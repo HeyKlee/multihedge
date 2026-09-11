@@ -137,7 +137,10 @@ def apply_decision(decision: dict, cfg: dict, *, balances: dict, evidence: dict,
         return {"state": "HOLD", "reason": "fee_reserve_below_minimum", "decision": decision}
     if decision["action"] == "HOLD":
         return {"state": "HOLD", "reason": "model_hold", "decision": decision}
-    if decision["action"] == "BUY" and evidence.get("qualified") is not True:
+    symbol_evidence = evidence.get("by_symbol", {}).get(decision["symbol"], {})
+    if decision["action"] == "BUY" and (
+        evidence.get("qualified") is not True or symbol_evidence.get("qualified") is not True
+    ):
         return {"state": "HOLD", "reason": "strategy_evidence_not_qualified", "decision": decision,
                 "evidence": evidence}
     if decision["action"] == "SELL" and float(balances.get(decision["symbol"], 0)) <= 0:
@@ -162,7 +165,29 @@ def extract_json(content: str) -> dict:
     raise DecisionDenied("model returned no JSON decision")
 
 
+def validate_market_context(market_context: dict, cfg: dict, *, now: float | None = None) -> None:
+    now = time.time() if now is None else now
+    assets = market_context.get("assets") if isinstance(market_context, dict) else None
+    if not isinstance(assets, dict):
+        raise DecisionDenied("market context is stale or incomplete")
+    for coin in tradeable_universe(cfg):
+        row = assets.get(coin["symbol"])
+        if not isinstance(row, dict):
+            raise DecisionDenied("market context is stale or incomplete")
+        latest = row.get("latest_usd")
+        timestamp = row.get("latest_ts")
+        samples = row.get("samples")
+        if (
+            isinstance(latest, bool) or not isinstance(latest, (int, float)) or latest <= 0
+            or isinstance(timestamp, bool) or not isinstance(timestamp, (int, float))
+            or timestamp > now + 30 or now - timestamp > 300
+            or isinstance(samples, bool) or not isinstance(samples, int) or samples < 2
+        ):
+            raise DecisionDenied("market context is stale or incomplete")
+
+
 def deepseek_decision(cfg: dict, market_context: dict) -> dict:
+    validate_market_context(market_context, cfg)
     key = os.getenv("OPENROUTER_API_KEY")
     if not key:
         raise DecisionDenied("OpenRouter credential unavailable")

@@ -58,6 +58,26 @@ class AutonomousLiveTests(unittest.TestCase):
         self.assertEqual(result["reason"], "strategy_evidence_not_qualified")
         executor.assert_not_called()
 
+    def test_buy_requires_selected_symbol_evidence(self):
+        executor = Mock()
+        result = al.apply_decision(
+            {"action": "BUY", "symbol": "JUP", "confidence": .8,
+             "expected_reward_nzd": .3, "expected_loss_nzd": .1},
+            CFG, balances={"USDC": 33.0, "SOL": .04, "JUP": 0.0, "ETH": 0.0},
+            evidence={"qualified": True, "by_symbol": {"JUP": {"qualified": False}}},
+            executor=executor, now=1800,
+        )
+        self.assertEqual(result["reason"], "strategy_evidence_not_qualified")
+        executor.assert_not_called()
+
+    def test_stale_market_context_is_rejected(self):
+        with self.assertRaisesRegex(al.DecisionDenied, "stale"):
+            al.validate_market_context(
+                {"assets": {"JUP": {"latest_usd": .2, "samples": 20, "latest_ts": 1000},
+                            "ETH": {"latest_usd": 2000, "samples": 20, "latest_ts": 1000}}},
+                CFG, now=1401,
+            )
+
     def test_buy_size_is_deterministic_and_not_model_controlled(self):
         decision = {"action": "BUY", "symbol": "JUP", "confidence": .8,
                     "expected_reward_nzd": .3, "expected_loss_nzd": .1}
@@ -65,7 +85,8 @@ class AutonomousLiveTests(unittest.TestCase):
         result = al.apply_decision(
             decision, CFG,
             balances={"USDC": 33.0, "SOL": .04, "JUP": 0.0, "ETH": 0.0},
-            evidence={"qualified": True, "reason": "passed"},
+            evidence={"qualified": True, "reason": "passed",
+                      "by_symbol": {"JUP": {"qualified": True}}},
             executor=executor,
             now=1800,
         )
