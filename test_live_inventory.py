@@ -100,6 +100,21 @@ class LiveInventoryTests(unittest.TestCase):
         decision = li.forced_exit(self.db, {MINT: .00125}, now=1100, cfg=cfg)
         self.assertEqual(decision["exit_reason"], "take_profit")
 
+    def test_enabled_approved_override_controls_live_exit(self):
+        li.record_fill(self.db, intent(), {
+            "verified": True, "input_atomic": 1_000_000,
+            "output_atomic": 1_000_000_000,
+        }, ticker="PEPE", decimals=6, price_usd=.001, now=1000)
+        li.set_risk_params_override(self.db, {
+            "take_profit_pct": .30, "stop_loss_pct": -.12,
+            "trail_arm_pct": .25, "trail_distance_pct": .10,
+            "max_hold_seconds": 1800, "mode": "MEME",
+        }, source="approved:test", sample_n=50)
+        cfg = {"live": {"autonomous": {"autotune_live_promotion_enabled": True}}}
+        self.assertIsNone(li.forced_exit(self.db, {MINT: .00125}, now=1100, cfg=cfg))
+        decision = li.forced_exit(self.db, {MINT: .00131}, now=1100, cfg=cfg)
+        self.assertEqual(decision["exit_reason"], "take_profit")
+
 
 if __name__ == "__main__":
     unittest.main()

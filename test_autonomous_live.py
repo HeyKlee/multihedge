@@ -159,6 +159,23 @@ class AutonomousLiveTests(unittest.TestCase):
         self.assertEqual(evidence["n"], 0)
         self.assertFalse(evidence["dynamic_strategy"]["qualified"])
 
+    def test_future_dated_trade_history_cannot_qualify_entry(self):
+        cfg = al.with_runtime_coins(CFG, [{
+            "symbol": DYNAMIC_MINT, "ticker": "PEPE", "mint": DYNAMIC_MINT,
+            "decimals": 6, "entry_eligible": True,
+        }])
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "evidence.db"
+            with sqlite3.connect(db) as con:
+                con.execute("CREATE TABLE mh_trades(coin TEXT,symbol TEXT,setup TEXT,realized_pct REAL,realized_usd REAL,close_ts REAL)")
+                con.executemany("INSERT INTO mh_trades VALUES(?,?,?,?,?,?)", [
+                    (DYNAMIC_MINT, "PEPE", "dynamic_scalper", .03, .03, 1031)
+                ] * 60)
+            with patch.dict("os.environ", {"MULTIHEDGE_EVIDENCE_DB": str(db)}):
+                evidence = al.strategy_evidence(cfg, now=1000)
+        self.assertEqual(evidence["n"], 0)
+        self.assertFalse(evidence["dynamic_strategy"]["qualified"])
+
     @patch("live_signer_worker.verify_onchain_mint")
     @patch("live_signer_worker.verify_round_trip")
     @patch("live_signer_worker.verify_token")
