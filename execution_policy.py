@@ -119,8 +119,10 @@ def validate_intent(intent: TradeIntent, approved_mints: set[str] | frozenset[st
         raise PolicyDenied("slippage exceeds 50 bps")
     reward = _decimal(intent.expected_reward_nzd, "expected reward")
     loss = _decimal(intent.expected_loss_nzd, "expected loss")
-    if loss <= 0 or reward < loss * 2:
+    if intent.side == "BUY" and (loss <= 0 or reward < loss * 2):
         raise PolicyDenied("expected net reward must be at least twice expected loss")
+    if intent.side == "SELL" and (reward < 0 or loss < 0):
+        raise PolicyDenied("SELL reward and loss cannot be negative")
     if not intent.strategy.strip():
         raise PolicyDenied("strategy identity required")
 

@@ -67,7 +67,8 @@ class ExecutionPolicyTests(unittest.TestCase):
 
     def test_sell_to_usdc_is_supported(self):
         intent = valid_intent()
-        intent = ep.TradeIntent(**{**intent.__dict__, "side": "SELL", "input_mint": JUP, "output_mint": USDC})
+        intent = ep.TradeIntent(**{**intent.__dict__, "side": "SELL", "input_mint": JUP, "output_mint": USDC,
+                                   "expected_reward_nzd": "0", "expected_loss_nzd": "0"})
         build = valid_build()
         build.update(inputMint=JUP, outputMint=USDC)
         ep.validate_intent(intent, {USDC, JUP})

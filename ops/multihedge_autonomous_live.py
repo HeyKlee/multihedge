@@ -53,6 +53,39 @@ def main():
             directory.mkdir(mode=0o700, exist_ok=True)
 
         runtime_user = f"{os.getuid()}:{os.getgid()}"
+        shadow = run([
+            "docker", "run", "--rm", "--user", runtime_user,
+            "--cap-drop=ALL", "--security-opt=no-new-privileges",
+            "--env-file", str(DATA / "agent.env"),
+            "-e", "MULTIHEDGE_EVIDENCE_DB=/app/multihedge.db",
+            "-e", "MULTIHEDGE_FORCED_EXIT=/logs/forced_exit.json",
+            "-v", f"{DATA / 'multihedge.db'}:/app/multihedge.db:rw",
+            "-v", f"{logs}:/logs:rw",
+            IMAGE, "python", "/app/dynamic_shadow_scalper.py",
+        ])
+        shadow_result = last_json(shadow.stdout)
+        if shadow.returncode != 0 or shadow_result is None:
+            print(json.dumps({"state": "HOLD", "reason": "shadow_scalper_failed",
+                              "exit_code": shadow.returncode}))
+            return 1
+
+        forced_path = logs / "forced_exit.json"
+        try:
+            forced_exit = json.loads(forced_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            forced_exit = {}
+        interval = 300
+        bucket = int(__import__("time").time() // interval)
+        marker = logs / "last_entry_bucket"
+        last_bucket = marker.read_text(encoding="utf-8").strip() if marker.exists() else ""
+        if not forced_exit and last_bucket == str(bucket):
+            print(json.dumps({"state": "SCALP_MONITOR_COMPLETE", "shadow": shadow_result,
+                              "agent": {"state": "NOT_DUE"}, "signer": {"handled": []}},
+                             sort_keys=True))
+            return 0
+        marker.write_text(str(bucket), encoding="utf-8")
+        os.chmod(marker, 0o600)
+
         agent = run([
             "docker", "run", "--rm", "--read-only", "--user", runtime_user,
             "--cap-drop=ALL", "--security-opt=no-new-privileges",
@@ -60,6 +93,7 @@ def main():
             "-e", "MULTIHEDGE_EVIDENCE_DB=/data/multihedge.db",
             "-e", "MULTIHEDGE_LIVE_QUEUE=/queue",
             "-e", "MULTIHEDGE_AUTONOMOUS_LOG=/logs/cycles.jsonl",
+            "-e", "MULTIHEDGE_FORCED_EXIT=/logs/forced_exit.json",
             "-v", f"{DATA / 'multihedge.db'}:/data/multihedge.db:ro",
             "-v", f"{queue}:/queue:rw", "-v", f"{logs}:/logs:rw",
             IMAGE, "python", "/app/autonomous_live.py",
@@ -87,8 +121,8 @@ def main():
             print(json.dumps({"state": "HOLD", "reason": "signer_cycle_failed",
                               "agent": agent_result, "exit_code": signer.returncode}))
             return 1
-        print(json.dumps({"state": "AUTONOMOUS_CYCLE_COMPLETE", "agent": agent_result,
-                          "signer": signer_result}, sort_keys=True))
+        print(json.dumps({"state": "AUTONOMOUS_CYCLE_COMPLETE", "shadow": shadow_result,
+                          "agent": agent_result, "signer": signer_result}, sort_keys=True))
         return 0
 
 

@@ -240,7 +240,9 @@ def execute_live_intent(cfg, intent, *, entry_authorized=False):
         raise PolicyDenied("signer key unavailable")
     wallet_str = str(keypair.pubkey())
     approved_mints = {cfg.get("live", {}).get("reserve_mint", RESERVE_MINT)}
-    approved_mints.update(c["mint"] for c in cfg.get("coins", []))
+    approved_mints.update(
+        c["mint"] for c in [*cfg.get("coins", []), *cfg.get("_runtime_coins", [])]
+    )
 
     try:
         sol_usd = float(os.environ["XORA_SOL_USD"])
@@ -286,8 +288,28 @@ def execute_live_intent(cfg, intent, *, entry_authorized=False):
         required_fee_reserve_sol=str(fee_reserve), treasury_verified=True,
         treasury_age_seconds=0,
     )
+    runtime_coin = next(
+        (c for c in cfg.get("_runtime_coins", [])
+         if c.get("mint") in {intent.input_mint, intent.output_mint} and c.get("ticker")),
+        None,
+    )
+    if runtime_coin is not None:
+        from live_inventory import record_fill
+        reconciliation = result["reconciliation"]
+        decimals = int(runtime_coin["decimals"])
+        if intent.side == "BUY":
+            fill_price = ((int(reconciliation["input_atomic"]) / 1_000_000)
+                          / (int(reconciliation["output_atomic"]) / (10 ** decimals)))
+        else:
+            fill_price = ((int(reconciliation["output_atomic"]) / 1_000_000)
+                          / (int(reconciliation["input_atomic"]) / (10 ** decimals)))
+        record_fill(
+            DB_PATH, intent, reconciliation, ticker=runtime_coin["ticker"],
+            decimals=decimals, price_usd=fill_price, now=time.time(),
+        )
     symbol = next(
-        (c.get("symbol") for c in cfg.get("coins", [])
+        (c.get("ticker", c.get("symbol"))
+         for c in [*cfg.get("coins", []), *cfg.get("_runtime_coins", [])]
          if c.get("mint") in {intent.input_mint, intent.output_mint}
          and c.get("mint") != RESERVE_MINT),
         "UNKNOWN",

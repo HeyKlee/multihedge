@@ -1,4 +1,5 @@
 import json
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,6 +7,10 @@ from unittest.mock import Mock, patch
 
 import autonomous_live as al
 import live_signer_worker as worker
+import live_inventory
+from execution_policy import TradeIntent
+
+DYNAMIC_MINT = "B5WTLaRwaUQpKk7ir1wniNB6m5o8GgMrimhKMYan2R6B"
 
 
 CFG = {
@@ -31,6 +36,145 @@ class AutonomousLiveTests(unittest.TestCase):
     def test_tradeable_universe_excludes_sol_and_usdc(self):
         universe = al.tradeable_universe(CFG)
         self.assertEqual([x["symbol"] for x in universe], ["JUP", "ETH"])
+
+    def test_dynamic_token_uses_mint_as_identity_and_can_build_intent(self):
+        cfg = al.with_runtime_coins(CFG, [{
+            "symbol": DYNAMIC_MINT, "ticker": "PEPE", "mint": DYNAMIC_MINT,
+            "decimals": 6, "entry_eligible": True,
+        }])
+        decision = {"action": "BUY", "symbol": DYNAMIC_MINT, "confidence": .8,
+                    "expected_reward_nzd": .3, "expected_loss_nzd": .1}
+        validated = al.validate_decision(decision, cfg)
+        intent = al.build_intent(validated, cfg, {"USDC": 33.0}, 1800)
+        self.assertEqual(intent.output_mint, DYNAMIC_MINT)
+        self.assertEqual(intent.order_id, f"auto:2:{DYNAMIC_MINT}:BUY")
+
+    def test_dynamic_buy_requires_mint_keyed_evidence(self):
+        cfg = al.with_runtime_coins(CFG, [{
+            "symbol": DYNAMIC_MINT, "ticker": "PEPE", "mint": DYNAMIC_MINT,
+            "decimals": 6, "entry_eligible": True,
+        }])
+        executor = Mock(return_value={"state": "QUEUED"})
+        result = al.apply_decision(
+            {"action": "BUY", "symbol": DYNAMIC_MINT, "confidence": .8,
+             "expected_reward_nzd": .3, "expected_loss_nzd": .1},
+            cfg, balances={"USDC": 33.0, "SOL": .04, DYNAMIC_MINT: 0},
+            evidence={"qualified": True, "by_symbol": {DYNAMIC_MINT: {"qualified": True}},
+                      "dynamic_strategy": {"qualified": True}},
+            executor=executor, now=1800,
+        )
+        self.assertEqual(result["state"], "QUEUED")
+
+    def test_dynamic_market_context_uses_fresh_discovery_snapshot(self):
+        candidate = {
+            "symbol": DYNAMIC_MINT, "ticker": "PEPE", "mint": DYNAMIC_MINT,
+            "decimals": 6, "entry_eligible": True,
+            "market": {"latest_usd": .001, "latest_ts": 1800, "samples": 2,
+                       "return_5m_pct": 2.0},
+        }
+        cfg = al.with_runtime_coins(CFG, [candidate])
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "evidence.db"
+            with sqlite3.connect(db) as con:
+                con.execute("CREATE TABLE mh_pxhist(coin TEXT,ts REAL,px REAL)")
+                for symbol, price in (("JUP", .2), ("ETH", 2000)):
+                    con.executemany("INSERT INTO mh_pxhist VALUES(?,?,?)",
+                                    [(symbol, 1790, price), (symbol, 1800, price)])
+            with patch.dict("os.environ", {"MULTIHEDGE_EVIDENCE_DB": str(db)}):
+                context = al.market_context(cfg, {"USDC": 33, "SOL": .04})
+        self.assertEqual(context["assets"][DYNAMIC_MINT]["latest_usd"], .001)
+        al.validate_market_context(context, cfg, now=1800)
+
+    def test_dynamic_evidence_is_keyed_by_mint_not_duplicate_ticker(self):
+        cfg = al.with_runtime_coins(CFG, [{
+            "symbol": DYNAMIC_MINT, "ticker": "PEPE", "mint": DYNAMIC_MINT,
+            "decimals": 6, "entry_eligible": True,
+        }])
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "evidence.db"
+            with sqlite3.connect(db) as con:
+                con.execute("CREATE TABLE mh_trades(coin TEXT,symbol TEXT,setup TEXT,realized_pct REAL,realized_usd REAL)")
+                con.executemany("INSERT INTO mh_trades VALUES(?,?,?,?,?)",
+                                [(DYNAMIC_MINT, "PEPE", "dynamic_scalper", .01, .01)] * 20
+                                + [("JUP", "JUP", "momentum_breakout", .01, .01)] * 30)
+            with patch.dict("os.environ", {"MULTIHEDGE_EVIDENCE_DB": str(db)}):
+                evidence = al.strategy_evidence(cfg)
+        self.assertEqual(evidence["by_symbol"][DYNAMIC_MINT]["n"], 20)
+        self.assertTrue(evidence["by_symbol"][DYNAMIC_MINT]["qualified"])
+
+    def test_dynamic_strategy_must_qualify_before_any_new_mint_can_enter(self):
+        cfg = al.with_runtime_coins(CFG, [{
+            "symbol": DYNAMIC_MINT, "ticker": "PEPE", "mint": DYNAMIC_MINT,
+            "decimals": 6, "entry_eligible": True,
+        }])
+        cfg["live"]["autonomous"]["dynamic_universe"] = {
+            "minimum_strategy_trades": 3, "minimum_strategy_win_rate": .6667,
+            "minimum_strategy_net_usd": 0,
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "evidence.db"
+            with sqlite3.connect(db) as con:
+                con.execute("CREATE TABLE mh_trades(coin TEXT,symbol TEXT,setup TEXT,realized_pct REAL,realized_usd REAL)")
+                con.executemany("INSERT INTO mh_trades VALUES(?,?,?,?,?)", [
+                    ("mint-one", "ONE", "dynamic_scalper", .03, .03),
+                    ("mint-two", "TWO", "dynamic_scalper", .03, .03),
+                    ("mint-three", "THREE", "dynamic_scalper", -.02, -.02),
+                ])
+            with patch.dict("os.environ", {"MULTIHEDGE_EVIDENCE_DB": str(db)}):
+                evidence = al.strategy_evidence(cfg)
+        self.assertFalse(evidence["dynamic_strategy"]["qualified"])
+        self.assertFalse(al.entry_evidence_qualified(cfg, DYNAMIC_MINT, evidence))
+        evidence["dynamic_strategy"].update(win_rate=.67, qualified=True)
+        self.assertTrue(al.entry_evidence_qualified(cfg, DYNAMIC_MINT, evidence))
+
+    @patch("live_signer_worker.verify_onchain_mint")
+    @patch("live_signer_worker.verify_round_trip")
+    @patch("live_signer_worker.verify_token")
+    def test_signer_independently_admits_dynamic_buy(self, verify_token, verify_round_trip,
+                                                     verify_onchain):
+        verify_token.return_value = {"symbol": DYNAMIC_MINT, "ticker": "PEPE",
+                                     "mint": DYNAMIC_MINT, "decimals": 6,
+                                     "entry_eligible": True}
+        intent = al.build_intent(
+            {"action": "BUY", "symbol": DYNAMIC_MINT, "confidence": .8,
+             "expected_reward_nzd": .3, "expected_loss_nzd": .1},
+            al.with_runtime_coins(CFG, [verify_token.return_value]), {"USDC": 33}, 1800,
+        )
+        enriched = worker.enrich_dynamic_intent(CFG, intent, api_key="key", rpc_url="rpc", now=1800)
+        self.assertEqual(al.tradeable_universe(enriched)[-1]["mint"], DYNAMIC_MINT)
+        verify_round_trip.assert_called_once()
+        verify_onchain.assert_called_once_with(DYNAMIC_MINT, 6, "rpc")
+
+    def test_signer_allows_only_registered_dynamic_sell(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "evidence.db"
+            buy = TradeIntent("buy", "BUY", al.USDC_MINT, DYNAMIC_MINT, 1_000_000,
+                              50, "dynamic_scalper", ".03", ".01")
+            live_inventory.record_fill(
+                db, buy, {"verified": True, "input_atomic": 1_000_000,
+                          "output_atomic": 1_000_000_000},
+                ticker="PEPE", decimals=6, price_usd=.001, now=1000,
+            )
+            sell = TradeIntent(f"auto:2:{DYNAMIC_MINT}:SELL", "SELL", DYNAMIC_MINT,
+                               al.USDC_MINT, 1_000_000_000, 50,
+                               "deepseek_v4_flash_autonomous", "0", "0")
+            with patch.dict("os.environ", {"MULTIHEDGE_EVIDENCE_DB": str(db)}):
+                enriched = worker.enrich_dynamic_intent(
+                    CFG, sell, api_key="key", rpc_url="rpc", now=1800
+                )
+            self.assertEqual(al.tradeable_universe(enriched)[-1]["mint"], DYNAMIC_MINT)
+
+    def test_forced_exit_file_accepts_only_registered_sell(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "forced.json"
+            path.write_text(json.dumps({"action": "SELL", "symbol": DYNAMIC_MINT,
+                                        "confidence": 1.0, "expected_reward_nzd": 0,
+                                        "expected_loss_nzd": 0, "exit_reason": "stop_loss"}))
+            decision = al.load_forced_exit(path, {DYNAMIC_MINT})
+            self.assertEqual(decision["action"], "SELL")
+            self.assertNotIn("exit_reason", decision)
+            path.write_text(json.dumps({"action": "BUY", "symbol": DYNAMIC_MINT}))
+            self.assertIsNone(al.load_forced_exit(path, {DYNAMIC_MINT}))
 
     def test_invalid_or_extra_model_fields_fail_closed(self):
         with self.assertRaises(al.DecisionDenied):
@@ -125,6 +269,13 @@ class AutonomousLiveTests(unittest.TestCase):
         self.assertEqual(result["state"], "HOLD")
         self.assertEqual(result["reason"], "no_inventory")
         executor.assert_not_called()
+
+    def test_risk_reducing_sell_does_not_require_buy_reward_ratio(self):
+        result = al.validate_decision(
+            {"action": "SELL", "symbol": "JUP", "confidence": .9,
+             "expected_reward_nzd": 0, "expected_loss_nzd": 0}, CFG
+        )
+        self.assertEqual(result["action"], "SELL")
 
     def test_low_fee_reserve_holds_before_execution(self):
         executor = Mock()

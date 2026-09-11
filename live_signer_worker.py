@@ -17,8 +17,11 @@ import time
 
 import yaml
 
-from autonomous_live import fresh_rates, strategy_evidence, tradeable_universe
+from autonomous_live import (entry_evidence_qualified, fresh_rates, strategy_evidence,
+                             tradeable_universe, with_runtime_coins)
 from execution_policy import PolicyDenied, TradeIntent, validate_intent
+from solana_token_universe import verify_onchain_mint, verify_round_trip, verify_token
+from live_inventory import get_holding
 
 ROOT = Path(__file__).resolve().parent
 TRADE_FIELDS = frozenset(field.name for field in fields(TradeIntent))
@@ -71,16 +74,40 @@ def entry_authorized(cfg: dict, intent: TradeIntent, evidence: dict) -> bool:
          if coin["mint"] == intent.output_mint),
         None,
     )
-    return bool(
-        evidence.get("qualified") is True
-        and symbol
-        and evidence.get("by_symbol", {}).get(symbol, {}).get("qualified") is True
-    )
+    return bool(symbol and entry_evidence_qualified(cfg, symbol, evidence))
+
+
+def enrich_dynamic_intent(cfg: dict, intent: TradeIntent, *, api_key: str, rpc_url: str,
+                          now: float) -> dict:
+    """Rebuild dynamic BUY approval inside the signer trust boundary."""
+    known = {coin["mint"] for coin in tradeable_universe(cfg)}
+    target = intent.output_mint if intent.side == "BUY" else intent.input_mint
+    if target in known:
+        return cfg
+    if intent.side == "SELL":
+        db_path = Path(os.getenv("MULTIHEDGE_EVIDENCE_DB", str(ROOT / "multihedge.db")))
+        holding = get_holding(db_path, target)
+        if holding is None or intent.amount_atomic > int(holding["amount_atomic"]):
+            raise PolicyDenied("dynamic sells require a registered wallet holding")
+        return with_runtime_coins(cfg, [{
+            "symbol": target, "ticker": holding["ticker"], "mint": target,
+            "decimals": int(holding["decimals"]), "entry_eligible": False,
+        }])
+    candidate = verify_token(target, cfg, api_key=api_key, now=now)
+    verify_round_trip(target, cfg, api_key=api_key)
+    verify_onchain_mint(target, candidate["decimals"], rpc_url)
+    return with_runtime_coins(cfg, [candidate])
 
 
 def process_one(cfg: dict, request: Path, *, now: float | None = None) -> dict:
     intent = _load_intent(request)
-    validate_autonomous_order_id(cfg, intent, time.time() if now is None else now)
+    checked_at = time.time() if now is None else now
+    api_key = os.getenv("JUPITER_API_KEY", "")
+    rpc_url = os.getenv("SOLANA_RPC_URL", "https://api.mainnet-beta.solana.com")
+    cfg = enrich_dynamic_intent(
+        cfg, intent, api_key=api_key, rpc_url=rpc_url, now=checked_at
+    )
+    validate_autonomous_order_id(cfg, intent, checked_at)
     approved = {cfg.get("live", {}).get("reserve_mint")}
     approved.update(coin["mint"] for coin in tradeable_universe(cfg))
     validate_intent(intent, approved)

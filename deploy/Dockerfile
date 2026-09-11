@@ -20,6 +20,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+# The one-shot independent containers (shadow scalper, agent, signer) run as
+# uid 1000 with an --env-file / bind-mounted DB. Make /app writable so SQLite
+# can place WAL/journal next to a bind-mounted single file without requiring
+# root or leaking the .env dirs into the container. No secrets live in /app.
+RUN chmod 0777 /app
 
 # Copy only the multihedge package.
 COPY *.py /app/
