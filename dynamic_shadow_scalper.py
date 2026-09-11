@@ -10,14 +10,16 @@ import time
 
 SETUP = "dynamic_scalper"
 PAPER_NOTIONAL_USD = 1.0
-TAKE_PROFIT_PCT = 0.03
-STOP_LOSS_PCT = -0.02
-TRAIL_ARM_PCT = 0.02
-TRAIL_DISTANCE_PCT = 0.01
-MAX_HOLD_SECONDS = 900
 MIN_ENTRY_5M_PCT = 0.5
 MAX_ENTRY_5M_PCT = 8.0
 MIN_BUY_SELL_RATIO = 1.05
+
+# Memecoin scalp (fast) defaults; per-coin params come from live_inventory.
+TAKE_PROFIT_PCT = 0.02
+STOP_LOSS_PCT = -0.01
+TRAIL_ARM_PCT = 0.02
+TRAIL_DISTANCE_PCT = 0.01
+MAX_HOLD_SECONDS = 900
 
 
 def _connect(path: Path):
@@ -39,16 +41,17 @@ def _connect(path: Path):
     return con
 
 
-def _exit_reason(position, price: float, now: float) -> str | None:
+def _exit_reason(position, price: float, now: float, params: dict) -> str | None:
     change = price / float(position["entry_usd"]) - 1
-    if change >= TAKE_PROFIT_PCT:
+    if change >= params["take_profit_pct"]:
         return "take_profit"
-    if change <= STOP_LOSS_PCT:
+    if change <= params["stop_loss_pct"]:
         return "stop_loss"
-    if now - float(position["opened_ts"]) >= MAX_HOLD_SECONDS:
+    if now - float(position["opened_ts"]) >= params["max_hold_seconds"]:
         return "max_hold"
     peak = max(float(position["peak_usd"]), price)
-    if peak / float(position["entry_usd"]) - 1 >= TRAIL_ARM_PCT and price / peak - 1 <= -TRAIL_DISTANCE_PCT:
+    if (peak / float(position["entry_usd"]) - 1 >= params["trail_arm_pct"]
+            and price / peak - 1 <= -params["trail_distance_pct"]):
         return "trail_stop"
     return None
 
@@ -70,8 +73,13 @@ def _entry_signal(row: dict) -> bool:
     )
 
 
-def tick(db_path: Path, candidates: list[dict], *, now: float) -> dict:
-    """Advance paper positions once using one immutable candidate snapshot."""
+def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None = None) -> dict:
+    """Advance paper positions once using one immutable candidate snapshot.
+
+    Exit thresholds are per-coin (via live_inventory.risk_params): memecoins
+    scalp fast; backed coins day-trade over hours.
+    """
+    from live_inventory import risk_params
     by_mint = {row.get("mint"): row for row in candidates if isinstance(row, dict)}
     opened = 0
     closed = 0
@@ -89,7 +97,8 @@ def tick(db_path: Path, candidates: list[dict], *, now: float) -> dict:
                 continue
             if price <= 0:
                 continue
-            reason = _exit_reason(position, price, now)
+            params = risk_params(position["mint"], cfg)
+            reason = _exit_reason(position, price, now, params)
             peak = max(float(position["peak_usd"]), price)
             if reason is None:
                 con.execute(
@@ -161,13 +170,14 @@ if __name__ == "__main__":
     all_tokens = {row["mint"]: row for row in resolved}
     all_tokens.update({row["mint"]: row for row in candidates})
     exit_decision = forced_exit(
-        db_path, {mint: row["market"]["latest_usd"] for mint, row in all_tokens.items()}, now=now
+        db_path, {mint: row["market"]["latest_usd"] for mint, row in all_tokens.items()}, now=now,
+        cfg=cfg,
     )
     forced_path = Path(os.getenv("MULTIHEDGE_FORCED_EXIT", "/tmp/multihedge_forced_exit.json"))
     forced_path.parent.mkdir(parents=True, exist_ok=True)
     temporary = forced_path.with_name(f".{forced_path.name}.{os.getpid()}.tmp")
     temporary.write_text(json.dumps(exit_decision or {}, sort_keys=True), encoding="utf-8")
     temporary.replace(forced_path)
-    result = tick(db_path, list(all_tokens.values()), now=now)
+    result = tick(db_path, list(all_tokens.values()), now=now, cfg=cfg)
     result["forced_exit"] = exit_decision and exit_decision["exit_reason"]
     print(json.dumps(result, sort_keys=True))

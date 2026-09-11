@@ -58,6 +58,38 @@ class DynamicShadowScalperTests(unittest.TestCase):
         self.assertEqual(ds.tick(self.db, [candidate(change5=0.1)], now=1000)["opened"], 0)
         self.assertEqual(ds.tick(self.db, [candidate(sell=0)], now=1060)["opened"], 0)
 
+    def test_serious_coin_day_trades_over_hours_not_15_min_scalp(self):
+        # JUP is a config `coins` entry -> SERIOUS day-trade params.
+        cfg = {"coins": [{"symbol": "JUP", "mint": MINT}]}
+        ds.tick(self.db, [candidate()], now=1000, cfg=cfg)
+        # At 15 minutes (900s) a memecoin would max-hold; a serious coin holds on.
+        result = ds.tick(self.db, [candidate(price=.00101, change5=0)], now=1905, cfg=cfg)
+        self.assertEqual(result["closed"], 0)
+        # But it day-trades on a longer clock: still open at ~1.5h, not force-sold.
+        result = ds.tick(self.db, [candidate(price=.00101, change5=0)], now=1000 + 5400, cfg=cfg)
+        self.assertEqual(result["closed"], 0)
+
+    def test_memecoin_scalps_fast_2pct_tp(self):
+        # A 2%+ move closes a memecoin take-profit (was 3% before this change).
+        cfg = {"coins": [{"symbol": "JUP", "mint": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"}]}
+        ds.tick(self.db, [candidate()], now=1000, cfg=cfg)
+        result = ds.tick(self.db, [candidate(price=.001028, change5=1)], now=1060, cfg=cfg)
+        self.assertEqual(result["reasons"], {"take_profit": 1})
+
+    def test_risk_params_classify_serious_vs_memecoin(self):
+        import live_inventory as li
+        cfg = {"coins": [{"symbol": "JUP", "mint": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"}]}
+        serious = li.risk_params("JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN", cfg)
+        meme = li.risk_params(MINT, cfg)
+        self.assertEqual(serious["mode"], "SERIOUS")
+        self.assertEqual(meme["mode"], "MEME")
+        self.assertEqual(serious["take_profit_pct"], 0.05)
+        self.assertEqual(serious["stop_loss_pct"], -0.025)
+        self.assertGreaterEqual(serious["max_hold_seconds"], 6 * 3600)
+        self.assertEqual(meme["take_profit_pct"], 0.02)
+        self.assertEqual(meme["stop_loss_pct"], -0.01)
+        self.assertEqual(meme["max_hold_seconds"], 900)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,11 +5,56 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-TAKE_PROFIT_PCT = 0.03
-STOP_LOSS_PCT = -0.02
-TRAIL_ARM_PCT = 0.02
-TRAIL_DISTANCE_PCT = 0.01
-MAX_HOLD_SECONDS = 900
+# Memecoin scalp (fast): tight targets, short hold. This is the default for
+# anything in the dynamic universe that is not a curated backed coin.
+MEME_TAKE_PROFIT_PCT = 0.02
+MEME_STOP_LOSS_PCT = -0.01
+MEME_TRAIL_ARM_PCT = 0.02
+MEME_TRAIL_DISTANCE_PCT = 0.01
+MEME_MAX_HOLD_SECONDS = 900
+
+# Serious / backed coins (present in the config `coins` list, e.g. JUP, ETH):
+# day-traded, allowed to swing over hours instead of a 15-minute scalp.
+SERIOUS_TAKE_PROFIT_PCT = 0.05
+SERIOUS_STOP_LOSS_PCT = -0.025
+SERIOUS_TRAIL_ARM_PCT = 0.04
+SERIOUS_TRAIL_DISTANCE_PCT = 0.015
+SERIOUS_MAX_HOLD_SECONDS = 6 * 3600
+
+# Legacy names kept so existing imports/tests see the memecoin defaults.
+TAKE_PROFIT_PCT = MEME_TAKE_PROFIT_PCT
+STOP_LOSS_PCT = MEME_STOP_LOSS_PCT
+TRAIL_ARM_PCT = MEME_TRAIL_ARM_PCT
+TRAIL_DISTANCE_PCT = MEME_TRAIL_DISTANCE_PCT
+MAX_HOLD_SECONDS = MEME_MAX_HOLD_SECONDS
+
+
+def _serious_mints(cfg: dict | None) -> set[str]:
+    if not isinstance(cfg, dict):
+        return set()
+    return {c["mint"] for c in cfg.get("coins", []) if isinstance(c, dict) and c.get("mint")}
+
+
+def risk_params(mint: str, cfg: dict | None) -> dict:
+    """Return per-coin exit params. Backed coins (in config `coins`) day-trade;
+    everything else (dynamic universe memecoin) scalp fast."""
+    if mint in _serious_mints(cfg):
+        return {
+            "take_profit_pct": SERIOUS_TAKE_PROFIT_PCT,
+            "stop_loss_pct": SERIOUS_STOP_LOSS_PCT,
+            "trail_arm_pct": SERIOUS_TRAIL_ARM_PCT,
+            "trail_distance_pct": SERIOUS_TRAIL_DISTANCE_PCT,
+            "max_hold_seconds": SERIOUS_MAX_HOLD_SECONDS,
+            "mode": "SERIOUS",
+        }
+    return {
+        "take_profit_pct": MEME_TAKE_PROFIT_PCT,
+        "stop_loss_pct": MEME_STOP_LOSS_PCT,
+        "trail_arm_pct": MEME_TRAIL_ARM_PCT,
+        "trail_distance_pct": MEME_TRAIL_DISTANCE_PCT,
+        "max_hold_seconds": MEME_MAX_HOLD_SECONDS,
+        "mode": "MEME",
+    }
 
 
 def _connect(path: Path):
@@ -86,8 +131,12 @@ def record_fill(path: Path, intent, reconciliation: dict, *, ticker: str, decima
             )
 
 
-def forced_exit(path: Path, prices: dict[str, float], *, now: float) -> dict | None:
-    """Update peaks and return one deterministic risk-reduction decision."""
+def forced_exit(path: Path, prices: dict[str, float], *, now: float, cfg: dict | None = None) -> dict | None:
+    """Update peaks and return one deterministic risk-reduction decision.
+
+    Exit thresholds are per-coin: backed coins (in config `coins`) day-trade
+    over hours; memecoin positions scalp fast.
+    """
     with _connect(path) as con:
         positions = con.execute("SELECT * FROM mh_live_inventory ORDER BY opened_ts").fetchall()
         for position in positions:
@@ -97,6 +146,7 @@ def forced_exit(path: Path, prices: dict[str, float], *, now: float) -> dict | N
                 continue
             if price <= 0:
                 continue
+            params = risk_params(position["mint"], cfg)
             entry = float(position["entry_usd"])
             peak = max(float(position["peak_usd"]), price)
             con.execute(
@@ -105,18 +155,19 @@ def forced_exit(path: Path, prices: dict[str, float], *, now: float) -> dict | N
             )
             change = price / entry - 1
             reason = None
-            if change >= TAKE_PROFIT_PCT:
+            if change >= params["take_profit_pct"]:
                 reason = "take_profit"
-            elif change <= STOP_LOSS_PCT:
+            elif change <= params["stop_loss_pct"]:
                 reason = "stop_loss"
-            elif now - float(position["opened_ts"]) >= MAX_HOLD_SECONDS:
+            elif now - float(position["opened_ts"]) >= params["max_hold_seconds"]:
                 reason = "max_hold"
-            elif peak / entry - 1 >= TRAIL_ARM_PCT and price / peak - 1 <= -TRAIL_DISTANCE_PCT:
+            elif (peak / entry - 1 >= params["trail_arm_pct"]
+                  and price / peak - 1 <= -params["trail_distance_pct"]):
                 reason = "trail_stop"
             if reason:
                 return {
                     "action": "SELL", "symbol": position["mint"], "confidence": 1.0,
                     "expected_reward_nzd": 0.0, "expected_loss_nzd": 0.0,
-                    "exit_reason": reason,
+                    "exit_reason": reason, "mode": params["mode"],
                 }
     return None
