@@ -35,10 +35,13 @@ def _serious_mints(cfg: dict | None) -> set[str]:
     return {c["mint"] for c in cfg.get("coins", []) if isinstance(c, dict) and c.get("mint")}
 
 
-def risk_params(mint: str, cfg: dict | None) -> dict:
-    """Return per-coin exit params. Backed coins (in config `coins`) day-trade;
-    everything else (dynamic universe memecoin) scalp fast."""
-    if mint in _serious_mints(cfg):
+def mode_for_mint(mint: str, cfg: dict | None) -> str:
+    """MEME for dynamic-universe coins, SERIOUS for curated backed config coins."""
+    return "SERIOUS" if mint in _serious_mints(cfg) else "MEME"
+
+
+def _default_params(mode: str) -> dict:
+    if mode == "SERIOUS":
         return {
             "take_profit_pct": SERIOUS_TAKE_PROFIT_PCT,
             "stop_loss_pct": SERIOUS_STOP_LOSS_PCT,
@@ -57,6 +60,70 @@ def risk_params(mint: str, cfg: dict | None) -> dict:
     }
 
 
+def _risk_params_override(path, mode: str) -> dict | None:
+    """Read a persisted tuned override for a mode, or None if none exists."""
+    try:
+        with _connect(path) as con:
+            row = con.execute(
+                "SELECT * FROM mh_risk_params WHERE mode=?", (mode,)
+            ).fetchone()
+    except Exception:
+        return None
+    if row is None:
+        return None
+    try:
+        return {
+            "take_profit_pct": float(row["take_profit_pct"]),
+            "stop_loss_pct": float(row["stop_loss_pct"]),
+            "trail_arm_pct": float(row["trail_arm_pct"]),
+            "trail_distance_pct": float(row["trail_distance_pct"]),
+            "max_hold_seconds": float(row["max_hold_seconds"]),
+            "mode": str(row["mode"]),
+        }
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def set_risk_params_override(path, params: dict, *, source: str, sample_n: int) -> None:
+    """Persist a tuned override so risk_params() starts using it. Bounded by
+    _connect's CHECK constraint to prevent degenerate or unsafe params."""
+    import time as _time
+    mode = params.get("mode")
+    if mode not in {"MEME", "SERIOUS"}:
+        raise ValueError("invalid mode")
+    with _connect(path) as con:
+        con.execute(
+            "INSERT INTO mh_risk_params(mode,take_profit_pct,stop_loss_pct,"
+            "trail_arm_pct,trail_distance_pct,max_hold_seconds,source,sample_n,"
+            "applied_ts) VALUES(?,?,?,?,?,?,?,?,?) "
+            "ON CONFLICT(mode) DO UPDATE SET "
+            "take_profit_pct=excluded.take_profit_pct,"
+            "stop_loss_pct=excluded.stop_loss_pct,"
+            "trail_arm_pct=excluded.trail_arm_pct,"
+            "trail_distance_pct=excluded.trail_distance_pct,"
+            "max_hold_seconds=excluded.max_hold_seconds,"
+            "source=excluded.source,sample_n=excluded.sample_n,"
+            "applied_ts=excluded.applied_ts",
+            (mode, params["take_profit_pct"], params["stop_loss_pct"],
+             params["trail_arm_pct"], params["trail_distance_pct"],
+             params["max_hold_seconds"], source, int(sample_n), _time.time()),
+        )
+
+
+def risk_params(mint: str, cfg: dict | None, db_path=None) -> dict:
+    """Return per-coin exit params.
+
+    A persisted tuned override (written by the autonomous autotuner) takes
+    precedence for the coin's class; otherwise deterministic defaults apply.
+    """
+    mode = mode_for_mint(mint, cfg)
+    if db_path is not None:
+        override = _risk_params_override(db_path, mode)
+        if override is not None:
+            return override
+    return _default_params(mode)
+
+
 def _connect(path: Path):
     con = sqlite3.connect(Path(path), timeout=30)
     con.row_factory = sqlite3.Row
@@ -66,6 +133,16 @@ def _connect(path: Path):
         "amount_atomic INTEGER NOT NULL,cost_usdc_atomic INTEGER NOT NULL,"
         "entry_usd REAL NOT NULL,peak_usd REAL NOT NULL,opened_ts REAL NOT NULL,"
         "updated_ts REAL NOT NULL)"
+    )
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS mh_risk_params ("
+        "mode TEXT PRIMARY KEY, take_profit_pct REAL NOT NULL,"
+        "stop_loss_pct REAL NOT NULL, trail_arm_pct REAL NOT NULL,"
+        "trail_distance_pct REAL NOT NULL, max_hold_seconds REAL NOT NULL,"
+        "source TEXT NOT NULL, sample_n INTEGER NOT NULL, applied_ts REAL NOT NULL,"
+        "CHECK(take_profit_pct BETWEEN 0.005 AND 0.60),"
+        "CHECK(stop_loss_pct BETWEEN -0.35 AND -0.005),"
+        "CHECK(max_hold_seconds BETWEEN 60 AND 604800))"
     )
     return con
 
@@ -146,7 +223,7 @@ def forced_exit(path: Path, prices: dict[str, float], *, now: float, cfg: dict |
                 continue
             if price <= 0:
                 continue
-            params = risk_params(position["mint"], cfg)
+            params = risk_params(position["mint"], cfg, db_path=path)
             entry = float(position["entry_usd"])
             peak = max(float(position["peak_usd"]), price)
             con.execute(

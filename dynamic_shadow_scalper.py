@@ -29,14 +29,28 @@ def _connect(path: Path):
         "CREATE TABLE IF NOT EXISTS mh_dynamic_scalp_positions ("
         "mint TEXT PRIMARY KEY,ticker TEXT NOT NULL,decimals INTEGER NOT NULL,"
         "entry_usd REAL NOT NULL,qty REAL NOT NULL,opened_ts REAL NOT NULL,"
-        "peak_usd REAL NOT NULL)"
+        "peak_usd REAL NOT NULL,trough_usd REAL NOT NULL)"
     )
+    # Backfill column for DBs created before trough tracking existed.
+    try:
+        con.execute("ALTER TABLE mh_dynamic_scalp_positions ADD COLUMN trough_usd REAL NOT NULL DEFAULT 1e18")
+    except sqlite3.OperationalError:
+        pass
     con.execute(
         "CREATE TABLE IF NOT EXISTS mh_trades ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT,coin TEXT NOT NULL,symbol TEXT,"
         "setup TEXT NOT NULL,side TEXT NOT NULL,open_ts REAL NOT NULL,close_ts REAL NOT NULL,"
         "entry_px REAL NOT NULL,exit_px REAL NOT NULL,qty REAL NOT NULL,"
         "realized_pct REAL NOT NULL,realized_usd REAL NOT NULL,exit_reason TEXT NOT NULL)"
+    )
+    # Per-trade excursion history (peak/trough/hold) feeds the autonomous
+    # parameter autotuner, which can only trust real observed extremes.
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS mh_scalp_excursions ("
+        "mint TEXT NOT NULL,ticker TEXT NOT NULL,mode TEXT NOT NULL,"
+        "entry_usd REAL NOT NULL,peak_usd REAL NOT NULL,trough_usd REAL NOT NULL,"
+        "open_ts REAL NOT NULL,close_ts REAL NOT NULL,"
+        "hold_seconds REAL NOT NULL,realized_pct REAL NOT NULL,exit_reason TEXT NOT NULL)"
     )
     return con
 
@@ -79,7 +93,7 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
     Exit thresholds are per-coin (via live_inventory.risk_params): memecoins
     scalp fast; backed coins day-trade over hours.
     """
-    from live_inventory import risk_params
+    from live_inventory import risk_params, mode_for_mint
     by_mint = {row.get("mint"): row for row in candidates if isinstance(row, dict)}
     opened = 0
     closed = 0
@@ -97,23 +111,34 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
                 continue
             if price <= 0:
                 continue
-            params = risk_params(position["mint"], cfg)
+            params = risk_params(position["mint"], cfg, db_path=db_path)
             reason = _exit_reason(position, price, now, params)
             peak = max(float(position["peak_usd"]), price)
+            entry = float(position["entry_usd"])
+            trough = float(position["trough_usd"]) if position["trough_usd"] is not None else entry
+            trough = min(trough, price)
             if reason is None:
                 con.execute(
-                    "UPDATE mh_dynamic_scalp_positions SET peak_usd=? WHERE mint=?",
-                    (peak, position["mint"]),
+                    "UPDATE mh_dynamic_scalp_positions SET peak_usd=?,trough_usd=? WHERE mint=?",
+                    (peak, trough, position["mint"]),
                 )
                 continue
-            realized_pct = price / float(position["entry_usd"]) - 1
+            realized_pct = price / entry - 1
             realized_usd = PAPER_NOTIONAL_USD * realized_pct
             con.execute(
                 "INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,"
                 "exit_px,qty,realized_pct,realized_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
                 (position["mint"], position["ticker"], SETUP, "LONG",
-                 position["opened_ts"], now, position["entry_usd"], price,
+                 position["opened_ts"], now, entry, price,
                  position["qty"], realized_pct, realized_usd, reason),
+            )
+            con.execute(
+                "INSERT INTO mh_scalp_excursions(mint,ticker,mode,entry_usd,peak_usd,"
+                "trough_usd,open_ts,close_ts,hold_seconds,realized_pct,exit_reason) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                (position["mint"], position["ticker"], mode_for_mint(position["mint"], cfg),
+                 entry, peak, trough, position["opened_ts"], now,
+                 now - position["opened_ts"], realized_pct, reason),
             )
             con.execute("DELETE FROM mh_dynamic_scalp_positions WHERE mint=?", (position["mint"],))
             closed += 1
@@ -136,9 +161,9 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
                 continue
             con.execute(
                 "INSERT INTO mh_dynamic_scalp_positions(mint,ticker,decimals,entry_usd,qty,"
-                "opened_ts,peak_usd) VALUES(?,?,?,?,?,?,?)",
+                "opened_ts,peak_usd,trough_usd) VALUES(?,?,?,?,?,?,?,?)",
                 (mint, str(row.get("ticker") or "UNKNOWN")[:24], decimals, price,
-                 PAPER_NOTIONAL_USD / price, now, price),
+                 PAPER_NOTIONAL_USD / price, now, price, price),
             )
             existing.add(mint)
             opened += 1
@@ -180,4 +205,11 @@ if __name__ == "__main__":
     temporary.replace(forced_path)
     result = tick(db_path, list(all_tokens.values()), now=now, cfg=cfg)
     result["forced_exit"] = exit_decision and exit_decision["exit_reason"]
+    # Autonomous parameter adaptation: propose TP/SL/max-hold changes from real
+    # closed-trade excursions, adopt only when evidence supports improvement.
+    try:
+        from parameter_autotuner import maybe_tune
+        result["autotune"] = maybe_tune(db_path, cfg, now=now)
+    except Exception as exc:  # never let a tuning failure stop the cycle
+        result["autotune"] = {"state": "TUNING_FAILED", "error": type(exc).__name__}
     print(json.dumps(result, sort_keys=True))
