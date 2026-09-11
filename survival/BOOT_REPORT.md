@@ -19,6 +19,7 @@ Mainnet authority is not enabled by this report. Kelly has explicitly designated
 - Sovereign mainnet authority default: disabled in code
 - Repository regression result at 2026-09-11T12:07:32+12:00: 90 tests executed, 90 passed, 1 diagnostic module skipped, 0 failures, 0 errors
 - Local rollback baseline: Git branch `master`, baseline commit `36f5c15`, latest verified fix `a71a554`; secrets, databases, runtime data, and virtual environments are excluded from reachable Git history
+- Recurring XORA-SURVIVAL model job paused after cycle 9 made unsupported claims and changed only the report timestamp; cycle 10 records the correction while wallet spending remains locked
 - Action-cycle audit: cycles 1 through 3 written and read back from `survival/survival_audit.db`; cycle 2 corrects the test-count wording recorded in cycle 1, and cycle 3 records the independent-review remediations
 - Audit mutation protection: SQLite denies application-level update and delete operations
 - Audit integrity: records are SHA-256 hash-chained, the complete chain is verified before every append, and corruption causes subsequent appends to fail closed
