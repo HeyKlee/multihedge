@@ -1,0 +1,25 @@
+services:
+  multihedge:
+    build:
+      context: ../
+      dockerfile: deploy/Dockerfile
+    container_name: multihedge
+    restart: unless-stopped
+    # Bind the persistent DB + .env over their in-image locations. Locks,
+    # pidfiles, WAL are recreated fresh in the writable layer each start.
+    volumes:
+      - ./data/multihedge.db:/app/multihedge.db
+      - ./data/.env:/app/.env
+    environment:
+      - TZ=Pacific/Auckland
+      - PYTHONUNBUFFERED=1
+    ports:
+      # Dashboard UI. Host-reachable on 0.0.0.0 so XORA's Tailscale interface
+      # (100.64.0.1:9052) can forward to it. Tailnet ACLs handle access control.
+      # Do NOT add public exposure (kittxora.duckdns.org) without Kelly's OK.
+      - "0.0.0.0:9052:9052"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

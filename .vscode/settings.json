@@ -1,0 +1,10 @@
+{
+  "claude.apiUrl": "https://openrouter.ai/api/v1",
+  "claude.defaultModel": "openrouter/free",
+  "claude.defaultProvider": "openrouter",
+  "claude.telemetry": false,
+  "terminal.integrated.defaultProfile.linux": "claude-openrouter",
+  "workbench.startupEditor": "none",
+  "kickbacks.authToken": "EqePexC2MJb9WBiMTso8pJwFna72",
+  "kickbacks.authFile": "/home/kelly/.vscode/extensions/auth.json"
+}

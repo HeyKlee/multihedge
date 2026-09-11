@@ -1,0 +1,11 @@
+audit/
+deploy/data/
+*.db
+*.db-*
+*.bak*
+.env
+.env.*
+.venv/
+__pycache__/
+.pytest_cache/
+.git/

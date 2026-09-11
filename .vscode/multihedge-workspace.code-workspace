@@ -1,0 +1,21 @@
+{
+  "folders": [
+    {
+      "path": "/home/kelly/multihedge"
+    }
+  ],
+  "settings": {
+    "claude.apiUrl": "https://openrouter.ai/api/v1",
+    "claude.defaultModel": "openrouter/free",
+    "claude.defaultProvider": "openrouter",
+    "claude.telemetry": false,
+    "terminal.integrated.defaultProfile.linux": "claude-openrouter",
+    "workbench.startupEditor": "none"
+  },
+  "extensions": {
+    "recommendations": [
+      "anthropic.claude-code",
+      "Kickbacksai.kickbacks-ai"
+    ]
+  }
+}

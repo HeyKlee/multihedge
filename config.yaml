@@ -1,0 +1,52 @@
+network: devnet
+coins:
+- symbol: SOL
+  name: Solana
+  mint: So11111111111111111111111111111111111111112
+- symbol: JUP
+  name: Jupiter
+  mint: JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN
+- symbol: ETH
+  name: Ethereum (Wormhole)
+  mint: 7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs
+paper:
+  starting_equity_usd: 24.0
+  position_fraction: 0.3
+  min_trade_value_usd: 1.0
+  fill_mode: jupiter_quote
+  quote_bps: 40
+  trade_cadence_s: 30
+  max_open_per_coin: 1
+  signal_dev_pct: 0.005   # mean-reversion / VWAP deviation trigger (was hardcoded 0.02; scalper sat flat for days)
+live:
+  gate_enabled: true
+  min_win_rate: 0.75
+  min_closed_trades: 20
+  min_aggregate_win_rate: 0.7
+  min_aggregate_trades: 50
+strategies:
+- name: momentum_breakout
+  enabled: true
+- name: mean_reversion
+  enabled: true
+- name: rsi_oversold
+  enabled: true
+- name: vwap_reversion
+  enabled: true
+reasoner:
+  POSITION_FRACTION: 0.5
+  TAKE_PROFIT: 0.015
+  STOP_LOSS: 0.015
+  MAX_HOLD_SECS: 10800
+  TRAIL_ARM: 0.008
+  TRAIL_DIST: 0.004
+  CONFIDENCE_MIN: 0.35
+grid:
+  enabled: true
+  starting_cash_nzd: 40
+  usd_per_nzd: 0.60
+  grid_levels: 8
+  range_pct: 0.04
+  min_trade_value_usd: 1.0
+  max_drawdown_kill: 0.20
+  flash_crash_drop: 0.94

@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+deploy/data/
+audit/
+optimization-results/
+*.bak*
+seen_whale_sigs.json
+confirm_live.flag
