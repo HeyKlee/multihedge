@@ -156,6 +156,37 @@ class ExecutionPolicyTests(unittest.TestCase):
             store.mark_reconciled(intent.order_id, {"input_delta": -1000000, "output_delta": 497500})
             self.assertEqual(store.get(intent.order_id)["state"], "RECONCILED")
 
+    def test_swap_instruction_must_be_jupiter_and_require_wallet_signature(self):
+        build = valid_build()
+        build["swapInstruction"]["programId"] = ep.TOKEN_PROGRAM
+        with self.assertRaisesRegex(ep.PolicyDenied, "Jupiter V6"):
+            ep.validate_build(valid_intent(), build, WALLET, 1000)
+        build = valid_build()
+        build["swapInstruction"]["accounts"][0]["isSigner"] = False
+        with self.assertRaisesRegex(ep.PolicyDenied, "wallet signer"):
+            ep.validate_build(valid_intent(), build, WALLET, 1000)
+
+    def test_usdc_route_denies_cleanup_and_other_instructions(self):
+        build = valid_build()
+        build["cleanupInstruction"] = ix(ep.TOKEN_PROGRAM)
+        with self.assertRaisesRegex(ep.PolicyDenied, "cleanup"):
+            ep.validate_build(valid_intent(), build, WALLET, 1000)
+        build = valid_build()
+        build["otherInstructions"] = [ix(ep.COMPUTE_BUDGET_PROGRAM)]
+        with self.assertRaisesRegex(ep.PolicyDenied, "other"):
+            ep.validate_build(valid_intent(), build, WALLET, 1000)
+
+    def test_restart_reopens_ledger_and_locks_orphaned_orders(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "orders.db"
+            first = ep.OrderStore(path)
+            intent = valid_intent()
+            self.assertTrue(first.reserve(intent))
+            second = ep.OrderStore(path)
+            self.assertFalse(second.reserve(intent))
+            self.assertEqual(second.recover_orphans(), 1)
+            self.assertEqual(second.get(intent.order_id)["state"], "REQUIRES_HUMAN")
+
 
 if __name__ == "__main__":
     unittest.main()

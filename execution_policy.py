@@ -190,6 +190,14 @@ def validate_build(
         raise PolicyDenied("missing swap instruction")
     if JUPITER_V6_PROGRAM not in program_ids:
         raise PolicyDenied("swap program is not Jupiter V6")
+    swap_accounts = (build.get("swapInstruction") or {}).get("accounts") or []
+    wallet_is_signer = any(a.get("isSigner") and a.get("pubkey") == wallet_pubkey for a in swap_accounts)
+    if not wallet_is_signer:
+        raise PolicyDenied("wallet signer required in swap instruction")
+    if build.get("cleanupInstruction"):
+        raise PolicyDenied("cleanup instruction is prohibited")
+    if build.get("otherInstructions"):
+        raise PolicyDenied("other instructions are prohibited")
 
     canonical = json.dumps(build, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     return ApprovedBuild(
@@ -286,3 +294,13 @@ class OrderStore:
         if row is None:
             raise KeyError(order_id)
         return dict(row)
+
+    def recover_orphans(self) -> int:
+        """Promote PENDING and SUBMITTED orders to REQUIRES_HUMAN on restart."""
+        with self._connect() as con:
+            count = con.execute(
+                "UPDATE live_orders SET state='REQUIRES_HUMAN',updated_ts=? "
+                "WHERE state IN ('PENDING','SUBMITTED')",
+                (time.time(),),
+            ).rowcount
+        return count or 0
