@@ -17,7 +17,8 @@ Mainnet authority is not enabled by this report. Kelly has explicitly designated
 - Chain execution module in deployed container: unavailable
 - Per-trade confirmation flag: absent
 - Sovereign mainnet authority default: disabled in code
-- Repository test result after independent-review fixes: 85 tests executed, 84 passed, 1 diagnostic module skipped, 0 failures, 0 errors
+- Repository regression result at 2026-09-11T12:07:32+12:00: 90 tests executed, 90 passed, 1 diagnostic module skipped, 0 failures, 0 errors
+- Local rollback baseline: Git branch `master`, baseline commit `36f5c15`, latest verified fix `a71a554`; secrets, databases, runtime data, and virtual environments are excluded from reachable Git history
 - Action-cycle audit: cycles 1 through 3 written and read back from `survival/survival_audit.db`; cycle 2 corrects the test-count wording recorded in cycle 1, and cycle 3 records the independent-review remediations
 - Audit mutation protection: SQLite denies application-level update and delete operations
 - Audit integrity: records are SHA-256 hash-chained, the complete chain is verified before every append, and corruption causes subsequent appends to fail closed
@@ -56,16 +57,17 @@ The workspace and deployed hashes matched for the original core runtime files be
 
 ## Critical activation blockers
 
-1. The workspace is not a Git repository. Changes are not yet version-controlled, reviewable through commits, or safely reversible through a repository rollback.
+1. RESOLVED: the workspace now has a local Git rollback baseline at `36f5c15`, with the verified execution-order fix at `a71a554`. No remote or independently stored release artifact exists yet, so host-loss recovery remains incomplete.
 2. The application container receives `SOLANA_PRIVATE_KEY` and `WALLET_PRIVATE_KEY` through its mounted `.env`. This violates the required signer isolation because the application process and shell can access signing secrets.
 3. Kelly has designated public address `CqsTCGDXQBeGUAPXHtGDFZ3cU1pqMWiuf9B6hxAZqaxw` as the intended live wallet, but there is not yet independent evidence that it is capped and separate from Kelly's primary wallet.
 4. Wallet valuation is now established for the current snapshot: 0.398282446 native SOL plus executable ETH liquidation value of 0.085828902 SOL, producing conservative treasury NZ$81.23 after haircut and estimated exit fee. This must be refreshed before every financial decision.
 5. No hardened external signer or deterministic exact-payload signing policy exists.
 6. The current bridge has an entry-only Jupiter swap path. It lacks a complete sell path, decoded instruction allowlisting, transaction simulation enforcement, exact-payload binding, quote-expiry handling, post-finality balance reconciliation, inventory accounting, and NZD reserve enforcement.
-7. No complete deterministic tests yet cover fee reserve, token sellability, quote failure and expiry, partial and full exits, daily and weekly drawdown, turnover, spend caps, restart recovery, database reconciliation, emergency pause, authenticated revival, or secret redaction.
-8. Discord is authenticated as the primary configured destination. No authenticated WhatsApp fallback destination is configured.
-9. No n8n automation registry, messaging escalation state machine, or durable leased heartbeat has been created for this sovereign agent.
-10. Existing paper results do not yet demonstrate positive net expectancy after all costs. The observed closed scalper paper P&L is negative.
+7. The copied `chain.py` still points `DB_PATH` at `autohedge.db`; `live_mode_enabled()` can query a missing `config` table and fail by exception rather than acting as a dependable MultiHedge fail-closed rail. It must be corrected and tested before any activation work.
+8. No complete deterministic tests yet cover fee reserve, token sellability, quote failure and expiry, partial and full exits, daily and weekly drawdown, turnover, spend caps, restart recovery, database reconciliation, emergency pause, authenticated revival, or secret redaction.
+9. Discord is authenticated as the primary configured destination. No authenticated WhatsApp fallback destination is configured.
+10. No n8n automation registry, messaging escalation state machine, or durable leased heartbeat has been created for this sovereign agent.
+11. Independent database and optimisation review found no strategy qualified for real capital: the untouched test set has 19 trades, walk-forward won 0 of 4 folds, aggregate scalper net P&L after modelled costs is approximately USD -7.91, reasoner is USD -27.40, whale trader is USD -0.42, and the grid result of approximately USD +0.07 is statistically inadequate. Real entry remains prohibited until the immutable promotion gates pass.
 
 ## Authority requested
 
@@ -84,11 +86,11 @@ No mainnet signing, wallet movement, paid service, account creation, outbound pr
 - Daily loss: at most the smaller of 5% of total treasury or NZ$3.00
 - Required expected net reward: at least 2 times expected loss
 - Signing authority in the new policy core: always false
-- Current verified risk capital: NZ$0.00 because real treasury data is unavailable
+- Snapshot risk capital: NZ$21.23 from the documented NZ$81.23 conservative treasury less the NZ$60.00 protected floor; this is stale-by-design and must be independently recomputed immediately before any financial decision
 
 ## Kill and rollback procedure
 
-Current immediate kill state is already effective because sovereign authority is disabled, the confirmation flag is absent, and the deployed chain module is unavailable.
+Current immediate kill state is already effective because sovereign authority is disabled, the confirmation flag is absent, and the deployed chain module is unavailable. Workspace readback reconfirmed `wallet_ready=false` at 2026-09-11T12:07:32+12:00.
 
 For the running paper service, the operational kill procedure is to stop the `multihedge` container. This was not executed because paper and advisory operation is authorised and non-spending. Before any future production deployment, the rollback procedure must be converted into a tested, version-controlled release rollback with a known-good image digest and database backup. No activation should occur until that procedure is exercised successfully.
 
@@ -103,4 +105,4 @@ For the running paper service, the operational kill procedure is to stop the `mu
 
 ## Next highest-value action
 
-Design and test a signer-isolation boundary that removes private keys from the application container, followed by deterministic conservative valuation and complete simulated buy, sell, and reconciliation paths. The system must remain `SHADOW_ONLY` while those controls are incomplete.
+Persist quote impact and counterfactual shadow outcomes, then accumulate at least 50 closed shadow opportunities overall and 20 for the promoted setup. A strategy must show positive cost-adjusted untouched-test expectancy and win a majority of walk-forward folds before execution engineering can graduate. In parallel, fix the `chain.py` database rail and design the signer-isolation, simulation, sell, idempotency, reserve, and reconciliation controls. The system must remain `SHADOW_ONLY` while either the strategy or execution gates are incomplete.
