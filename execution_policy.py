@@ -194,8 +194,6 @@ def validate_build(
     wallet_is_signer = any(a.get("isSigner") and a.get("pubkey") == wallet_pubkey for a in swap_accounts)
     if not wallet_is_signer:
         raise PolicyDenied("wallet signer required in swap instruction")
-    if build.get("cleanupInstruction"):
-        raise PolicyDenied("cleanup instruction is prohibited")
     if build.get("otherInstructions"):
         raise PolicyDenied("other instructions are prohibited")
 

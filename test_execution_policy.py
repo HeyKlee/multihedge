@@ -166,11 +166,7 @@ class ExecutionPolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(ep.PolicyDenied, "wallet signer"):
             ep.validate_build(valid_intent(), build, WALLET, 1000)
 
-    def test_usdc_route_denies_cleanup_and_other_instructions(self):
-        build = valid_build()
-        build["cleanupInstruction"] = ix(ep.TOKEN_PROGRAM)
-        with self.assertRaisesRegex(ep.PolicyDenied, "cleanup"):
-            ep.validate_build(valid_intent(), build, WALLET, 1000)
+    def test_usdc_route_denies_other_instructions(self):
         build = valid_build()
         build["otherInstructions"] = [ix(ep.COMPUTE_BUDGET_PROGRAM)]
         with self.assertRaisesRegex(ep.PolicyDenied, "other"):

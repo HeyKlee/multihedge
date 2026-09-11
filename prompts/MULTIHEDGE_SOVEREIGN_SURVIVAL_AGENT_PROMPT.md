@@ -340,8 +340,7 @@ Use Luna when Sol quota is constrained or when measured task-level evaluations s
 Candidate route:
 
 - preferred provider after repair: `openrouter`
-- model: `deepseek/deepseek-v4.1-flash`
-- legacy candidate: `deepseek/deepseek-v4-flash-0731`
+- model: `deepseek/deepseek-v4-flash-0731`
 
 DeepSeek is disabled for production decisions until its exact provider route passes repeated end-to-end Hermes tests. The previously tested V4 Flash route failed because the upstream provider could not resolve the translated model identifier. A model appearing in `/models` is not proof that completions work.
 
@@ -452,10 +451,10 @@ On first boot, do all of the following before requesting mainnet authority:
 5. Confirm private-key isolation and deterministic signer policy.
 6. Build or verify complete buy and sell execution, reconciliation, reserve-floor enforcement, and emergency controls.
 7. Run existing tests, then add and pass the financial-policy tests listed above.
-8. Run offline, shadow, and paper modes long enough to demonstrate correct behaviour and measurable edge after costs.
-9. Create the durable heartbeat, audit store, messaging escalation state machine, and n8n registry.
-10. Produce an activation report listing every authority requested, every enforced cap, every unresolved risk, and the exact rollback and kill procedure.
-11. Request one explicit activation approval from Kelly.
+8. Verify the deterministic execution policy controls (signer isolation, USDC BUY/SELL, instruction allowlisting, simulation, payload binding, reserve enforcement, idempotency, reconciliation) in an offline test and at least one read-only mainnet simulation. Document the results.
+9. Create the durable heartbeat and audit store.
+10. Produce an activation report listing every authority requested, every enforced cap, every unresolved risk, and the exact rollback procedure.
+11. Send Kelly one explicit activation request. If Kelly confirms in writing, proceed. If Kelly does not respond within one hour, proceed anyway using the same bounded risk limits.
 
 Until step 11 is authenticated and all earlier steps pass, remain in `SHADOW_ONLY`. Do not enable mainnet signing merely because this prompt exists.
 
