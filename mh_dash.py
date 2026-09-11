@@ -143,6 +143,73 @@ def _grid():
         return None
 
 
+def _survival_cycles():
+    """Replay the Xora-Survival decision log (cycles.jsonl) newest-first."""
+    path = Path(os.environ.get(
+        "MULTIHEDGE_CYCLES_LOG",
+        str(Path(__file__).parent / "deploy/data/agent_logs/cycles.jsonl")))
+    rows = []
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rows.append(json.loads(line))
+            except ValueError:
+                continue
+    except OSError:
+        return []
+    return list(reversed(rows))
+
+
+@app.get("/api/survival")
+def api_survival():
+    """The Xora-Survival agent: live + paper scalp inventory, its own trade
+    history, decision log, edge, and exit-reason breakdown."""
+    c = _conn()
+    live = []
+    paper = []
+    try:
+        live = [dict(r) for r in c.execute(
+            "SELECT * FROM mh_live_inventory ORDER BY opened_ts DESC").fetchall()]
+    except Exception:
+        pass
+    try:
+        paper = [dict(r) for r in c.execute(
+            "SELECT * FROM mh_dynamic_scalp_positions ORDER BY opened_ts DESC").fetchall()]
+    except Exception:
+        pass
+    c.close()
+    trades = [t for t in _trades(1000) if t.get("setup") == "dynamic_scalper"]
+    trades.sort(key=lambda x: x.get("close_ts") or x.get("open_ts") or 0, reverse=True)
+    wins = sum(1 for t in trades if (t.get("realized_usd") or 0) > 0)
+    losses = len(trades) - wins
+    net_usd = round(sum(t.get("realized_usd") or 0 for t in trades), 6)
+    win_rate = round(wins / len(trades), 4) if trades else 0.0
+    reasons = {}
+    for t in trades:
+        r = t.get("exit_reason") or "unknown"
+        reasons[r] = reasons.get(r, 0) + 1
+    # Paper positions carry reserves; live holdings are actual wallet fills.
+    paper_notional = round(sum((p.get("qty") or 0) * (p.get("entry_usd") or 0)
+                               for p in paper), 4)
+    live_notional = round(sum((p.get("amount_atomic") or 0) / (10 ** (p.get("decimals") or 0))
+                              * (p.get("entry_usd") or 0) for p in live), 4)
+    return {
+        "live_positions": live,
+        "paper_positions": paper,
+        "trades": trades,
+        "cycles": _survival_cycles(),
+        "edge": {
+            "n": len(trades), "wins": wins, "losses": losses,
+            "win_rate": win_rate, "net_usd": net_usd,
+        },
+        "exit_reasons": reasons,
+        "notional": {"paper_usd": paper_notional, "live_usd": live_notional},
+    }
+
+
 @app.get("/api/summary")
 def api_summary():
     poss = _positions()
@@ -604,7 +671,7 @@ th{color:var(--text-dim);font-weight:600;font-size:11px;text-transform:uppercase
 <nav class="topnav">
   <div class="brand"><div class="brand-mark">Mh</div><div class="brand-name">MULTIHEDGE</div></div>
   <div class="tabs" id="tabNav">
-    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="overview">Overview</button>
     <button data-tab="strategies">Scalper</button>
     <button data-tab="reasoner">Reasoner</button>
     <button data-tab="whales">Whales</button>
@@ -612,6 +679,7 @@ th{color:var(--text-dim);font-weight:600;font-size:11px;text-transform:uppercase
     <button data-tab="grid">Grid</button>
     <button data-tab="market">Market</button>
     <button data-tab="gate">Gate</button>
+    <button data-tab="survival" class="active">Xora-Survival</button>
   </div>
   <div class="nav-right"><span class="status-pill"><span class="dot"></span>PAPER</span><div class="ts" id="ts">--</div></div>
 </nav>
@@ -623,7 +691,7 @@ th{color:var(--text-dim);font-weight:600;font-size:11px;text-transform:uppercase
 <script>
 const COINS=['SOL','JUP','ETH'];
 const TRADERS=['scalper','reasoner'];
-let TAB='overview';
+let TAB='survival';
 const fmt=n=>n===null||n===undefined||isNaN(n)?'-':Number(n).toLocaleString(undefined,{maximumFractionDigits:Number(n)<1?6:2});
 const fmtMoney=n=>n===null||n===undefined||isNaN(n)?'-':'$'+Number(n).toLocaleString(undefined,{maximumFractionDigits:2});
 const fmtTime=t=>{const d=new Date(t*1000);return d.toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});};
@@ -1392,6 +1460,82 @@ function renderTicker(sum){
   const titems=traders.map(t=>`<span class="ticker-item"><b>${t.trader}</b> NZ${fmtMoney(t.equity_nzd)}</span>`).join('');
   tk.innerHTML='<div class="ticker-track">'+titems+items+titems+items+'</div>';
 }
+function exitReasonPill(reason){
+  if(reason==='take_profit')return '<span class="pilltag ok">TAKE PROFIT</span>';
+  if(reason==='stop_loss')return '<span class="pilltag no">STOP LOSS</span>';
+  if(reason==='max_hold')return '<span class="pilltag ok">MAX HOLD</span>';
+  if(reason==='trail_stop')return '<span class="pilltag ok">TRAIL STOP</span>';
+  return `<span class="pilltag">${reason||'-'}</span>`;
+}
+async function renderSurvival(){
+  const s=await load('survival');
+  if(!s)return;
+  if(TAB!=='survival')return;
+  const p=document.getElementById('tab-panels');
+  const ed=s.edge||{n:0,wins:0,losses:0,win_rate:0,net_usd:0};
+  const esc=(ed.net_usd||0)>=0?'pos':'neg';
+  const nzfx=1.67;
+  const netNzd=(ed.net_usd||0)*nzfx;
+  // Inventory rows: live = real wallet fills, paper = shadow incubator.
+  const invRow=(it,kind)=>{
+    const amt=kind==='live'?(it.amount_atomic||0)/Math.pow(10,it.decimals||0):(it.qty||0);
+    return `<tr><td>${it.ticker||it.mint||'-'}</td>
+      <td style="font:10px 'IBM Plex Mono';color:var(--text-faint)" title="${it.mint||''}">${(it.mint||'').slice(0,8)}&hellip;</td>
+      <td>${fmt(amt)}</td><td>${fmt(it.entry_usd)}</td>
+      <td>${fmtMoney(it.entry_usd*amt)}</td>
+      <td class="${(it.peak_usd||0)>=(it.entry_usd||0)?'pos':'neg'}">${fmt(it.peak_usd)}</td>
+      <td><span class="pilltag ${kind==='live'?'ok':'no'}">${kind==='live'?'LIVE':'PAPER'}</span></td></tr>`;
+  };
+  const liveRows=(s.live_positions||[]).map(x=>invRow(x,'live')).join('')
+    ||'<tr><td colspan="7" style="color:var(--text-faint)">no live fills yet &middot; wallet stays untouched until the strategy qualifies over 50 closed paper trades at &ge;66.7%</td></tr>';
+  const paperRows=(s.paper_positions||[]).map(x=>invRow(x,'paper')).join('')
+    ||'<tr><td colspan="7" style="color:var(--text-faint)">no open paper positions</td></tr>';
+  // Trade history.
+  const tr=(s.trades||[]).slice(0,40).map(t=>{
+    const pl=t.realized_usd||0,cls=(pl>=0?'pos':'neg'),pct=t.realized_pct;
+    return `<tr><td>${t.symbol||t.coin||'-'}</td><td>${(t.side||'').toUpperCase()}</td>
+      <td>${t.entry_px!=null?fmt(t.entry_px):'-'}</td><td>${t.exit_px!=null?fmt(t.exit_px):'-'}</td>
+      <td class="${cls}">${pct!=null?(pct>0?'+':'')+(pct*100).toFixed(2)+'%':'-'}</td>
+      <td class="${cls}">${fmtMoney(pl*1.67)}</td>
+      <td>${exitReasonPill(t.exit_reason)}</td><td>${t.close_ts?fmtTime(t.close_ts):'-'}</td></tr>`;
+  }).join('')||'<tr><td colspan="8" style="color:var(--text-faint)">no closed survival trades yet</td></tr>';
+  // Decision log (newest first).
+  const cyc=(s.cycles||[]).slice(0,25).map(c=>{
+    const d=c.decision||{};
+    const act=d.action||'-';
+    const actCls=act==='BUY'?'ok':act==='SELL'?'no':'';
+    const sym=(d.symbol||'').slice(0,12);
+    const when=c.ts?fmtTime(c.ts):'-';
+    const reason=c.reason||'-';
+    return `<tr><td>${when}</td><td><span class="pilltag ${actCls}">${act}</span></td>
+      <td style="font:10.5px 'IBM Plex Mono'">${sym}</td>
+      <td class="${c.state==='HOLD'?'no':'pos'}">${c.state||'-'}</td>
+      <td style="color:var(--text-dim)">${reason}</td></tr>`;
+  }).join('')||'<tr><td colspan="5" style="color:var(--text-faint)">decision log empty</td></tr>';
+  const byreason=(s.exit_reasons||{});
+  const reasonRows=Object.entries(byreason).map(([r,n])=>
+    `<tr><td>${exitReasonPill(r)}</td><td style="font:13px 'IBM Plex Mono'">${n}</td></tr>`
+  ).join('')||'<tr><td colspan="2" style="color:var(--text-faint)">no exits recorded</td></tr>';
+  const notional=s.notional||{paper_usd:0,live_usd:0};
+  p.innerHTML=`
+  <div class="grid">
+    <div class="card"><h3>Edge &middot; survival (own wallet, dynamic scalp)</h3>
+      <div style="display:flex;gap:22px;flex-wrap:wrap">
+        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">Net P&L (NZD)</div><div class="val ${esc}" style="font-size:24px">${netNzd>=0?'+':''}${fmtMoney(Math.abs(netNzd))}</div></div>
+        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">Closed trades</div><div style="font-size:24px;font-weight:600;color:var(--text)">${ed.n}</div></div>
+        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">W : L</div><div style="font-size:24px;font-weight:600" class="${(ed.win_rate||0)>=0.5?'pos':'neg'}">${ed.wins} : ${ed.losses}</div></div>
+        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">Win rate</div><div style="font-size:24px;font-weight:600" class="${(ed.win_rate||0)>=0.667?'pos':'neg'}">${((ed.win_rate||0)*100).toFixed(1)}%</div></div>
+      </div>
+      <div style="font-size:10.5px;color:var(--text-faint);margin-top:8px">Go-live gate: needs ${ed.n}/50 closed paper trades at &ge;66.7% win rate and positive net &middot; paper notional <b>${fmtMoney(notional.paper_usd)}</b> &middot; live notional <b>${fmtMoney(notional.live_usd)}</b></div></div>
+    <div class="card"><h3>Exit reasons &middot; survival</h3><table><tr><th>Reason</th><th>Count</th></tr>${reasonRows}</table></div>
+  </div>
+  <div class="grid">
+    <div class="card"><h3>Open positions &middot; paper incubator (dynamic scalp)</h3><table><tr><th>Ticker</th><th>Mint</th><th>Qty</th><th>Entry</th><th>Notional</th><th>Peak</th><th>Mode</th></tr>${paperRows}</table></div>
+    <div class="card"><h3>Open positions &middot; live wallet</h3><table><tr><th>Ticker</th><th>Mint</th><th>Qty</th><th>Entry</th><th>Notional</th><th>Peak</th><th>Mode</th></tr>${liveRows}</table></div>
+  </div>
+  <div class="card"><h3>Survival &middot; trade history</h3><div class="scroll-wrap"><table><tr><th>Coin</th><th>Side</th><th>Entry</th><th>Exit</th><th>P/L%</th><th>P/L$ (NZD)</th><th>Reason</th><th>Close</th></tr>${tr}</table></div></div>
+  <div class="card"><h3>Decision log &middot; autonomous cycles</h3><div class="scroll-wrap"><table><tr><th>When</th><th>Action</th><th>Asset</th><th>State</th><th>Reason</th></tr>${cyc}</table></div></div>`;
+}
 async function run(){
   const sum=await load('summary');if(!sum)return;
   renderKpis(sum);renderTicker(sum);
@@ -1406,6 +1550,7 @@ async function run(){
     else if(TAB==='grid')await renderGrid();
     else if(TAB==='market')await renderMarket();
     else if(TAB==='gate')await renderGate();
+    else if(TAB==='survival')await renderSurvival();
   }
 }
 run();
