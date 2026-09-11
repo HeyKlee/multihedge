@@ -11,10 +11,12 @@ services:
       - ./data/multihedge.db:/app/multihedge.db
       - ./data/agent.env:/app/.env:ro
       - ./data/agent_logs:/data/agent_logs:ro
+      - ../multihedge.db:/data/legacy_multihedge.db:ro
     environment:
       - TZ=Pacific/Auckland
       - PYTHONUNBUFFERED=1
       - MULTIHEDGE_CYCLES_LOG=/data/agent_logs/cycles.jsonl
+      - MULTIHEDGE_LEGACY_DB=/data/legacy_multihedge.db
     ports:
       # Dashboard UI. Host-reachable on 0.0.0.0 so XORA's Tailscale interface
       # (100.64.0.1:9052) can forward to it. Tailnet ACLs handle access control.

@@ -165,45 +165,83 @@ def _survival_cycles():
 
 @app.get("/api/survival")
 def api_survival():
-    """The Xora-Survival agent: live + paper scalp inventory, its own trade
-    history, decision log, edge, and exit-reason breakdown."""
+    """The Xora-Survival agent: real on-chain fills (live), open live inventory,
+    separately-labelled paper incubator activity, decision log, and edge."""
     c = _conn()
-    live = []
-    paper = []
+    live_positions, paper_positions = [], []
     try:
-        live = [dict(r) for r in c.execute(
+        live_positions = [dict(r) for r in c.execute(
             "SELECT * FROM mh_live_inventory ORDER BY opened_ts DESC").fetchall()]
     except Exception:
         pass
     try:
-        paper = [dict(r) for r in c.execute(
+        paper_positions = [dict(r) for r in c.execute(
             "SELECT * FROM mh_dynamic_scalp_positions ORDER BY opened_ts DESC").fetchall()]
     except Exception:
         pass
     c.close()
-    trades = [t for t in _trades(1000) if t.get("setup") == "dynamic_scalper"]
-    trades.sort(key=lambda x: x.get("close_ts") or x.get("open_ts") or 0, reverse=True)
-    wins = sum(1 for t in trades if (t.get("realized_usd") or 0) > 0)
-    losses = len(trades) - wins
-    net_usd = round(sum(t.get("realized_usd") or 0 for t in trades), 6)
-    win_rate = round(wins / len(trades), 4) if trades else 0.0
+
+    # ---- Real on-chain fills (live). This dashboard's canonical DB grows a
+    # mh_live_logs table the first time the signer settles a fill. ----
+    live_trades = []
+    try:
+        cc = _conn()
+        live_trades = [dict(r) for r in cc.execute(
+            "SELECT * FROM mh_live_logs ORDER BY ts DESC").fetchall()]
+        cc.close()
+    except Exception:
+        pass
+    # Legacy one-off manual fills were logged to the host-root engine ledger.
+    legacy = Path(os.environ.get("MULTIHEDGE_LEGACY_DB", str(Path(__file__).parent / "multihedge.db")))
+    try:
+        lc = sqlite3.connect(legacy)
+        lc.row_factory = sqlite3.Row
+        for r in lc.execute("SELECT * FROM mh_live_logs ORDER BY ts DESC").fetchall():
+            live_trades.append(dict(r))
+        lc.close()
+    except Exception:
+        pass
+    # De-dupe by signature, keep newest.
+    seen = set()
+    uniq = []
+    for t in live_trades:
+        sig = t.get("signature")
+        if sig in seen:
+            continue
+        seen.add(sig)
+        uniq.append(t)
+    live_trades = uniq
+
+    # ---- Paper incubator activity (closed + open) stays clearly separated. ----
+    paper_trades = [t for t in _trades(1000) if t.get("setup") == "dynamic_scalper"]
+    paper_trades.sort(key=lambda x: x.get("close_ts") or x.get("open_ts") or 0, reverse=True)
+
+    paper_wins = sum(1 for t in paper_trades if (t.get("realized_usd") or 0) > 0)
+    paper_net = round(sum(t.get("realized_usd") or 0 for t in paper_trades), 6)
     reasons = {}
-    for t in trades:
+    for t in paper_trades:
         r = t.get("exit_reason") or "unknown"
         reasons[r] = reasons.get(r, 0) + 1
-    # Paper positions carry reserves; live holdings are actual wallet fills.
+    paper_pos_rows = paper_positions
+    live_pos_rows = live_positions
     paper_notional = round(sum((p.get("qty") or 0) * (p.get("entry_usd") or 0)
-                               for p in paper), 4)
+                               for p in paper_pos_rows), 4)
     live_notional = round(sum((p.get("amount_atomic") or 0) / (10 ** (p.get("decimals") or 0))
-                              * (p.get("entry_usd") or 0) for p in live), 4)
+                              * (p.get("entry_usd") or 0) for p in live_pos_rows), 4)
     return {
-        "live_positions": live,
-        "paper_positions": paper,
-        "trades": trades,
+        "live_positions": live_pos_rows,
+        "paper_positions": paper_pos_rows,
+        "live_trades": live_trades,
+        "paper_trades": paper_trades,
         "cycles": _survival_cycles(),
         "edge": {
-            "n": len(trades), "wins": wins, "losses": losses,
-            "win_rate": win_rate, "net_usd": net_usd,
+            "live_n": len(live_trades),
+            "paper_n": len(paper_trades),
+            "paper_wins": paper_wins, "paper_losses": len(paper_trades) - paper_wins,
+            "paper_win_rate": round(paper_wins / len(paper_trades), 4) if paper_trades else 0.0,
+            "paper_net_usd": paper_net,
+            "live_fills": len([t for t in live_trades if t.get("side") == "BUY"]),
+            "live_closes": len([t for t in live_trades if t.get("side") == "SELL"]),
         },
         "exit_reasons": reasons,
         "notional": {"paper_usd": paper_notional, "live_usd": live_notional},
@@ -1472,10 +1510,10 @@ async function renderSurvival(){
   if(!s)return;
   if(TAB!=='survival')return;
   const p=document.getElementById('tab-panels');
-  const ed=s.edge||{n:0,wins:0,losses:0,win_rate:0,net_usd:0};
-  const esc=(ed.net_usd||0)>=0?'pos':'neg';
+  const ed=s.edge||{};
   const nzfx=1.67;
-  const netNzd=(ed.net_usd||0)*nzfx;
+  const esc=(ed.paper_net_usd||0)>=0?'pos':'neg';
+  const netNzd=(ed.paper_net_usd||0)*nzfx;
   // Inventory rows: live = real wallet fills, paper = shadow incubator.
   const invRow=(it,kind)=>{
     const amt=kind==='live'?(it.amount_atomic||0)/Math.pow(10,it.decimals||0):(it.qty||0);
@@ -1490,15 +1528,31 @@ async function renderSurvival(){
     ||'<tr><td colspan="7" style="color:var(--text-faint)">no live fills yet &middot; wallet stays untouched until the strategy qualifies over 50 closed paper trades at &ge;66.7%</td></tr>';
   const paperRows=(s.paper_positions||[]).map(x=>invRow(x,'paper')).join('')
     ||'<tr><td colspan="7" style="color:var(--text-faint)">no open paper positions</td></tr>';
-  // Trade history.
-  const tr=(s.trades||[]).slice(0,40).map(t=>{
+  // Wash signature for display (full sig shown in tooltip).
+  const sigShort=sig=>sig?`<span style="font:10px 'IBM Plex Mono';color:var(--text-faint)" title="${sig}">${sig.slice(0,10)}&hellip;</span>`:'-';
+  // REAL on-chain fill history (live). One row per settled mainnet tx.
+  const liveTr=(s.live_trades||[]).map(t=>{
+    let detail={};
+    try{detail=(typeof t.details==='string')?JSON.parse(t.details):(t.details||{});}catch(e){}
+    const out=detail.out_atomic;
+    const side=(t.side||'').toUpperCase();
+    // coins in live_logs are display tickers here (SOL/JUP), not mints.
+    const token=t.coin||t.symbol||'-';
+    return `<tr><td>${token}</td><td>${side}</td>
+      <td>${fmtTime(t.ts)}</td>
+      <td>${t.signature?sigShort(t.signature):'-'}</td>
+      <td class="${(detail.state||'').toUpperCase()==='RECONCILED'?'pos':'no'}">${detail.state||'-'}</td>
+      <td style="color:var(--text-dim)">${detail.order_id||'-'}</td></tr>`;
+  }).join('')||'<tr><td colspan="6" style="color:var(--text-faint)">no on-chain fills on the survival wallet yet</td></tr>';
+  // Paper history (shadow incubator) — explicitly labelled, never presented as live.
+  const paperTr=(s.paper_trades||[]).slice(0,40).map(t=>{
     const pl=t.realized_usd||0,cls=(pl>=0?'pos':'neg'),pct=t.realized_pct;
     return `<tr><td>${t.symbol||t.coin||'-'}</td><td>${(t.side||'').toUpperCase()}</td>
       <td>${t.entry_px!=null?fmt(t.entry_px):'-'}</td><td>${t.exit_px!=null?fmt(t.exit_px):'-'}</td>
       <td class="${cls}">${pct!=null?(pct>0?'+':'')+(pct*100).toFixed(2)+'%':'-'}</td>
       <td class="${cls}">${fmtMoney(pl*1.67)}</td>
-      <td>${exitReasonPill(t.exit_reason)}</td><td>${t.close_ts?fmtTime(t.close_ts):'-'}</td></tr>`;
-  }).join('')||'<tr><td colspan="8" style="color:var(--text-faint)">no closed survival trades yet</td></tr>';
+      <td>${exitReasonPill(t.exit_reason)}</td><td>${t.close_ts?fmtTime(t.close_ts):'-'}</td><td><span class="pilltag">PAPER</span></td></tr>`;
+  }).join('')||'<tr><td colspan="9" style="color:var(--text-faint)">no closed paper incubator trades yet</td></tr>';
   // Decision log (newest first).
   const cyc=(s.cycles||[]).slice(0,25).map(c=>{
     const d=c.decision||{};
@@ -1515,25 +1569,34 @@ async function renderSurvival(){
   const byreason=(s.exit_reasons||{});
   const reasonRows=Object.entries(byreason).map(([r,n])=>
     `<tr><td>${exitReasonPill(r)}</td><td style="font:13px 'IBM Plex Mono'">${n}</td></tr>`
-  ).join('')||'<tr><td colspan="2" style="color:var(--text-faint)">no exits recorded</td></tr>';
+  ).join('')||'<tr><td colspan="2" style="color:var(--text-faint)">no paper exits recorded</td></tr>';
   const notional=s.notional||{paper_usd:0,live_usd:0};
+  const liveN=ed.live_fills||0, liveC=ed.live_closes||0;
   p.innerHTML=`
   <div class="grid">
-    <div class="card"><h3>Edge &middot; survival (own wallet, dynamic scalp)</h3>
+    <div class="card"><h3>Live wallet &middot; Xora-Survival (real on-chain fills)</h3>
       <div style="display:flex;gap:22px;flex-wrap:wrap">
-        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">Net P&L (NZD)</div><div class="val ${esc}" style="font-size:24px">${netNzd>=0?'+':''}${fmtMoney(Math.abs(netNzd))}</div></div>
-        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">Closed trades</div><div style="font-size:24px;font-weight:600;color:var(--text)">${ed.n}</div></div>
-        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">W : L</div><div style="font-size:24px;font-weight:600" class="${(ed.win_rate||0)>=0.5?'pos':'neg'}">${ed.wins} : ${ed.losses}</div></div>
-        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">Win rate</div><div style="font-size:24px;font-weight:600" class="${(ed.win_rate||0)>=0.667?'pos':'neg'}">${((ed.win_rate||0)*100).toFixed(1)}%</div></div>
+        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">On-chain fills</div><div style="font-size:24px;font-weight:600;color:var(--text)">${ed.live_n||0}</div></div>
+        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">Buys</div><div style="font-size:20px;font-weight:600" class="${liveN?"pos":''}">${liveN}</div></div>
+        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">Closes/Sells</div><div style="font-size:20px;font-weight:600">${liveC}</div></div>
       </div>
-      <div style="font-size:10.5px;color:var(--text-faint);margin-top:8px">Go-live gate: needs ${ed.n}/50 closed paper trades at &ge;66.7% win rate and positive net &middot; paper notional <b>${fmtMoney(notional.paper_usd)}</b> &middot; live notional <b>${fmtMoney(notional.live_usd)}</b></div></div>
-    <div class="card"><h3>Exit reasons &middot; survival</h3><table><tr><th>Reason</th><th>Count</th></tr>${reasonRows}</table></div>
+      <div style="font-size:10.5px;color:var(--text-faint);margin-top:8px">live notional <b>${fmtMoney(notional.live_usd)}</b> &middot; real wallet fills only (no paper). When the strategy clears the gate this is where the survival wallet acts.</div></div>
+    <div class="card"><h3>Paper incubator &middot; shadow (go-live gate)</h3>
+      <div style="display:flex;gap:22px;flex-wrap:wrap">
+        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">Paper net</div><div class="val ${esc}" style="font-size:24px">${netNzd>=0?'+':''}${fmtMoney(Math.abs(netNzd))}</div></div>
+        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">Closed</div><div style="font-size:24px;font-weight:600;color:var(--text)">${ed.paper_n||0}</div></div>
+        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">W : L</div><div style="font-size:24px;font-weight:600" class="${(ed.paper_win_rate||0)>=0.5?'pos':'neg'}">${ed.paper_wins||0} : ${ed.paper_losses||0}</div></div>
+        <div><div class="lbl" style="font-size:11px;color:var(--text-dim)">Win rate</div><div style="font-size:24px;font-weight:600" class="${(ed.paper_win_rate||0)>=0.667?'pos':'neg'}">${((ed.paper_win_rate||0)*100).toFixed(1)}%</div></div>
+      </div>
+      <div style="font-size:10.5px;color:var(--text-faint);margin-top:8px">Go-live gate: needs ${ed.paper_n||0}/50 closed paper trades at &ge;66.7% win rate and positive net &middot; paper notional <b>${fmtMoney(notional.paper_usd)}</b></div></div>
   </div>
   <div class="grid">
-    <div class="card"><h3>Open positions &middot; paper incubator (dynamic scalp)</h3><table><tr><th>Ticker</th><th>Mint</th><th>Qty</th><th>Entry</th><th>Notional</th><th>Peak</th><th>Mode</th></tr>${paperRows}</table></div>
-    <div class="card"><h3>Open positions &middot; live wallet</h3><table><tr><th>Ticker</th><th>Mint</th><th>Qty</th><th>Entry</th><th>Notional</th><th>Peak</th><th>Mode</th></tr>${liveRows}</table></div>
+    <div class="card"><h3>Open paper incubator positions</h3><table><tr><th>Ticker</th><th>Mint</th><th>Qty</th><th>Entry</th><th>Notional</th><th>Peak</th><th>Mode</th></tr>${paperRows}</table></div>
+    <div class="card"><h3>Open live wallet positions</h3><table><tr><th>Ticker</th><th>Mint</th><th>Qty</th><th>Entry</th><th>Notional</th><th>Peak</th><th>Mode</th></tr>${liveRows}</table></div>
   </div>
-  <div class="card"><h3>Survival &middot; trade history</h3><div class="scroll-wrap"><table><tr><th>Coin</th><th>Side</th><th>Entry</th><th>Exit</th><th>P/L%</th><th>P/L$ (NZD)</th><th>Reason</th><th>Close</th></tr>${tr}</table></div></div>
+  <div class="card"><h3>Exit reasons &middot; paper incubator</h3><table><tr><th>Reason</th><th>Count</th></tr>${reasonRows}</table></div>
+  <div class="card"><h3>Survival &middot; live trade history (on-chain)</h3><div class="scroll-wrap"><table><tr><th>Coin</th><th>Side</th><th>When</th><th>Signature</th><th>State</th><th>Order</th></tr>${liveTr}</table></div></div>
+  <div class="card"><h3>Paper incubator &middot; trade history</h3><div class="scroll-wrap"><table><tr><th>Coin</th><th>Side</th><th>Entry</th><th>Exit</th><th>P/L%</th><th>P/L$ (NZD)</th><th>Reason</th><th>Close</th><th>Mode</th></tr>${paperTr}</table></div></div>
   <div class="card"><h3>Decision log &middot; autonomous cycles</h3><div class="scroll-wrap"><table><tr><th>When</th><th>Action</th><th>Asset</th><th>State</th><th>Reason</th></tr>${cyc}</table></div></div>`;
 }
 async function run(){
