@@ -57,6 +57,7 @@ def run_tick(cfg):
     max_open = p.get("max_open_per_coin", 1)
 
     results = []
+    _ensure_pxhist()
     for coin_cfg in cfg.get("coins", []):
         sym = coin_cfg["symbol"]
         mint = coin_cfg["mint"]
@@ -101,28 +102,8 @@ def run_tick(cfg):
         finally:
             con.close()
 
-        # Run agent pipeline with exception handling and fallbacks
-        try:
-            analyst = AnalystAgent()
-            analyst_result = analyst.run(sym, price_ctx, news_ctx)
-        except Exception as e_agent:
-            analyst_result = {"bias_read": "neutral", "news_signal": 0.0,
-                              "price_deviation_pct": price_ctx["deviation_pct"], "recommendation": "hold"}
-
-        try:
-            researcher = ResearcherAgent()
-            researcher_result = researcher.run(sym, analyst_result)
-        except Exception:
-            researcher_result = {"bull_case_score": 0.5, "bear_case_score": 0.5,
-                                 "debate_outcome": "tie", "confidence": 0.5}
-
-        try:
-            trader = TraderAgent()
-            risk_state = {"POSITION_FRACTION": cfg.get("reasoner",{}).get("POSITION_FRACTION",0.5)}
-            trader_result = trader.run(sym, researcher_result, risk_state)
-        except Exception:
-            trader_result = {"coin": sym, "action": "hold", "quantity_pct": 0.0,
-                             "confidence": 0.0, "reason": "agent_error"}
+        # Agent inference is asynchronous and advisory. It is submitted only
+        # after deterministic exit handling so it can never delay a safe exit.
 
         # 3. Insert current price into history for scalper signals (existing logic)
         con = paper._connect()
@@ -155,6 +136,12 @@ def run_tick(cfg):
                 closed_here += 1
                 results.append({"coin": sym, "action": "close",
                                 "reason": reason, "pct": round(r["pct"], 4)})
+
+        risk_state = {
+            "POSITION_FRACTION": cfg.get("reasoner", {}).get("POSITION_FRACTION", 0.5),
+            "paused": paper.is_paused(paper.TRADER_SCALPER),
+        }
+        agents.submit_pipeline(sym, price_ctx, news_ctx, risk_state)
 
         # 5. open new position if signal calls and we have room
         paper.kill_switch_check(paper.TRADER_SCALPER,
