@@ -86,6 +86,20 @@ class ExecutionPolicyTests(unittest.TestCase):
                 {USDC, JUP},
             )
 
+    def test_sol_is_fees_only_and_never_a_trading_leg(self):
+        intent = valid_intent()
+        with self.assertRaisesRegex(ep.PolicyDenied, "fees-only"):
+            ep.validate_intent(
+                ep.TradeIntent(**{**intent.__dict__, "output_mint": SOL}),
+                {SOL, USDC, JUP},
+            )
+        with self.assertRaisesRegex(ep.PolicyDenied, "fees-only"):
+            ep.validate_intent(
+                ep.TradeIntent(**{**intent.__dict__, "side": "SELL", "input_mint": SOL,
+                                  "output_mint": USDC}),
+                {SOL, USDC, JUP},
+            )
+
     def test_operational_sol_reserve_has_measured_headroom(self):
         self.assertEqual(ep.MIN_FEE_RESERVE_SOL, ep.Decimal("0.01"))
         measured = ep.calculate_fee_reserve_sol(

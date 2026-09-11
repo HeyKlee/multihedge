@@ -9,7 +9,7 @@ services:
     # pidfiles, WAL are recreated fresh in the writable layer each start.
     volumes:
       - ./data/multihedge.db:/app/multihedge.db
-      - ./data/.env:/app/.env
+      - ./data/agent.env:/app/.env:ro
     environment:
       - TZ=Pacific/Auckland
       - PYTHONUNBUFFERED=1

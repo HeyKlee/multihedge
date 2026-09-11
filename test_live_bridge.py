@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import live_bridge
 import paper  # we need to mock paper.paper_gate_status as well
+from execution_policy import PolicyDenied, TradeIntent
 
 
 class TestLiveBridge(unittest.TestCase):
@@ -192,6 +193,22 @@ class TestLiveBridge(unittest.TestCase):
         self.confirm_flag.touch()
         status = live_bridge.status(self.cfg)
         self.assertTrue(status["wallet_ready"])
+
+    def test_explicit_buy_requires_strategy_authorization_before_key_load(self):
+        intent = TradeIntent(
+            order_id="auto:1:JUP:BUY", side="BUY", input_mint=live_bridge.RESERVE_MINT,
+            output_mint="JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+            amount_atomic=1_000_000, slippage_bps=50,
+            strategy="deepseek_v4_flash_autonomous", expected_reward_nzd="0.30",
+            expected_loss_nzd="0.10",
+        )
+        self.confirm_flag.touch()
+        with self.assertRaisesRegex(PolicyDenied, "strategy evidence"):
+            live_bridge.execute_live_intent(self.cfg, intent, entry_authorized=False)
+        self.chain_mock.get_keypair.assert_not_called()
+
+    def test_order_ledger_path_is_durable_not_tmp(self):
+        self.assertNotIn("/tmp", str(live_bridge.LIVE_ORDER_DB))
 
 
 if __name__ == '__main__':

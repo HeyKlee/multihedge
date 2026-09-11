@@ -6,9 +6,11 @@ coins:
 - symbol: JUP
   name: Jupiter
   mint: JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN
+  decimals: 6
 - symbol: ETH
   name: Ethereum (Wormhole)
   mint: 7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs
+  decimals: 8
 paper:
   starting_equity_usd: 24.0
   position_fraction: 0.3
@@ -28,6 +30,13 @@ live:
   min_closed_trades: 20
   min_aggregate_win_rate: 0.6667
   min_aggregate_trades: 50
+  autonomous:
+    enabled: true
+    model: deepseek/deepseek-v4-flash-0731
+    cycle_seconds: 900
+    max_buy_usdc: 1.0
+    min_confidence: 0.70
+    slippage_bps: 50
 strategies:
 - name: momentum_breakout
   enabled: true

@@ -20,6 +20,7 @@ TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 ASSOCIATED_TOKEN_PROGRAM = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
 JUPITER_V6_PROGRAM = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
 USDC_MAINNET_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+NATIVE_SOL_MINT = "So11111111111111111111111111111111111111112"
 ALLOWED_PROGRAMS = frozenset(
     {SYSTEM_PROGRAM, COMPUTE_BUDGET_PROGRAM, TOKEN_PROGRAM, ASSOCIATED_TOKEN_PROGRAM, JUPITER_V6_PROGRAM}
 )
@@ -108,6 +109,8 @@ def validate_intent(intent: TradeIntent, approved_mints: set[str] | frozenset[st
         raise PolicyDenied("BUY input must be mainnet USDC")
     if intent.side == "SELL" and intent.output_mint != USDC_MAINNET_MINT:
         raise PolicyDenied("SELL output must be mainnet USDC")
+    if NATIVE_SOL_MINT in {intent.input_mint, intent.output_mint}:
+        raise PolicyDenied("SOL is fees-only and cannot be a trading leg")
     if intent.input_mint == USDC_MAINNET_MINT and intent.output_mint == USDC_MAINNET_MINT:
         raise PolicyDenied("USDC cannot trade to itself")
     if isinstance(intent.amount_atomic, bool) or not isinstance(intent.amount_atomic, int) or intent.amount_atomic <= 0:

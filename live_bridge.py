@@ -33,6 +33,9 @@ except ImportError:
     chain = None
 
 DB_PATH = Path(__file__).parent / "multihedge.db"
+LIVE_ORDER_DB = Path(os.environ.get(
+    "MULTIHEDGE_LIVE_ORDERS_DB", str(Path(__file__).parent / "multihedge_live_orders.db")
+))
 CONFIRM_FLAG = Path(__file__).parent / "confirm_live.flag"
 REAL_SAFE_SOL = 0.021  # keep min SOL for rent + fees
 LIVE_FRACTION = 0.10   # commit up to 10% of real balance per swap
@@ -184,136 +187,124 @@ def execute_swap(coin_cfg, side="LONG", cfg=None):
     raise RuntimeError("live blocked: isolated signer service is required")
 
 
-def live_execute(cfg):
-    """Execute a live trade using the deterministic signer pipeline.
-
-    Requires Solana components and a valid Jupiter API key. Returns the
-    reconciled execution result or raises PolicyDenied.
-    """
-    try:
-        import chain as chain_mod
-        from solana_signer_backend import SolanaSignerBackend
-        from signer_core import SignerCore
-        from execution_policy import TradeIntent, OrderStore, calculate_fee_reserve_sol
-    except ImportError as exc:
-        raise RuntimeError(f"live execution components unavailable: {exc}")
-
-    from pathlib import Path
+def _load_execution_env() -> dict:
     env_paths = [Path(__file__).resolve().parent / ".env",
                  Path(__file__).resolve().parent / "deploy/data/.env",
                  Path(__file__).resolve().parent.parent / ".env"]
-    env_vals = {}
+    values = {}
     for env_path in env_paths:
         if env_path.exists():
             for line in env_path.read_text(errors="ignore").splitlines():
                 if "=" in line and not line.lstrip().startswith("#"):
-                    k, v = line.split("=", 1)
-                    env_vals[k.strip()] = v.strip().strip('"').strip("'")
+                    key, value = line.split("=", 1)
+                    values[key.strip()] = value.strip().strip('"').strip("'")
+    return values
 
-    api_key = env_vals.get("JUPITER_API_KEY", "") or os.getenv("JUPITER_API_KEY", "")
-    rpc_url = env_vals.get("SOLANA_RPC_URL", "") or os.getenv("SOLANA_RPC_URL", "https://api.mainnet-beta.solana.com")
-    net = env_vals.get("SOLANA_NETWORK", "") or os.getenv("SOLANA_NETWORK", "mainnet-beta")
 
-    wallet_pubkey = chain_mod.get_keypair()[0].pubkey()
-    wallet_str = str(wallet_pubkey)
-    approved_mints = {cfg.get("live", {}).get("reserve_mint", RESERVE_MINT)}
+def execute_live_intent(cfg, intent, *, entry_authorized=False):
+    """Execute one pre-sized intent through the deterministic signer pipeline."""
+    from execution_policy import PolicyDenied
 
-    # 1. Build a small trade intent.
-    # Use the first non-fee coin in config as the target.
-    # SOL is fees-only and must never be a trading target.
-    NATIVE_SOL = "So11111111111111111111111111111111111111112"
-    coins = [c for c in cfg.get("coins", []) if c["mint"] != NATIVE_SOL]
-    if not coins:
-        raise RuntimeError("no tradeable coins configured (all coins are SOL/fee reserve)")
-    target = coins[0]
-    target_mint = target["mint"]
-    approved_mints.add(target_mint)
-    target_symbol = target.get("symbol", "UNKNOWN")
+    if not SOVEREIGN_MAINNET_AUTHORITY_ENABLED or not ISOLATED_SIGNER_READY:
+        raise PolicyDenied("live authority or signer is disabled")
+    if not CONFIRM_FLAG.exists():
+        raise PolicyDenied("confirmation flag missing")
+    if intent.side == "BUY" and entry_authorized is not True:
+        raise PolicyDenied("strategy evidence has not authorized a new entry")
 
-    # Size: use 1 USDC (1_000_000 atomic for 6-decimal USDC)
-    atomic_amount = 1_000_000  # 1 USDC
+    try:
+        import chain as chain_mod
+        from solana_signer_backend import SolanaSignerBackend
+        from signer_core import SignerCore
+        from execution_policy import OrderStore, calculate_fee_reserve_sol
+    except ImportError as exc:
+        raise RuntimeError(f"live execution components unavailable: {exc}")
 
-    intent = TradeIntent(
-        order_id=f"live:{target_symbol}:buy:{int(time.time())}",
-        side="BUY",
-        input_mint=RESERVE_MINT,
-        output_mint=target_mint,
-        amount_atomic=atomic_amount,
-        slippage_bps=50,
-        strategy="mainnet_activation",
-        expected_reward_nzd="0.30",
-        expected_loss_nzd="0.10",
+    values = _load_execution_env()
+    api_key = values.get("JUPITER_API_KEY", "") or os.getenv("JUPITER_API_KEY", "")
+    rpc_url = values.get("SOLANA_RPC_URL", "") or os.getenv(
+        "SOLANA_RPC_URL", "https://api.mainnet-beta.solana.com"
     )
+    network = values.get("SOLANA_NETWORK", "") or os.getenv("SOLANA_NETWORK", "mainnet-beta")
+    if network != "mainnet-beta" or not chain_mod.live_mode_enabled():
+        raise PolicyDenied("mainnet live mode is not enabled")
 
-    # 2. Set up treasury valuation and fee reserve
-    import urllib.request, json as _json
-    sol_usd = 100.0
-    _nzd_per_usd = 1.72
-    try:
-        sol_usd_env = os.getenv("XORA_SOL_USD")
-        if sol_usd_env:
-            sol_usd = float(sol_usd_env)
-    except Exception:
-        pass
-    try:
-        nzd_env = os.getenv("XORA_NZD_PER_USD")
-        if nzd_env:
-            _nzd_per_usd = float(nzd_env)
-    except Exception:
-        pass
+    auto = cfg.get("live", {}).get("autonomous", {})
+    if intent.side == "BUY":
+        maximum = int(float(auto.get("max_buy_usdc", 1.0)) * 1_000_000)
+        if intent.amount_atomic > maximum:
+            raise PolicyDenied("autonomous buy exceeds configured maximum")
 
-    sol_bal = chain_mod.get_balance(pubkey_str=wallet_str, network=net, rpc_url=rpc_url)
-    usdc_bal = chain_mod.get_token_balance(RESERVE_MINT, pubkey_str=wallet_str, network=net, rpc_url=rpc_url)
-    treasury_usd = sol_bal * sol_usd + usdc_bal
-    treasury_nzd = treasury_usd * _nzd_per_usd
-    post_trade_nzd = (treasury_usd - atomic_amount / 1e6) * _nzd_per_usd
+    keypair = chain_mod.get_keypair()[0]
+    if keypair is None:
+        raise PolicyDenied("signer key unavailable")
+    wallet_str = str(keypair.pubkey())
+    approved_mints = {cfg.get("live", {}).get("reserve_mint", RESERVE_MINT)}
+    approved_mints.update(c["mint"] for c in cfg.get("coins", []))
+
+    try:
+        sol_usd = float(os.environ["XORA_SOL_USD"])
+        nzd_per_usd = float(os.environ["XORA_NZD_PER_USD"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise PolicyDenied("fresh treasury rates are required") from exc
+    if sol_usd <= 0 or nzd_per_usd <= 0:
+        raise PolicyDenied("fresh treasury rates are invalid")
+
+    sol_balance = chain_mod.get_balance(
+        pubkey_str=wallet_str, network=network, rpc_url=rpc_url
+    )
+    usdc_balance = chain_mod.get_token_balance(
+        RESERVE_MINT, pubkey_str=wallet_str, network=network, rpc_url=rpc_url
+    )
+    treasury_usd = sol_balance * sol_usd + usdc_balance
+    treasury_nzd = treasury_usd * nzd_per_usd
+    projected_usd = treasury_usd
+    if intent.side == "BUY":
+        projected_usd -= intent.amount_atomic / 1_000_000
+    projected_nzd = projected_usd * nzd_per_usd
 
     fee_reserve = calculate_fee_reserve_sol(
-        priority_micro_lamports_per_cu=0,
-        transactions=10,
+        priority_micro_lamports_per_cu=0, transactions=10,
         compute_units_per_transaction=200_000,
-        token_account_rent_lamports=1_855_569,
-        token_accounts=2,
+        token_account_rent_lamports=1_855_569, token_accounts=2,
         contingency_multiplier="2",
     )
 
-    # 3. Build and execute through the signer pipeline
-    def _keypair_loader():
-        return chain_mod.get_keypair()[0]
-
     backend = SolanaSignerBackend(
-        wallet_pubkey=wallet_str,
-        rpc_url=rpc_url,
-        api_key=api_key,
-        keypair_loader=_keypair_loader,
+        wallet_pubkey=wallet_str, rpc_url=rpc_url, api_key=api_key,
+        keypair_loader=lambda: keypair,
     )
-    order_store = OrderStore(Path("/tmp/multihedge_live_orders.db"))
+    order_store = OrderStore(LIVE_ORDER_DB)
+    order_store.recover_orphans()
     core = SignerCore(
-        wallet_pubkey=wallet_str,
-        approved_mints=approved_mints,
-        order_store=order_store,
-        backend=backend,
+        wallet_pubkey=wallet_str, approved_mints=approved_mints,
+        order_store=order_store, backend=backend,
     )
-
     result = core.execute(
-        intent,
-        pre_treasury_nzd=str(treasury_nzd),
-        projected_post_nzd=str(post_trade_nzd),
-        fee_reserve_sol=str(sol_bal),
-        required_fee_reserve_sol=str(fee_reserve),
-        treasury_verified=True,
+        intent, pre_treasury_nzd=str(treasury_nzd),
+        projected_post_nzd=str(projected_nzd), fee_reserve_sol=str(sol_balance),
+        required_fee_reserve_sol=str(fee_reserve), treasury_verified=True,
         treasury_age_seconds=0,
     )
-
-    _log(target_symbol, intent.side, atomic_amount / 1e6,
-         result["signature"],
-         {"net": net, "state": result["state"],
-          "out_atomic": result["min_output_atomic"],
-          "programs": result["program_ids"],
-          "sim_units": result["simulation_units"],
-          "reconciliation": result["reconciliation"]})
-
+    symbol = next(
+        (c.get("symbol") for c in cfg.get("coins", [])
+         if c.get("mint") in {intent.input_mint, intent.output_mint}
+         and c.get("mint") != RESERVE_MINT),
+        "UNKNOWN",
+    )
+    _log(symbol, intent.side, intent.amount_atomic, result["signature"], {
+        "net": network, "state": result["state"],
+        "order_id": intent.order_id, "out_atomic": result["min_output_atomic"],
+        "programs": result["program_ids"], "sim_units": result["simulation_units"],
+        "reconciliation": result["reconciliation"],
+    })
     return result
+
+
+def live_execute(cfg):
+    """Legacy manual helper retained fail-closed for new entries."""
+    from execution_policy import PolicyDenied
+    raise PolicyDenied("manual live helper disabled; submit an explicit authorized intent")
 
 
 def status(cfg):
