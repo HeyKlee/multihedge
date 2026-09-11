@@ -26,7 +26,7 @@ USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 NATIVE_SOL_MINT = "So11111111111111111111111111111111111111112"
 WALLET_PUBKEY = "CqsTCGDXQBeGUAPXHtGDFZ3cU1pqMWiuf9B6hxAZqaxw"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-AUTONOMOUS_MODEL = "nvidia/nemotron-3-super-120b-a12b"
+AUTONOMOUS_MODEL = "deepseek/deepseek-v4-flash-0731"
 DECISION_FIELDS = frozenset(
     {"action", "symbol", "confidence", "expected_reward_nzd", "expected_loss_nzd"}
 )
