@@ -47,7 +47,8 @@ class LiveInventoryTests(unittest.TestCase):
         self.assertIsNone(li.get_holding(self.db, MINT))
 
     def test_take_profit_stop_loss_and_max_hold_force_sell(self):
-        cases = [(.001031, 1060, "take_profit"), (.000979, 1060, "stop_loss"),
+        # Meme thresholds: 20% TP, -10% SL, 900s max hold (entry .001).
+        cases = [(.00122, 1060, "take_profit"), (.00089, 1060, "stop_loss"),
                  (.001, 1901, "max_hold")]
         for price, now, reason in cases:
             with self.subTest(reason=reason):

@@ -15,8 +15,8 @@ MAX_ENTRY_5M_PCT = 8.0
 MIN_BUY_SELL_RATIO = 1.05
 
 # Memecoin scalp (fast) defaults; per-coin params come from live_inventory.
-TAKE_PROFIT_PCT = 0.02
-STOP_LOSS_PCT = -0.01
+TAKE_PROFIT_PCT = 0.20
+STOP_LOSS_PCT = -0.10
 TRAIL_ARM_PCT = 0.02
 TRAIL_DISTANCE_PCT = 0.01
 MAX_HOLD_SECONDS = 900

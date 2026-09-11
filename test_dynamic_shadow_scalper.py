@@ -35,7 +35,8 @@ class DynamicShadowScalperTests(unittest.TestCase):
 
     def test_take_profit_closes_and_records_mint_evidence(self):
         ds.tick(self.db, [candidate()], now=1000)
-        result = ds.tick(self.db, [candidate(price=.001031, change5=1)], now=1060)
+        # Meme TP is 20%: entry .001, a 22% move closes it.
+        result = ds.tick(self.db, [candidate(price=.00122, change5=1)], now=1060)
         self.assertEqual(result["closed"], 1)
         with sqlite3.connect(self.db) as con:
             trade = con.execute(
@@ -43,12 +44,13 @@ class DynamicShadowScalperTests(unittest.TestCase):
             ).fetchone()
             positions = con.execute("SELECT count(*) FROM mh_dynamic_scalp_positions").fetchone()[0]
         self.assertEqual(trade[:4], (MINT, "PEPE", "dynamic_scalper", "take_profit"))
-        self.assertGreater(trade[4], .03)
+        self.assertGreater(trade[4], .2)
         self.assertEqual(positions, 0)
 
     def test_stop_loss_and_max_hold_are_deterministic(self):
         ds.tick(self.db, [candidate()], now=1000)
-        result = ds.tick(self.db, [candidate(price=.000979, change5=-1)], now=1060)
+        # Meme SL is -10%: entry .001, an -11% drop stops it out.
+        result = ds.tick(self.db, [candidate(price=.00089, change5=-1)], now=1060)
         self.assertEqual(result["reasons"], {"stop_loss": 1})
         ds.tick(self.db, [candidate()], now=2000)
         result = ds.tick(self.db, [candidate(price=.001, change5=0)], now=2901)
@@ -69,11 +71,11 @@ class DynamicShadowScalperTests(unittest.TestCase):
         result = ds.tick(self.db, [candidate(price=.00101, change5=0)], now=1000 + 5400, cfg=cfg)
         self.assertEqual(result["closed"], 0)
 
-    def test_memecoin_scalps_fast_2pct_tp(self):
-        # A 2%+ move closes a memecoin take-profit (was 3% before this change).
+    def test_memecoin_swings_for_20pct_tp(self):
+        # A 20%+ move closes a memecoin take-profit.
         cfg = {"coins": [{"symbol": "JUP", "mint": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"}]}
         ds.tick(self.db, [candidate()], now=1000, cfg=cfg)
-        result = ds.tick(self.db, [candidate(price=.001028, change5=1)], now=1060, cfg=cfg)
+        result = ds.tick(self.db, [candidate(price=.00122, change5=1)], now=1060, cfg=cfg)
         self.assertEqual(result["reasons"], {"take_profit": 1})
 
     def test_risk_params_classify_serious_vs_memecoin(self):
@@ -86,8 +88,8 @@ class DynamicShadowScalperTests(unittest.TestCase):
         self.assertEqual(serious["take_profit_pct"], 0.05)
         self.assertEqual(serious["stop_loss_pct"], -0.025)
         self.assertGreaterEqual(serious["max_hold_seconds"], 6 * 3600)
-        self.assertEqual(meme["take_profit_pct"], 0.02)
-        self.assertEqual(meme["stop_loss_pct"], -0.01)
+        self.assertEqual(meme["take_profit_pct"], 0.20)
+        self.assertEqual(meme["stop_loss_pct"], -0.10)
         self.assertEqual(meme["max_hold_seconds"], 900)
 
 

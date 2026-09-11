@@ -5,10 +5,10 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-# Memecoin scalp (fast): tight targets, short hold. This is the default for
-# anything in the dynamic universe that is not a curated backed coin.
-MEME_TAKE_PROFIT_PCT = 0.02
-MEME_STOP_LOSS_PCT = -0.01
+# Memecoin scalp (fast): tight stops, swing for the big upside. This is the
+# default for anything in the dynamic universe that is not a curated backed coin.
+MEME_TAKE_PROFIT_PCT = 0.20
+MEME_STOP_LOSS_PCT = -0.10
 MEME_TRAIL_ARM_PCT = 0.02
 MEME_TRAIL_DISTANCE_PCT = 0.01
 MEME_MAX_HOLD_SECONDS = 900
