@@ -61,15 +61,17 @@ def _connect(path: Path):
 
 
 def _exit_reason(position, price: float, now: float, params: dict) -> str | None:
-    change = price / float(position["entry_usd"]) - 1
+    entry = float(position["entry_usd"])
+    peak = max(float(position["peak_usd"]), price)
+    change = price / entry - 1
     if change >= params["take_profit_pct"]:
         return "take_profit"
     if change <= params["stop_loss_pct"]:
         return "stop_loss"
-    if now - float(position["opened_ts"]) >= params["max_hold_seconds"]:
+    if (now - float(position["opened_ts"]) >= params["max_hold_seconds"]
+            and peak / entry - 1 >= params["take_profit_pct"]):
         return "max_hold"
-    peak = max(float(position["peak_usd"]), price)
-    if (peak / float(position["entry_usd"]) - 1 >= params["trail_arm_pct"]
+    if (peak / entry - 1 >= params["trail_arm_pct"]
             and price / peak - 1 <= -params["trail_distance_pct"]):
         return "trail_stop"
     return None

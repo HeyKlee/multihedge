@@ -116,7 +116,8 @@ def _simulate_trade(x: dict, params: dict, *, round_trip_cost_pct: float = 0.0) 
             return tp - round_trip_cost_pct
         if change <= sl:
             return sl - round_trip_cost_pct
-        if sample_ts - opened >= hold:
+        if (sample_ts - opened >= hold
+                and peak / entry - 1.0 >= tp):
             return change - round_trip_cost_pct
         if (peak / entry - 1.0 >= trail_arm
                 and price / peak - 1.0 <= -trail_distance):

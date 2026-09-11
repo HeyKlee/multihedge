@@ -106,7 +106,7 @@ class AutotunerTests(unittest.TestCase):
         # Stop is observed first, so the later 50% peak cannot be claimed.
         self.assertLess(pa._expectancy([row], p), 0)
 
-    def test_shorter_max_hold_uses_first_observed_price_after_boundary(self):
+    def test_age_without_take_profit_crossing_is_censored(self):
         row = excursion(MINT, 1.0, 1.10, 0.95, 900, 0.10, close_ts=900)
         row["samples"] = [
             {"sample_ts": 0.0, "price_usd": 1.0},
@@ -115,15 +115,15 @@ class AutotunerTests(unittest.TestCase):
         ]
         candidate = {"take_profit_pct": 0.20, "stop_loss_pct": -0.10,
                      "max_hold_seconds": 600}
-        self.assertAlmostEqual(pa._expectancy([row], candidate), -0.05)
+        self.assertIsNone(pa._expectancy([row], candidate))
 
     def test_expectancy_and_wins_are_net_of_round_trip_cost(self):
-        row = excursion(MINT, 1.0, 1.01, 1.0, 900, 0.01, close_ts=900)
+        row = excursion(MINT, 1.0, 1.011, 1.0, 900, 0.011, close_ts=900)
         row["samples"] = [
             {"sample_ts": 0.0, "price_usd": 1.0},
-            {"sample_ts": 900.0, "price_usd": 1.01},
+            {"sample_ts": 900.0, "price_usd": 1.011},
         ]
-        params = {"take_profit_pct": .20, "stop_loss_pct": -.10,
+        params = {"take_profit_pct": .01, "stop_loss_pct": -.10,
                   "max_hold_seconds": 900}
         self.assertAlmostEqual(
             pa._expectancy([row], params, round_trip_cost_pct=.008), .002)

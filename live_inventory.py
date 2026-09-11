@@ -215,7 +215,9 @@ def forced_exit(path: Path, prices: dict[str, float], *, now: float, cfg: dict |
     """Update peaks and return one deterministic risk-reduction decision.
 
     Exit thresholds are per-coin: backed coins (in config `coins`) day-trade
-    over hours; memecoin positions scalp fast.
+    over hours; memecoin positions scalp fast. Max-hold is not a generic time
+    stop: it only retries a position whose observed peak already crossed TP but
+    whose sell did not complete.
     """
     with _connect(path) as con:
         positions = con.execute("SELECT * FROM mh_live_inventory ORDER BY opened_ts").fetchall()
@@ -249,7 +251,8 @@ def forced_exit(path: Path, prices: dict[str, float], *, now: float, cfg: dict |
                 reason = "take_profit"
             elif change <= params["stop_loss_pct"]:
                 reason = "stop_loss"
-            elif now - float(position["opened_ts"]) >= params["max_hold_seconds"]:
+            elif (now - float(position["opened_ts"]) >= params["max_hold_seconds"]
+                  and peak / entry - 1 >= params["take_profit_pct"]):
                 reason = "max_hold"
             elif (peak / entry - 1 >= params["trail_arm_pct"]
                   and price / peak - 1 <= -params["trail_distance_pct"]):

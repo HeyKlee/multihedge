@@ -47,13 +47,23 @@ class DynamicShadowScalperTests(unittest.TestCase):
         self.assertGreater(trade[4], .2)
         self.assertEqual(positions, 0)
 
-    def test_stop_loss_and_max_hold_are_deterministic(self):
+    def test_stop_loss_is_deterministic_and_age_alone_does_not_exit(self):
         ds.tick(self.db, [candidate()], now=1000)
         # Meme SL is -10%: entry .001, an -11% drop stops it out.
         result = ds.tick(self.db, [candidate(price=.00089, change5=-1)], now=1060)
         self.assertEqual(result["reasons"], {"stop_loss": 1})
         ds.tick(self.db, [candidate()], now=2000)
         result = ds.tick(self.db, [candidate(price=.001, change5=0)], now=2901)
+        self.assertEqual(result["closed"], 0)
+
+    def test_max_hold_only_falls_back_after_take_profit_was_missed(self):
+        ds.tick(self.db, [candidate()], now=1000)
+        with sqlite3.connect(self.db) as con:
+            con.execute(
+                "UPDATE mh_dynamic_scalp_positions SET peak_usd=? WHERE mint=?",
+                (.00121, MINT),
+            )
+        result = ds.tick(self.db, [candidate(price=.00105, change5=0)], now=1901)
         self.assertEqual(result["reasons"], {"max_hold": 1})
 
     def test_no_entry_without_balanced_sell_liquidity_and_momentum(self):
