@@ -40,7 +40,9 @@ class RiskParamsOverrideTests(unittest.TestCase):
             "take_profit_pct": 0.30, "stop_loss_pct": -0.12, "trail_arm_pct": 0.02,
             "trail_distance_pct": 0.01, "max_hold_seconds": 1200, "mode": "MEME",
         }, source="test", sample_n=40)
-        got = li.risk_params(MINT, cfg(), db_path=self.db)
+        # Live/default reads ignore an unpromoted paper candidate.
+        self.assertEqual(li.risk_params(MINT, cfg(), db_path=self.db)["take_profit_pct"], 0.20)
+        got = li.risk_params(MINT, cfg(), db_path=self.db, allow_tuned=True)
         self.assertEqual(got["take_profit_pct"], 0.30)
         self.assertEqual(got["stop_loss_pct"], -0.12)
         self.assertEqual(got["max_hold_seconds"], 1200)
@@ -65,6 +67,10 @@ class AutotunerTests(unittest.TestCase):
             "entry_usd REAL,peak_usd REAL,trough_usd REAL,open_ts REAL,close_ts REAL,"
             "hold_seconds REAL,realized_pct REAL,exit_reason TEXT)"
         )
+        con.execute(
+            "CREATE TABLE mh_scalp_price_samples (mint TEXT,opened_ts REAL,"
+            "sample_ts REAL,price_usd REAL,PRIMARY KEY(mint,opened_ts,sample_ts))"
+        )
         con.commit()
         con.close()
 
@@ -88,12 +94,48 @@ class AutotunerTests(unittest.TestCase):
         self.assertIsNone(li._risk_params_override(self.db, "MEME"))
 
     def test_wins_condition_is_conservative_both_hit(self):
-        # Both TP and SL pierced -> stop counts first (pessimistic).
+        # Chronological replay sees the stop before the later peak.
         row = excursion(MINT, 0.001, 0.0015, 0.0008, 600, 0.0)
+        row["samples"] = [
+            {"sample_ts": 0.0, "price_usd": 0.001},
+            {"sample_ts": 300.0, "price_usd": 0.0008},
+            {"sample_ts": 600.0, "price_usd": 0.0015},
+        ]
         p = {"take_profit_pct": 0.20, "stop_loss_pct": -0.10,
              "max_hold_seconds": 900}
-        # trough -20% <= -10% -> counted as the SL loss, not the 50% TP.
+        # Stop is observed first, so the later 50% peak cannot be claimed.
         self.assertLess(pa._expectancy([row], p), 0)
+
+    def test_shorter_max_hold_uses_first_observed_price_after_boundary(self):
+        row = excursion(MINT, 1.0, 1.10, 0.95, 900, 0.10, close_ts=900)
+        row["samples"] = [
+            {"sample_ts": 0.0, "price_usd": 1.0},
+            {"sample_ts": 600.0, "price_usd": 0.95},
+            {"sample_ts": 900.0, "price_usd": 1.10},
+        ]
+        candidate = {"take_profit_pct": 0.20, "stop_loss_pct": -0.10,
+                     "max_hold_seconds": 600}
+        self.assertAlmostEqual(pa._expectancy([row], candidate), -0.05)
+
+    def test_expectancy_and_wins_are_net_of_round_trip_cost(self):
+        row = excursion(MINT, 1.0, 1.01, 1.0, 900, 0.01, close_ts=900)
+        row["samples"] = [
+            {"sample_ts": 0.0, "price_usd": 1.0},
+            {"sample_ts": 900.0, "price_usd": 1.01},
+        ]
+        params = {"take_profit_pct": .20, "stop_loss_pct": -.10,
+                  "max_hold_seconds": 900}
+        self.assertAlmostEqual(
+            pa._expectancy([row], params, round_trip_cost_pct=.008), .002)
+        self.assertEqual(pa._win_rate([row], params, round_trip_cost_pct=.011), 0.0)
+
+    def test_legacy_extremes_without_price_paths_never_tune(self):
+        self._seed([excursion(MINT, 0.001, 0.0013, 0.00095, 900, 0.05,
+                              open_ts=float(i), close_ts=float(i + 900))
+                    for i in range(30)])
+        rep = pa.maybe_tune(self.db, cfg())
+        self.assertEqual(rep["evaluation"]["MEME"]["state"], "INSUFFICIENT_PRICE_PATHS")
+        self.assertIsNone(li._risk_params_override(self.db, "MEME"))
 
     def test_empty_returns_incumbent_no_write(self):
         rep = pa.maybe_tune(self.db, cfg())

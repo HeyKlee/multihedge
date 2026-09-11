@@ -79,6 +79,9 @@ def _risk_params_override(path, mode: str) -> dict | None:
             "trail_distance_pct": float(row["trail_distance_pct"]),
             "max_hold_seconds": float(row["max_hold_seconds"]),
             "mode": str(row["mode"]),
+            "source": str(row["source"]),
+            "sample_n": int(row["sample_n"]),
+            "applied_ts": float(row["applied_ts"]),
         }
     except (KeyError, TypeError, ValueError):
         return None
@@ -110,14 +113,14 @@ def set_risk_params_override(path, params: dict, *, source: str, sample_n: int) 
         )
 
 
-def risk_params(mint: str, cfg: dict | None, db_path=None) -> dict:
+def risk_params(mint: str, cfg: dict | None, db_path=None, *, allow_tuned: bool = False) -> dict:
     """Return per-coin exit params.
 
     A persisted tuned override (written by the autonomous autotuner) takes
     precedence for the coin's class; otherwise deterministic defaults apply.
     """
     mode = mode_for_mint(mint, cfg)
-    if db_path is not None:
+    if allow_tuned and db_path is not None:
         override = _risk_params_override(db_path, mode)
         if override is not None:
             return override
@@ -223,7 +226,17 @@ def forced_exit(path: Path, prices: dict[str, float], *, now: float, cfg: dict |
                 continue
             if price <= 0:
                 continue
-            params = risk_params(position["mint"], cfg, db_path=path)
+            candidate = _risk_params_override(path, mode_for_mint(position["mint"], cfg))
+            live_promotion = bool(
+                (cfg or {}).get("live", {}).get("autonomous", {}).get(
+                    "autotune_live_promotion_enabled", False
+                )
+                and candidate is not None
+                and candidate.get("source", "").startswith("approved:")
+            )
+            params = risk_params(
+                position["mint"], cfg, db_path=path, allow_tuned=live_promotion
+            )
             entry = float(position["entry_usd"])
             peak = max(float(position["peak_usd"]), price)
             con.execute(

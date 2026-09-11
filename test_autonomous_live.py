@@ -23,7 +23,7 @@ CFG = {
         "reserve_mint": al.USDC_MINT,
         "autonomous": {
             "enabled": True,
-            "model": "deepseek/deepseek-v4-flash-0731",
+            "model": al.AUTONOMOUS_MODEL,
             "max_buy_usdc": 1.0,
             "min_confidence": 0.70,
             "cycle_seconds": 900,
@@ -60,6 +60,7 @@ class AutonomousLiveTests(unittest.TestCase):
              "expected_reward_nzd": .3, "expected_loss_nzd": .1},
             cfg, balances={"USDC": 33.0, "SOL": .04, DYNAMIC_MINT: 0},
             evidence={"qualified": True, "by_symbol": {DYNAMIC_MINT: {"qualified": True}},
+                      "dynamic_by_symbol": {DYNAMIC_MINT: {"qualified": True}},
                       "dynamic_strategy": {"qualified": True}},
             executor=executor, now=1800,
         )
@@ -93,12 +94,12 @@ class AutonomousLiveTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / "evidence.db"
             with sqlite3.connect(db) as con:
-                con.execute("CREATE TABLE mh_trades(coin TEXT,symbol TEXT,setup TEXT,realized_pct REAL,realized_usd REAL)")
-                con.executemany("INSERT INTO mh_trades VALUES(?,?,?,?,?)",
-                                [(DYNAMIC_MINT, "PEPE", "dynamic_scalper", .01, .01)] * 20
-                                + [("JUP", "JUP", "momentum_breakout", .01, .01)] * 30)
+                con.execute("CREATE TABLE mh_trades(coin TEXT,symbol TEXT,setup TEXT,realized_pct REAL,realized_usd REAL,close_ts REAL)")
+                con.executemany("INSERT INTO mh_trades VALUES(?,?,?,?,?,?)",
+                                [(DYNAMIC_MINT, "PEPE", "dynamic_scalper", .01, .01, 900)] * 20
+                                + [("JUP", "JUP", "momentum_breakout", .01, .01, 900)] * 30)
             with patch.dict("os.environ", {"MULTIHEDGE_EVIDENCE_DB": str(db)}):
-                evidence = al.strategy_evidence(cfg)
+                evidence = al.strategy_evidence(cfg, now=1000)
         self.assertEqual(evidence["by_symbol"][DYNAMIC_MINT]["n"], 20)
         self.assertTrue(evidence["by_symbol"][DYNAMIC_MINT]["qualified"])
 
@@ -114,18 +115,49 @@ class AutonomousLiveTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / "evidence.db"
             with sqlite3.connect(db) as con:
-                con.execute("CREATE TABLE mh_trades(coin TEXT,symbol TEXT,setup TEXT,realized_pct REAL,realized_usd REAL)")
-                con.executemany("INSERT INTO mh_trades VALUES(?,?,?,?,?)", [
-                    ("mint-one", "ONE", "dynamic_scalper", .03, .03),
-                    ("mint-two", "TWO", "dynamic_scalper", .03, .03),
-                    ("mint-three", "THREE", "dynamic_scalper", -.02, -.02),
+                con.execute("CREATE TABLE mh_trades(coin TEXT,symbol TEXT,setup TEXT,realized_pct REAL,realized_usd REAL,close_ts REAL)")
+                con.executemany("INSERT INTO mh_trades VALUES(?,?,?,?,?,?)", [
+                    ("mint-one", "ONE", "dynamic_scalper", .03, .03, 900),
+                    ("mint-two", "TWO", "dynamic_scalper", .03, .03, 900),
+                    ("mint-three", "THREE", "dynamic_scalper", -.02, -.02, 900),
                 ])
             with patch.dict("os.environ", {"MULTIHEDGE_EVIDENCE_DB": str(db)}):
-                evidence = al.strategy_evidence(cfg)
+                evidence = al.strategy_evidence(cfg, now=1000)
         self.assertFalse(evidence["dynamic_strategy"]["qualified"])
         self.assertFalse(al.entry_evidence_qualified(cfg, DYNAMIC_MINT, evidence))
         evidence["dynamic_strategy"].update(win_rate=.67, qualified=True)
-        self.assertTrue(al.entry_evidence_qualified(cfg, DYNAMIC_MINT, evidence))
+        self.assertFalse(al.entry_evidence_qualified(cfg, DYNAMIC_MINT, evidence))
+
+    def test_dynamic_entry_requires_selected_mint_evidence_not_only_aggregate(self):
+        cfg = al.with_runtime_coins(CFG, [{
+            "symbol": DYNAMIC_MINT, "ticker": "PEPE", "mint": DYNAMIC_MINT,
+            "decimals": 6, "entry_eligible": True,
+        }])
+        evidence = {
+            "qualified": True,
+            "dynamic_strategy": {"qualified": True},
+            "by_symbol": {DYNAMIC_MINT: {"qualified": False, "n": 0}},
+            "dynamic_by_symbol": {DYNAMIC_MINT: {"qualified": False, "n": 0}},
+        }
+        self.assertFalse(al.entry_evidence_qualified(cfg, DYNAMIC_MINT, evidence))
+
+    def test_stale_trade_history_cannot_qualify_entry(self):
+        cfg = al.with_runtime_coins(CFG, [{
+            "symbol": DYNAMIC_MINT, "ticker": "PEPE", "mint": DYNAMIC_MINT,
+            "decimals": 6, "entry_eligible": True,
+        }])
+        cfg["live"]["autonomous"]["evidence_max_age_seconds"] = 100
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "evidence.db"
+            with sqlite3.connect(db) as con:
+                con.execute("CREATE TABLE mh_trades(coin TEXT,symbol TEXT,setup TEXT,realized_pct REAL,realized_usd REAL,close_ts REAL)")
+                con.executemany("INSERT INTO mh_trades VALUES(?,?,?,?,?,?)", [
+                    (DYNAMIC_MINT, "PEPE", "dynamic_scalper", .03, .03, 1000)
+                ] * 60)
+            with patch.dict("os.environ", {"MULTIHEDGE_EVIDENCE_DB": str(db)}):
+                evidence = al.strategy_evidence(cfg, now=2000)
+        self.assertEqual(evidence["n"], 0)
+        self.assertFalse(evidence["dynamic_strategy"]["qualified"])
 
     @patch("live_signer_worker.verify_onchain_mint")
     @patch("live_signer_worker.verify_round_trip")
@@ -157,7 +189,7 @@ class AutonomousLiveTests(unittest.TestCase):
             )
             sell = TradeIntent(f"auto:2:{DYNAMIC_MINT}:SELL", "SELL", DYNAMIC_MINT,
                                al.USDC_MINT, 1_000_000_000, 50,
-                               "deepseek_v4_flash_autonomous", "0", "0")
+                               "nemotron_3_super_autonomous", "0", "0")
             with patch.dict("os.environ", {"MULTIHEDGE_EVIDENCE_DB": str(db)}):
                 enriched = worker.enrich_dynamic_intent(
                     CFG, sell, api_key="key", rpc_url="rpc", now=1800

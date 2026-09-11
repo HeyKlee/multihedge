@@ -64,6 +64,42 @@ class LiveInventoryTests(unittest.TestCase):
         self.assertIsNone(li.get_holding(self.db, MINT))
         self.assertIsNone(li.forced_exit(self.db, {MINT: .001}, now=1000))
 
+    def test_unpromoted_autotune_cannot_change_live_exit(self):
+        params = {
+            "take_profit_pct": .30, "stop_loss_pct": -.12,
+            "trail_arm_pct": .25, "trail_distance_pct": .10,
+            "max_hold_seconds": 1800, "mode": "MEME",
+        }
+        for promoted, expected in ((False, "take_profit"), (True, None)):
+            with self.subTest(promoted=promoted):
+                db = self.db.with_name(f"promotion-{promoted}.db")
+                li.record_fill(db, intent(), {
+                    "verified": True, "input_atomic": 1_000_000,
+                    "output_atomic": 1_000_000_000,
+                }, ticker="PEPE", decimals=6, price_usd=.001, now=1000)
+                li.set_risk_params_override(
+                    db, params, source="approved:test" if promoted else "autotuner@test",
+                    sample_n=50)
+                cfg = {"live": {"autonomous": {
+                    "autotune_live_promotion_enabled": promoted,
+                }}}
+                decision = li.forced_exit(db, {MINT: .00125}, now=1100, cfg=cfg)
+                self.assertEqual(decision and decision["exit_reason"], expected)
+
+    def test_config_flip_alone_cannot_promote_unapproved_candidate(self):
+        li.record_fill(self.db, intent(), {
+            "verified": True, "input_atomic": 1_000_000,
+            "output_atomic": 1_000_000_000,
+        }, ticker="PEPE", decimals=6, price_usd=.001, now=1000)
+        li.set_risk_params_override(self.db, {
+            "take_profit_pct": .30, "stop_loss_pct": -.12,
+            "trail_arm_pct": .25, "trail_distance_pct": .10,
+            "max_hold_seconds": 1800, "mode": "MEME",
+        }, source="autotuner@1000", sample_n=50)
+        cfg = {"live": {"autonomous": {"autotune_live_promotion_enabled": True}}}
+        decision = li.forced_exit(self.db, {MINT: .00125}, now=1100, cfg=cfg)
+        self.assertEqual(decision["exit_reason"], "take_profit")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -253,23 +253,33 @@ def api_survival():
 
 
 def _survival_risk_status(db_path: Path) -> dict:
-    """Report the currently active TP/SL/max-hold per class (default or tuned),
-    plus whether the autonomous autotuner has written an override."""
+    """Report live params and any separate shadow-tuned candidate truthfully."""
     try:
         import yaml
         from live_inventory import _default_params, _risk_params_override
         cfg = yaml.safe_load((Path(__file__).parent / "config.yaml").read_text(encoding="utf-8"))
     except Exception:
         return {}
+    promotion_enabled = bool(
+        cfg.get("live", {}).get("autonomous", {}).get(
+            "autotune_live_promotion_enabled", False
+        )
+    )
     out = {}
     for mode in ("MEME", "SERIOUS"):
         override = _risk_params_override(db_path, mode)
-        active = override or _default_params(mode)
+        approved = bool(
+            promotion_enabled and override is not None
+            and override.get("source", "").startswith("approved:")
+        )
+        active = override if approved else _default_params(mode)
         out[mode] = {
             "take_profit_pct": active["take_profit_pct"],
             "stop_loss_pct": active["stop_loss_pct"],
             "max_hold_seconds": active["max_hold_seconds"],
-            "source": "autotuned" if override is not None else "default",
+            "source": "autotuned_live" if approved else "default_locked",
+            "shadow_candidate": override,
+            "live_promotion_enabled": promotion_enabled,
         }
     return out
 
@@ -1622,9 +1632,9 @@ async function renderSurvival(){
   </div>
   <div class="card"><h3>Exit reasons &middot; paper incubator</h3><table><tr><th>Reason</th><th>Count</th></tr>${reasonRows}</table></div>
   <div class="card"><h3>Active exit params &middot; auto-tuned from history</h3><table><tr><th>Class</th><th>Take profit</th><th>Stop loss</th><th>Max hold</th><th>Source</th></tr>
-    ${((s.risk_params||{}).MEME?'<tr><td><span class="pilltag no">MEME</span></td><td>'+(s.risk_params.MEME.take_profit_pct*100).toFixed(0)+'%</td><td>'+(s.risk_params.MEME.stop_loss_pct*100).toFixed(0)+'%</td><td>'+Math.round(s.risk_params.MEME.max_hold_seconds/60)+' min</td><td>'+(s.risk_params.MEME.source||'default')+'</td></tr>':'')}
-    ${((s.risk_params||{}).SERIOUS?'<tr><td><span class="pilltag ok">SERIOUS</span></td><td>'+(s.risk_params.SERIOUS.take_profit_pct*100).toFixed(0)+'%</td><td>'+(s.risk_params.SERIOUS.stop_loss_pct*100).toFixed(0)+'%</td><td>'+Math.round(s.risk_params.SERIOUS.max_hold_seconds/3600*10)/10+' h</td><td>'+(s.risk_params.SERIOUS.source||'default')+'</td></tr>':'')}
-  </table><div style="font-size:10.5px;color:var(--text-faint);margin-top:6px">The autonomous autotuner rewrites these from real closed-trade history (per-trade peak/trough/hold) once &ge;30 closed trades per class exist and a candidate strictly beats the incumbent out-of-sample. Until then defaults apply.</div></div>
+    ${((s.risk_params||{}).MEME?'<tr><td><span class="pilltag no">MEME</span></td><td>'+(s.risk_params.MEME.take_profit_pct*100).toFixed(1)+'%</td><td>'+(s.risk_params.MEME.stop_loss_pct*100).toFixed(1)+'%</td><td>'+Math.round(s.risk_params.MEME.max_hold_seconds/60)+' min</td><td>'+(s.risk_params.MEME.source||'default')+'</td></tr>':'')}
+    ${((s.risk_params||{}).SERIOUS?'<tr><td><span class="pilltag ok">SERIOUS</span></td><td>'+(s.risk_params.SERIOUS.take_profit_pct*100).toFixed(1)+'%</td><td>'+(s.risk_params.SERIOUS.stop_loss_pct*100).toFixed(1)+'%</td><td>'+Math.round(s.risk_params.SERIOUS.max_hold_seconds/3600*10)/10+' h</td><td>'+(s.risk_params.SERIOUS.source||'default')+'</td></tr>':'')}
+  </table><div style="font-size:10.5px;color:var(--text-faint);margin-top:6px">The autotuner now records and replays timestamped paper price paths. Tuned candidates can control paper exits, but live promotion is locked until cost, censorship, probation, and rollback gates pass an additional safety review.</div></div>
   <div class="card"><h3>Survival &middot; live trade history (on-chain)</h3><div class="scroll-wrap"><table><tr><th>Coin</th><th>Side</th><th>When</th><th>Signature</th><th>State</th><th>Order</th></tr>${liveTr}</table></div></div>
   <div class="card"><h3>Paper incubator &middot; trade history</h3><div class="scroll-wrap"><table><tr><th>Coin</th><th>Side</th><th>Entry</th><th>Exit</th><th>P/L%</th><th>P/L$ (NZD)</th><th>Reason</th><th>Close</th><th>Mode</th></tr>${paperTr}</table></div></div>
   <div class="card"><h3>Decision log &middot; autonomous cycles</h3><div class="scroll-wrap"><table><tr><th>When</th><th>Action</th><th>Asset</th><th>State</th><th>Reason</th></tr>${cyc}</table></div></div>`;

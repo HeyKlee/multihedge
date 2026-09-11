@@ -69,59 +69,85 @@ def load_excursions(db_path, mode: str) -> list[dict]:
                 "FROM mh_scalp_excursions WHERE mode=? ORDER BY close_ts ASC",
                 (mode,),
             ).fetchall()
+            excursions = [dict(r) for r in rows]
+            for item in excursions:
+                try:
+                    samples = con.execute(
+                        "SELECT sample_ts,price_usd FROM mh_scalp_price_samples "
+                        "WHERE mint=? AND opened_ts=? ORDER BY sample_ts ASC",
+                        (item["mint"], item["open_ts"]),
+                    ).fetchall()
+                except sqlite3.Error:
+                    samples = []
+                item["samples"] = [
+                    {"sample_ts": float(r[0]), "price_usd": float(r[1])} for r in samples
+                ]
     except sqlite3.Error:
         return []
-    return [dict(r) for r in rows]
+    return excursions
 
 
-def _expectancy(excursions: list[dict], params: dict, *, notional_usd: float = 1.0) -> float:
-    """Simulate each closed trade under a candidate TP/SL/max-hold using its
-    real observed peak/trough extremes.
+def _simulate_trade(x: dict, params: dict, *, round_trip_cost_pct: float = 0.0) -> float | None:
+    """Replay one observed price path using the exact production exit order.
 
-    Conservative ordering: if both TP and SL were pierced we cannot know the
-    true order, so we count the stop (adverse) first. That biases against
-    optimistic TP claims, which is the safe direction.
+    None means the path cannot prove an exit for this candidate. In particular,
+    a longer max-hold cannot borrow the original trade's earlier close price.
+    Returns are net of the supplied round-trip execution-cost estimate.
     """
     tp = float(params["take_profit_pct"])
     sl = float(params["stop_loss_pct"])
     hold = float(params["max_hold_seconds"])
-    total = 0.0
-    for x in excursions:
-        entry = float(x["entry_usd"])
-        peak_pct = float(x["peak_usd"]) / entry - 1.0
-        trough_pct = float(x["trough_usd"]) / entry - 1.0
-        hit_tp = peak_pct >= tp
-        hit_sl = trough_pct <= sl
-        if hit_sl:
-            # Stop hit (worst case, could be before TP or not at all).
-            pct = sl
-        elif hit_tp:
-            pct = tp
-        elif float(x["hold_seconds"]) >= hold:
-            # Never reached either target before max-hold; realised whatever
-            # the market gave within the allowed window.
-            pct = float(x["realized_pct"])
-        else:
-            continue  # trade still open under this hold -> contributes nothing
-        total += pct
-    return total / len(excursions) if excursions else 0.0
+    trail_arm = float(params.get("trail_arm_pct", 0.02))
+    trail_distance = float(params.get("trail_distance_pct", 0.01))
+    entry = float(x["entry_usd"])
+    opened = float(x["open_ts"])
+    samples = x.get("samples") or []
+    if entry <= 0 or not samples or abs(float(samples[0]["sample_ts"]) - opened) > 1:
+        return None
+    peak = entry
+    for sample in samples:
+        price = float(sample["price_usd"])
+        sample_ts = float(sample["sample_ts"])
+        if price <= 0 or sample_ts < opened:
+            return None
+        peak = max(peak, price)
+        change = price / entry - 1.0
+        if change >= tp:
+            return tp - round_trip_cost_pct
+        if change <= sl:
+            return sl - round_trip_cost_pct
+        if sample_ts - opened >= hold:
+            return change - round_trip_cost_pct
+        if (peak / entry - 1.0 >= trail_arm
+                and price / peak - 1.0 <= -trail_distance):
+            return price / entry - 1.0 - round_trip_cost_pct
+    return None
 
 
-def _win_rate(excursions, params) -> float:
-    tp = float(params["take_profit_pct"])
-    sl = float(params["stop_loss_pct"])
+def _expectancy(excursions: list[dict], params: dict, *,
+                round_trip_cost_pct: float = 0.0) -> float | None:
+    """Mean replay return, or None if any path is insufficient/censored."""
+    if not excursions:
+        return None
+    outcomes = [
+        _simulate_trade(x, params, round_trip_cost_pct=round_trip_cost_pct)
+        for x in excursions
+    ]
+    if any(value is None for value in outcomes):
+        return None
+    return sum(outcomes) / len(outcomes)
+
+
+def _win_rate(excursions, params, *, round_trip_cost_pct: float = 0.0) -> float:
     if not excursions:
         return 0.0
-    wins = 0
-    for x in excursions:
-        entry = float(x["entry_usd"])
-        if (float(x["peak_usd"]) / entry - 1.0) >= tp:
-            wins += 1
-        elif (float(x["trough_usd"]) / entry - 1.0) <= sl:
-            continue
-        elif float(x["realized_pct"]) > 0:
-            wins += 1
-    return wins / len(excursions)
+    outcomes = [
+        _simulate_trade(x, params, round_trip_cost_pct=round_trip_cost_pct)
+        for x in excursions
+    ]
+    if any(value is None for value in outcomes):
+        return 0.0
+    return sum(1 for value in outcomes if value > 0) / len(outcomes)
 
 
 def _grid(mode: str):
@@ -130,13 +156,17 @@ def _grid(mode: str):
     return MEME_TP_GRID, MEME_SL_GRID, MEME_HOLD_GRID
 
 
-def _walk_forward(excursions, params, *, holdout: float) -> tuple[float, float]:
+def _walk_forward(excursions, params, *, holdout: float,
+                  round_trip_cost_pct: float = 0.0) -> tuple[float | None, float | None]:
     """Chronological split; return (train_expectancy, holdout_expectancy)."""
     n = len(excursions)
     cut = int(n * (1.0 - holdout))
     train = excursions[:cut]
     test = excursions[cut:]
-    return _expectancy(train, params), _expectancy(test, params)
+    return (
+        _expectancy(train, params, round_trip_cost_pct=round_trip_cost_pct),
+        _expectancy(test, params, round_trip_cost_pct=round_trip_cost_pct),
+    )
 
 
 def maybe_tune(db_path, cfg, *, now=None) -> dict:
@@ -145,6 +175,10 @@ def maybe_tune(db_path, cfg, *, now=None) -> dict:
     import time as _time
     now = _time.time() if now is None else now
     db_path = Path(db_path)
+    quote_bps = float((cfg or {}).get("paper", {}).get("quote_bps", 40))
+    if quote_bps < 0 or quote_bps > 500:
+        raise ValueError("invalid paper quote cost")
+    round_trip_cost_pct = 2 * quote_bps / 10000.0
     report = {"state": "NO_CHANGE", "tuned": {}, "evaluation": {}}
     for mode in ("MEME", "SERIOUS"):
         excursions = load_excursions(db_path, mode)
@@ -154,9 +188,26 @@ def maybe_tune(db_path, cfg, *, now=None) -> dict:
                 "closed": len(excursions), "required": MIN_SAMPLE_CLOSED,
             }
             continue
+        path_ready = [
+            x for x in excursions if x.get("samples")
+            and abs(float(x["samples"][0]["sample_ts"]) - float(x["open_ts"])) <= 1
+        ]
+        if len(path_ready) < MIN_SAMPLE_CLOSED:
+            report["evaluation"][mode] = {
+                "state": "INSUFFICIENT_PRICE_PATHS", "closed": len(excursions),
+                "path_ready": len(path_ready), "required": MIN_SAMPLE_CLOSED,
+            }
+            continue
+        excursions = path_ready
         incumbent = _risk_params_override(db_path, mode) or _default_params(mode)
         inc_train, inc_hold = _walk_forward(
-            excursions, incumbent, holdout=HOLDOUT_FRACTION)
+            excursions, incumbent, holdout=HOLDOUT_FRACTION,
+            round_trip_cost_pct=round_trip_cost_pct)
+        if inc_train is None or inc_hold is None:
+            report["evaluation"][mode] = {
+                "state": "INCUMBENT_PATH_CENSORED", "closed": len(excursions),
+            }
+            continue
         best = None
         best_train = -1e18
         best_hold = -1e18
@@ -169,7 +220,11 @@ def maybe_tune(db_path, cfg, *, now=None) -> dict:
                         "trail_distance_pct": incumbent.get("trail_distance_pct", 0.01),
                         "max_hold_seconds": hold, "mode": mode,
                     }
-                    tr, ho = _walk_forward(excursions, cand, holdout=HOLDOUT_FRACTION)
+                    tr, ho = _walk_forward(
+                        excursions, cand, holdout=HOLDOUT_FRACTION,
+                        round_trip_cost_pct=round_trip_cost_pct)
+                    if tr is None or ho is None:
+                        continue
                     if tr > best_train:
                         best_train, best_hold, best = tr, ho, cand
         if best is None:
@@ -177,7 +232,9 @@ def maybe_tune(db_path, cfg, *, now=None) -> dict:
         adopted = (
             best_hold > inc_hold + IMPROVEMENT_MARGIN
             and best_train > inc_train + IMPROVEMENT_MARGIN
-            and _win_rate(excursions, best) >= 0.40  # not a degenerate SL-fed policy
+            and _win_rate(
+                excursions, best, round_trip_cost_pct=round_trip_cost_pct
+            ) >= 0.40
         )
         if adopted:
             set_risk_params_override(
@@ -194,7 +251,9 @@ def maybe_tune(db_path, cfg, *, now=None) -> dict:
             "incumbent_holdout_expectancy": round(inc_hold, 6),
             "candidate_holdout_expectancy": round(best_hold, 6),
             "candidate_train_expectancy": round(best_train, 6),
-            "win_rate": round(_win_rate(excursions, best), 4),
+            "win_rate": round(_win_rate(
+                excursions, best, round_trip_cost_pct=round_trip_cost_pct), 4),
+            "round_trip_cost_pct": round(round_trip_cost_pct, 6),
         }
     return report
 

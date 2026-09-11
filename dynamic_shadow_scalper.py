@@ -52,6 +52,11 @@ def _connect(path: Path):
         "open_ts REAL NOT NULL,close_ts REAL NOT NULL,"
         "hold_seconds REAL NOT NULL,realized_pct REAL NOT NULL,exit_reason TEXT NOT NULL)"
     )
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS mh_scalp_price_samples ("
+        "mint TEXT NOT NULL,opened_ts REAL NOT NULL,sample_ts REAL NOT NULL,"
+        "price_usd REAL NOT NULL,PRIMARY KEY(mint,opened_ts,sample_ts))"
+    )
     return con
 
 
@@ -111,7 +116,12 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
                 continue
             if price <= 0:
                 continue
-            params = risk_params(position["mint"], cfg, db_path=db_path)
+            params = risk_params(position["mint"], cfg, db_path=db_path, allow_tuned=True)
+            con.execute(
+                "INSERT OR IGNORE INTO mh_scalp_price_samples(mint,opened_ts,sample_ts,price_usd) "
+                "VALUES(?,?,?,?)",
+                (position["mint"], position["opened_ts"], now, price),
+            )
             reason = _exit_reason(position, price, now, params)
             peak = max(float(position["peak_usd"]), price)
             entry = float(position["entry_usd"])
@@ -164,6 +174,10 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
                 "opened_ts,peak_usd,trough_usd) VALUES(?,?,?,?,?,?,?,?)",
                 (mint, str(row.get("ticker") or "UNKNOWN")[:24], decimals, price,
                  PAPER_NOTIONAL_USD / price, now, price, price),
+            )
+            con.execute(
+                "INSERT INTO mh_scalp_price_samples(mint,opened_ts,sample_ts,price_usd) "
+                "VALUES(?,?,?,?)", (mint, now, now, price),
             )
             existing.add(mint)
             opened += 1

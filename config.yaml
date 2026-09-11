@@ -32,8 +32,10 @@ live:
   min_aggregate_trades: 50
   autonomous:
     enabled: true
-    model: deepseek/deepseek-v4-flash-0731
+    model: nvidia/nemotron-3-super-120b-a12b
     cycle_seconds: 300
+    evidence_max_age_seconds: 86400
+    autotune_live_promotion_enabled: false
     max_buy_usdc: 1.0
     min_confidence: 0.70
     slippage_bps: 50

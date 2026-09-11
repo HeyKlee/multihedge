@@ -37,5 +37,7 @@ class DashboardTests(unittest.TestCase):
         grid_trader.seed_wallet(grid_trader.cfg_grid())
         with sqlite3.connect(self.db) as c:c.execute("INSERT INTO grid_trades(ts,side,level_px,qty,usd,cycle_id,realized_usd) VALUES(1,'SELL',100,.1,10,1,1)")
         self.assertEqual(len(dash.api_exit_reason_series('grid')),1)
+    def test_survival_exit_params_preserve_half_percent_precision(self):
+        self.assertIn("SERIOUS.stop_loss_pct*100).toFixed(1)", dash._html())
 
 if __name__=='__main__':unittest.main()

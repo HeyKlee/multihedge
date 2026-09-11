@@ -26,6 +26,7 @@ USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 NATIVE_SOL_MINT = "So11111111111111111111111111111111111111112"
 WALLET_PUBKEY = "CqsTCGDXQBeGUAPXHtGDFZ3cU1pqMWiuf9B6hxAZqaxw"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+AUTONOMOUS_MODEL = "nvidia/nemotron-3-super-120b-a12b"
 DECISION_FIELDS = frozenset(
     {"action", "symbol", "confidence", "expected_reward_nzd", "expected_loss_nzd"}
 )
@@ -137,7 +138,7 @@ def build_intent(decision: dict, cfg: dict, balances: dict, now: float) -> Trade
         output_mint=output_mint,
         amount_atomic=amount_atomic,
         slippage_bps=int(auto.get("slippage_bps", 50)),
-        strategy="deepseek_v4_flash_autonomous",
+        strategy="nemotron_3_super_autonomous",
         expected_reward_nzd=str(decision["expected_reward_nzd"]),
         expected_loss_nzd=str(decision["expected_loss_nzd"]),
     )
@@ -265,7 +266,7 @@ def deepseek_decision(cfg: dict, market_context: dict) -> dict:
     if not key:
         raise DecisionDenied("OpenRouter credential unavailable")
     model = autonomous_config(cfg).get("model")
-    if model != "deepseek/deepseek-v4-flash-0731":
+    if model != AUTONOMOUS_MODEL:
         raise DecisionDenied("unexpected autonomous model")
     universe, label_to_symbol = _asset_labels(cfg)
     prompt = {
@@ -358,22 +359,34 @@ def read_public_balances(cfg: dict) -> dict:
     return balances
 
 
-def strategy_evidence(cfg: dict) -> dict:
+def strategy_evidence(cfg: dict, *, now: float | None = None) -> dict:
+    """Return only recent closed-trade evidence, keyed by canonical symbol/mint."""
+    now = time.time() if now is None else now
     db_path = Path(os.getenv(
         "MULTIHEDGE_EVIDENCE_DB", str(Path(__file__).parent / "deploy/data/multihedge.db")
     ))
+    max_age = int(autonomous_config(cfg).get("evidence_max_age_seconds", 86400))
+    if max_age <= 0:
+        raise DecisionDenied("invalid evidence freshness window")
     uri = f"file:{db_path.resolve()}?mode=ro"
     with sqlite3.connect(uri, uri=True) as con:
         rows = con.execute(
             "SELECT coin,symbol,setup,realized_pct,realized_usd FROM mh_trades "
-            "WHERE setup NOT IN ('reasoner','whale_trader','memecoin_trader')"
+            "WHERE setup NOT IN ('reasoner','whale_trader','memecoin_trader') "
+            "AND close_ts IS NOT NULL AND close_ts>=? AND close_ts<=?",
+            (now - max_age, now + 30),
         ).fetchall()
     minimum_n = int(cfg.get("live", {}).get("min_aggregate_trades", 50))
     minimum_wr = float(cfg.get("live", {}).get("min_aggregate_win_rate", 0.6667))
+    dynamic_cfg = autonomous_config(cfg).get("dynamic_universe", {})
+    dynamic_min_n = int(dynamic_cfg.get("minimum_strategy_trades", 50))
+    dynamic_min_wr = float(dynamic_cfg.get("minimum_strategy_win_rate", 0.6667))
+    dynamic_min_net = float(dynamic_cfg.get("minimum_strategy_net_usd", 0))
     total = len(rows)
     wins = sum(1 for _, _, _, result, _ in rows if float(result) > 0)
     aggregate_wr = wins / total if total else 0.0
     by_symbol = {}
+    dynamic_by_symbol = {}
     minimum_symbol_n = int(cfg.get("live", {}).get("min_closed_trades", 20))
     minimum_symbol_wr = float(cfg.get("live", {}).get("min_win_rate", 0.6667))
     for coin in tradeable_universe(cfg):
@@ -386,6 +399,25 @@ def strategy_evidence(cfg: dict) -> dict:
             "n": len(values), "win_rate": round(symbol_wr, 6),
             "qualified": len(values) >= minimum_symbol_n and symbol_wr >= minimum_symbol_wr,
         }
+        dynamic_values = [
+            (float(result), float(usd)) for trade_coin, symbol, setup, result, usd in rows
+            if setup == "dynamic_scalper"
+            and (trade_coin == coin["mint"] or symbol == coin["symbol"])
+        ]
+        dynamic_symbol_wr = (
+            sum(1 for result, _ in dynamic_values if result > 0) / len(dynamic_values)
+            if dynamic_values else 0.0
+        )
+        dynamic_symbol_net = sum(usd for _, usd in dynamic_values)
+        dynamic_by_symbol[coin["symbol"]] = {
+            "n": len(dynamic_values), "win_rate": round(dynamic_symbol_wr, 6),
+            "net_usd": round(dynamic_symbol_net, 6),
+            "qualified": (
+                len(dynamic_values) >= dynamic_min_n
+                and dynamic_symbol_wr >= dynamic_min_wr
+                and dynamic_symbol_net > dynamic_min_net
+            ),
+        }
     qualified = total >= minimum_n and aggregate_wr >= minimum_wr and any(
         row["qualified"] for row in by_symbol.values()
     )
@@ -395,10 +427,6 @@ def strategy_evidence(cfg: dict) -> dict:
     dynamic_wr = (sum(1 for result, _ in dynamic_rows if result > 0) / dynamic_n
                   if dynamic_n else 0.0)
     dynamic_net = sum(usd for _, usd in dynamic_rows)
-    dynamic_cfg = autonomous_config(cfg).get("dynamic_universe", {})
-    dynamic_min_n = int(dynamic_cfg.get("minimum_strategy_trades", 50))
-    dynamic_min_wr = float(dynamic_cfg.get("minimum_strategy_win_rate", 0.6667))
-    dynamic_min_net = float(dynamic_cfg.get("minimum_strategy_net_usd", 0))
     dynamic_qualified = (
         dynamic_n >= dynamic_min_n and dynamic_wr >= dynamic_min_wr
         and dynamic_net > dynamic_min_net
@@ -406,7 +434,8 @@ def strategy_evidence(cfg: dict) -> dict:
     return {
         "qualified": qualified, "n": total, "win_rate": round(aggregate_wr, 6),
         "minimum_n": minimum_n, "minimum_win_rate": minimum_wr,
-        "by_symbol": by_symbol,
+        "by_symbol": by_symbol, "dynamic_by_symbol": dynamic_by_symbol,
+        "evidence_max_age_seconds": max_age,
         "dynamic_strategy": {
             "qualified": dynamic_qualified, "n": dynamic_n,
             "win_rate": round(dynamic_wr, 6), "net_usd": round(dynamic_net, 6),
@@ -420,7 +449,10 @@ def strategy_evidence(cfg: dict) -> dict:
 def entry_evidence_qualified(cfg: dict, symbol: str, evidence: dict) -> bool:
     coin = _coin(cfg, symbol)
     if coin.get("ticker") and coin.get("symbol") == coin.get("mint"):
-        return evidence.get("dynamic_strategy", {}).get("qualified") is True
+        return bool(
+            evidence.get("dynamic_strategy", {}).get("qualified") is True
+            and evidence.get("dynamic_by_symbol", {}).get(symbol, {}).get("qualified") is True
+        )
     return bool(
         evidence.get("qualified") is True
         and evidence.get("by_symbol", {}).get(symbol, {}).get("qualified") is True
