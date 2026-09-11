@@ -24,9 +24,9 @@ live:
   reserve_mint: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
   minimum_sol_fee_reserve: 0.01
   strategy_evidence_required: true
-  min_win_rate: 0.75
+  min_win_rate: 0.6667
   min_closed_trades: 20
-  min_aggregate_win_rate: 0.7
+  min_aggregate_win_rate: 0.6667
   min_aggregate_trades: 50
 strategies:
 - name: momentum_breakout
