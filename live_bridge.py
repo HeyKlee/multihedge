@@ -219,10 +219,12 @@ def live_execute(cfg):
     approved_mints = {cfg.get("live", {}).get("reserve_mint", RESERVE_MINT)}
 
     # 1. Build a small trade intent.
-    # Use the first coin in config as the target.  Config coins are the approved universe.
-    coins = cfg.get("coins", [])
+    # Use the first non-fee coin in config as the target.
+    # SOL is fees-only and must never be a trading target.
+    NATIVE_SOL = "So11111111111111111111111111111111111111112"
+    coins = [c for c in cfg.get("coins", []) if c["mint"] != NATIVE_SOL]
     if not coins:
-        raise RuntimeError("no coins configured for trading")
+        raise RuntimeError("no tradeable coins configured (all coins are SOL/fee reserve)")
     target = coins[0]
     target_mint = target["mint"]
     approved_mints.add(target_mint)
