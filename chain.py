@@ -50,7 +50,7 @@ USDC_DEVNET = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
 _JUP_QUOTE = "https://api.jup.ag/swap/v2/quote"
 _JUP_SWAP = "https://api.jup.ag/swap/v2/swap"
 
-DB_PATH = Path(__file__).parent / "autohedge.db"
+DB_PATH = Path(__file__).parent / "multihedge.db"
 
 
 # --------------------------------------------------------------------------
@@ -172,7 +172,13 @@ def current_network() -> str:
 
 def live_mode_enabled() -> bool:
     """Mainnet writes require live_mode=1 explicitly set by the user."""
-    return (_get_cfg("live_mode") or "0") == "1"
+    env_value = os.getenv("MULTIHEDGE_LIVE_MODE")
+    if env_value is not None:
+        return env_value.strip() == "1"
+    try:
+        return (_get_cfg("live_mode") or "0") == "1"
+    except sqlite3.Error:
+        return False
 
 
 # --------------------------------------------------------------------------

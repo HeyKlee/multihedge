@@ -29,12 +29,15 @@ class TestLiveBridge(unittest.TestCase):
         self.authority_patch = patch.object(
             live_bridge, 'SOVEREIGN_MAINNET_AUTHORITY_ENABLED', True
         )
+        self.signer_patch = patch.object(live_bridge, 'ISOLATED_SIGNER_READY', True)
         self.db_patch.start()
         self.flag_patch.start()
         self.authority_patch.start()
+        self.signer_patch.start()
         self.addCleanup(self.db_patch.stop)
         self.addCleanup(self.flag_patch.stop)
         self.addCleanup(self.authority_patch.stop)
+        self.addCleanup(self.signer_patch.stop)
 
         # Patch chain module: we'll replace sys.modules['chain'] with a MagicMock
         self.chain_patch = patch.dict('sys.modules')
@@ -83,6 +86,18 @@ class TestLiveBridge(unittest.TestCase):
 
         self.assertFalse(status["wallet_ready"])
         self.assertEqual(status["reason"], "sovereign authority disabled; shadow-only")
+
+    def test_isolated_signer_is_required(self):
+        self.confirm_flag.touch()
+        with patch.object(live_bridge, "ISOLATED_SIGNER_READY", False):
+            status = live_bridge.live_status(self.cfg)
+        self.assertFalse(status["wallet_ready"])
+        self.assertEqual(status["reason"], "isolated signer not deployed")
+
+    def test_reserve_asset_is_usdc_and_sol_is_fees_only(self):
+        self.assertEqual(live_bridge.RESERVE_SYMBOL, "USDC")
+        self.assertEqual(live_bridge.RESERVE_MINT, "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
+        self.assertEqual(live_bridge.MIN_SOL_FEE_RESERVE, 0.01)
 
     def test_live_status_wallet_ready(self):
         """When all conditions are met, wallet_ready should be True."""
@@ -149,8 +164,8 @@ class TestLiveBridge(unittest.TestCase):
         finally:
             paper_gate_mock.stop()
 
-    def test_execute_swap_consumes_flag(self):
-        """execute_swap should delete the confirmation flag before executing."""
+    def test_legacy_direct_swap_is_permanently_disabled(self):
+        """The application process may never directly access the wallet signer."""
         self.chain_mock.jupiter_quote.return_value = {"some": "quote"}
         self.chain_mock.send_swap.return_value = {"signature": "txsig", "out_amount_lam": 5000000}
 
@@ -159,13 +174,10 @@ class TestLiveBridge(unittest.TestCase):
 
         # Execute swap
         coin_cfg = {"symbol": "SOL", "mint": "So11111111111111111111111111111111111111112"}
-        result = live_bridge.execute_swap(coin_cfg, cfg=self.cfg)
-
-        # Flag should be consumed (deleted)
-        self.assertFalse(self.confirm_flag.exists())
-        # Check that chain.send_swap was called
-        self.chain_mock.send_swap.assert_called_once()
-        self.assertEqual(result["signature"], "txsig")
+        with self.assertRaisesRegex(RuntimeError, "isolated signer"):
+            live_bridge.execute_swap(coin_cfg, cfg=self.cfg)
+        self.assertTrue(self.confirm_flag.exists())
+        self.chain_mock.send_swap.assert_not_called()
 
     def test_execute_swap_no_flag_raises(self):
         """If confirmation flag is missing, execute_swap should raise."""

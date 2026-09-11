@@ -36,10 +36,14 @@ DB_PATH = Path(__file__).parent / "multihedge.db"
 CONFIRM_FLAG = Path(__file__).parent / "confirm_live.flag"
 REAL_SAFE_SOL = 0.021  # keep min SOL for rent + fees
 LIVE_FRACTION = 0.10   # commit up to 10% of real balance per swap
+RESERVE_SYMBOL = "USDC"
+RESERVE_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+MIN_SOL_FEE_RESERVE = 0.01
 # Immutable default for this shadow-only boot. This may only change after the
 # complete activation checklist, independent review, and Kelly's authenticated
 # approval. A confirmation flag alone is deliberately insufficient.
 SOVEREIGN_MAINNET_AUTHORITY_ENABLED = False
+ISOLATED_SIGNER_READY = False
 
 
 # ------------------------------ db helpers ----------------------------------
@@ -88,6 +92,18 @@ def live_status(cfg):
             "balance_sol": -1.0,
             "wallet_ready": False,
             "reason": "sovereign authority disabled; shadow-only",
+            "gates": {},
+        }
+    if not ISOLATED_SIGNER_READY:
+        return {
+            "network": "mainnet-beta",
+            "live_mode": False,
+            "confirm_flag": CONFIRM_FLAG.exists(),
+            "balance_sol": -1.0,
+            "wallet_ready": False,
+            "reason": "isolated signer not deployed",
+            "reserve_symbol": RESERVE_SYMBOL,
+            "minimum_sol_fee_reserve": MIN_SOL_FEE_RESERVE,
             "gates": {},
         }
     if chain is None:
@@ -156,37 +172,16 @@ def assert_live_allowed(coin, cfg):
 
 
 def execute_swap(coin_cfg, side="LONG", cfg=None):
-    """Real Jupiter swap for a coin. REFUSES unless gate passes. No short (spot)."""
+    """Legacy direct-wallet entry point, permanently blocked.
+
+    Future live requests must use the separate signer service and USDC as the
+    base and settlement asset. This process must never load a private key.
+    """
     if side != "LONG":
         raise RuntimeError("live spot engine only supports LONG buys (no leverage).")
     coin = coin_cfg["symbol"]
-    st = assert_live_allowed(coin, cfg)
-    # Consume per-trade confirmation flag safely before execution
-    if CONFIRM_FLAG.exists():
-        CONFIRM_FLAG.unlink()
-    else:
-        # Should not happen because assert_live_allowed checked, but double-check
-        raise RuntimeError("live blocked: confirmation flag missing before swap")
-    net = st["network"]
-    kp, _ = chain.get_keypair()
-
-    bal = float(st["balance_sol"])
-    budget = min(bal * LIVE_FRACTION, max(0.0, bal - REAL_SAFE_SOL))
-    if budget <= 0.01:
-        raise RuntimeError("budget too small after gas reserve")
-
-    # Buy: SOL -> the coin token. Input is SOL (native), output is the coin mint.
-    input_mint = chain.NATIVE_SOL_MINT
-    output_mint = coin_cfg["mint"]
-
-    q = chain.jupiter_quote(int(budget * 1e9), input_mint, output_mint, net)
-    if not q:
-        raise RuntimeError("no Jupiter route for budget (illiquid or bad mint)")
-
-    result = chain.send_swap(kp, q, net)
-    _log(coin, side, budget, result["signature"],
-         {"net": net, "out_amount": result.get("out_amount_lam")})
-    return result
+    assert_live_allowed(coin, cfg)
+    raise RuntimeError("live blocked: isolated signer service is required")
 
 
 def status(cfg):

@@ -10,6 +10,8 @@ State: `SHADOW_ONLY`
 
 Mainnet authority is not enabled by this report. Kelly has explicitly designated public address `CqsTCGDXQBeGUAPXHtGDFZ3cU1pqMWiuf9B6hxAZqaxw` as the intended live operating wallet and corrected its network to `mainnet-beta`. Two independent read-only RPC checks returned a native balance of 0.398282446 SOL. The wallet also holds 0.00347272 of the configured ETH asset; two executable Jupiter quotes valued it at a conservative 0.085828902 SOL. Using the lower of two SOL/NZD prices, a 1% liquidation haircut, and an estimated network exit fee gives a conservative combined treasury of NZ$81.23, state `NORMAL`. Mainnet spending remains locked until the remaining activation controls pass.
 
+Kelly has designated USDC as the sole trading reserve and settlement asset. Deterministic policy now requires every BUY to be mainnet USDC to an approved token and every SELL to return that token to mainnet USDC. SOL is fees-only and cannot be a trading leg. A current read-only RPC check found 0 USDC and 0.398282446 SOL. Measured fee-reserve modelling produced 0.007822276 SOL with substantial assumptions and a 100% contingency, so the enforced operational minimum is rounded up to 0.01 SOL. The wallet has not been converted because the isolated signer and activation gates remain incomplete.
+
 ## Verified controls
 
 - Workspace bridge readback: `wallet_ready=false`
@@ -24,6 +26,8 @@ Mainnet authority is not enabled by this report. Kelly has explicitly designated
 - Audit mutation protection: SQLite denies application-level update and delete operations
 - Audit integrity: records are SHA-256 hash-chained, the complete chain is verified before every append, and corruption causes subsequent appends to fail closed
 - Future live-network enforcement: only exact network `mainnet-beta` can pass wallet readiness, independently of `live_mode`
+- Trading reserve invariant: USDC only; SOL is fees-only with an enforced minimum reserve of 0.01 SOL
+- Legacy application-level direct wallet swap is permanently disabled; future execution must cross the separately reviewed signer boundary
 
 ## Runtime inventory
 
@@ -56,19 +60,22 @@ The workspace and deployed hashes matched for the original core runtime files be
 
 `live_bridge.py` now has an additional default-off sovereign authority gate. Even if the missing chain dependency is restored, the bridge remains shadow-only unless this code-level gate is deliberately changed through a later reviewed activation process.
 
+Shadow execution components now validate USDC-only BUY/SELL direction, approved mints, slippage, price impact, transaction expiry, program allowlists, signer identity, exact build/message binding, simulation, protected reserve, SOL fee reserve, idempotency, finality, and balance reconciliation. These components are not wired to production authority and are not a claim of activation readiness.
+
 ## Critical activation blockers
 
 1. RESOLVED: the workspace now has a local Git rollback baseline at `36f5c15`, with the verified execution-order fix at `a71a554`. No remote or independently stored release artifact exists yet, so host-loss recovery remains incomplete.
 2. The application container receives `SOLANA_PRIVATE_KEY` and `WALLET_PRIVATE_KEY` through its mounted `.env`. This violates the required signer isolation because the application process and shell can access signing secrets.
 3. Kelly has designated public address `CqsTCGDXQBeGUAPXHtGDFZ3cU1pqMWiuf9B6hxAZqaxw` as the intended live wallet, but there is not yet independent evidence that it is capped and separate from Kelly's primary wallet.
 4. Wallet valuation is now established for the current snapshot: 0.398282446 native SOL plus executable ETH liquidation value of 0.085828902 SOL, producing conservative treasury NZ$81.23 after haircut and estimated exit fee. This must be refreshed before every financial decision.
-5. No hardened external signer or deterministic exact-payload signing policy exists.
-6. The current bridge has an entry-only Jupiter swap path. It lacks a complete sell path, decoded instruction allowlisting, transaction simulation enforcement, exact-payload binding, quote-expiry handling, post-finality balance reconciliation, inventory accounting, and NZD reserve enforcement.
-7. The copied `chain.py` still points `DB_PATH` at `autohedge.db`; `live_mode_enabled()` can query a missing `config` table and fail by exception rather than acting as a dependable MultiHedge fail-closed rail. It must be corrected and tested before any activation work.
+5. Signer and policy components exist in shadow code, but no hardened external signer service is deployed and the application container still receives wallet secrets.
+6. The legacy bridge is now permanently blocked. The shadow signer path has USDC BUY/SELL, allowlisting, simulation, payload binding, expiry, idempotency, and reconciliation primitives, but complete account-destination validation, token-security checks, independently sourced treasury valuation, restart recovery, and production integration remain incomplete.
+7. RESOLVED: `chain.py` now points at `multihedge.db`, fails closed when the config table is unavailable, and honours an explicit `MULTIHEDGE_LIVE_MODE=0` override. Container tests cover these paths.
 8. No complete deterministic tests yet cover fee reserve, token sellability, quote failure and expiry, partial and full exits, daily and weekly drawdown, turnover, spend caps, restart recovery, database reconciliation, emergency pause, authenticated revival, or secret redaction.
 9. Discord is authenticated as the primary configured destination. No authenticated WhatsApp fallback destination is configured.
 10. No n8n automation registry, messaging escalation state machine, or durable leased heartbeat has been created for this sovereign agent.
 11. Independent database and optimisation review found no strategy qualified for real capital: the untouched test set has 19 trades, walk-forward won 0 of 4 folds, aggregate scalper net P&L after modelled costs is approximately USD -7.91, reasoner is USD -27.40, whale trader is USD -0.42, and the grid result of approximately USD +0.07 is statistically inadequate. Real entry remains prohibited until the immutable promotion gates pass.
+12. The designated wallet currently has 0 USDC. Treasury conversion into USDC cannot occur through the legacy bridge and must wait for the isolated signer path, complete deterministic transaction-account validation, and an authorised activation state.
 
 ## Authority requested
 
