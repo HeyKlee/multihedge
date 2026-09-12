@@ -86,6 +86,47 @@ class AutotunerTests(unittest.TestCase):
         con.commit()
         con.close()
 
+    def _seed_with_paths(self, n=4, entry=1.0, prices=(1.0, 1.085, 1.05, 1.02)):
+        """Excursions that carry replayable price paths, in chronological order."""
+        con = sqlite3.connect(self.db)
+        for i in range(n):
+            opened = float(i * 10_000)
+            con.execute(
+                "INSERT INTO mh_scalp_excursions VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                (MINT, "X", li.mode_for_mint(MINT, cfg()), entry, max(prices), min(prices),
+                 opened, opened + 180.0, 180.0, prices[-1] / entry - 1, "trail_stop"))
+            for j, price in enumerate(prices):
+                con.execute("INSERT INTO mh_scalp_price_samples VALUES(?,?,?,?)",
+                            (MINT, opened, opened + j * 60.0, price))
+        con.commit()
+        con.close()
+
+    def test_trailing_is_inside_the_search_space(self):
+        # Trail exits dominate the MEME class, so a search that freezes the arm
+        # and distance cannot fix the thing that actually costs money.
+        candidates = list(pa._candidates("MEME"))
+        arms = {c["trail_arm_pct"] for c in candidates}
+        dists = {c["trail_distance_pct"] for c in candidates}
+        self.assertGreater(len(arms), 1)
+        self.assertGreater(len(dists), 1)
+        # The incumbent's own pair stays reachable so the comparison is fair.
+        self.assertIn(0.08, arms)
+        self.assertIn(0.04, dists)
+        for c in candidates:
+            self.assertLess(c["trail_distance_pct"], c["trail_arm_pct"])
+
+    def test_tighter_trail_can_be_adopted(self):
+        # Incumbent trail (arm 8% / distance 4%) leaves at +2.0%; a 2% distance
+        # leaves at +5.0% on the same path. That must be adoptable once the
+        # 30-sample evidence gate is met.
+        self._seed_with_paths(n=pa.MIN_SAMPLE_CLOSED)
+        rep = pa.maybe_tune(self.db, cfg())
+        self.assertEqual(rep["state"], "TUNED", rep)
+        got = li._risk_params_override(self.db, "MEME")
+        self.assertIsNotNone(got)
+        self.assertEqual(got["trail_distance_pct"], 0.02)
+        self.assertEqual(rep["tuned"]["MEME"]["trail_distance_pct"], 0.02)
+
     def test_insufficient_history_never_tunes(self):
         self._seed([excursion(MINT, 0.001, 0.0013, 0.00095, 600, 0.05)
                     for _ in range(10)])

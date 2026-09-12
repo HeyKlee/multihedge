@@ -47,10 +47,18 @@ BIG_HOLD_S = 14 * 3600              # "day trade" hold floor for SERIOUS (14h)
 MEME_TP_GRID = (0.15, 0.20, 0.25)
 MEME_SL_GRID = (-0.12, -0.10, -0.08)
 MEME_HOLD_GRID = (600, 900, 1800)
+# Trailing is the dominant exit for the MEME class (14 of 40 closes observed) and
+# it is what gives a run back: the arm sits at +8% and the distance takes 4% off
+# the peak, so trades that poke above the arm leave near +2%. Leaving the arm and
+# distance frozen at the incumbent meant the search could never price that in.
+MEME_TRAIL_ARM_GRID = (0.04, 0.08, 0.12)
+MEME_TRAIL_DIST_GRID = (0.02, 0.04, 0.06)
 
 SERIOUS_TP_GRID = (0.04, 0.05, 0.06)
 SERIOUS_SL_GRID = (-0.03, -0.025, -0.02)
 SERIOUS_HOLD_GRID = (BIG_HOLD_S, SERIOUS_MAX_HOLD_SECONDS)
+SERIOUS_TRAIL_ARM_GRID = (0.008, 0.015, 0.030)
+SERIOUS_TRAIL_DIST_GRID = (0.004, 0.008, 0.015)
 
 
 def _connect(path):
@@ -153,8 +161,33 @@ def _win_rate(excursions, params, *, round_trip_cost_pct: float = 0.0) -> float:
 
 def _grid(mode: str):
     if mode == "SERIOUS":
-        return SERIOUS_TP_GRID, SERIOUS_SL_GRID, SERIOUS_HOLD_GRID
-    return MEME_TP_GRID, MEME_SL_GRID, MEME_HOLD_GRID
+        return (SERIOUS_TP_GRID, SERIOUS_SL_GRID, SERIOUS_HOLD_GRID,
+                SERIOUS_TRAIL_ARM_GRID, SERIOUS_TRAIL_DIST_GRID)
+    return (MEME_TP_GRID, MEME_SL_GRID, MEME_HOLD_GRID,
+            MEME_TRAIL_ARM_GRID, MEME_TRAIL_DIST_GRID)
+
+
+def _candidates(mode: str):
+    """Every exit-parameter candidate the search may adopt, in a stable order.
+
+    Exposed as its own unit so the search space itself is testable: trailing must
+    be varied (it is the dominant exit for MEME), and a trail distance at or above
+    its own arm would trail before the move has armed, so those are excluded. Each
+    grid contains the incumbent's own trail pair, so the comparison is fair.
+    """
+    tps, sls, holds, arms, dists = _grid(mode)
+    for tp in tps:
+        for sl in sls:
+            for hold in holds:
+                for arm in arms:
+                    for dist in dists:
+                        if dist >= arm:
+                            continue
+                        yield {
+                            "take_profit_pct": tp, "stop_loss_pct": sl,
+                            "trail_arm_pct": arm, "trail_distance_pct": dist,
+                            "max_hold_seconds": hold, "mode": mode,
+                        }
 
 
 def _walk_forward(excursions, params, *, holdout: float,
@@ -246,22 +279,14 @@ def maybe_tune(db_path, cfg, *, now=None) -> dict:
         best = None
         best_train = -1e18
         best_hold = -1e18
-        for tp in _grid(mode)[0]:
-            for sl in _grid(mode)[1]:
-                for hold in _grid(mode)[2]:
-                    cand = {
-                        "take_profit_pct": tp, "stop_loss_pct": sl,
-                        "trail_arm_pct": incumbent.get("trail_arm_pct", 0.08),
-                        "trail_distance_pct": incumbent.get("trail_distance_pct", 0.04),
-                        "max_hold_seconds": hold, "mode": mode,
-                    }
-                    tr, ho = _walk_forward(
-                        excursions, cand, holdout=HOLDOUT_FRACTION,
-                        round_trip_cost_pct=round_trip_cost_pct)
-                    if tr is None or ho is None:
-                        continue
-                    if tr > best_train:
-                        best_train, best_hold, best = tr, ho, cand
+        for cand in _candidates(mode):
+            tr, ho = _walk_forward(
+                excursions, cand, holdout=HOLDOUT_FRACTION,
+                round_trip_cost_pct=round_trip_cost_pct)
+            if tr is None or ho is None:
+                continue
+            if tr > best_train:
+                best_train, best_hold, best = tr, ho, cand
         if best is None:
             continue
         adopted = (
@@ -277,7 +302,8 @@ def maybe_tune(db_path, cfg, *, now=None) -> dict:
             report["state"] = "TUNED"
             report["tuned"][mode] = {
                 **{k: best[k] for k in
-                   ("take_profit_pct", "stop_loss_pct", "max_hold_seconds", "mode")},
+                   ("take_profit_pct", "stop_loss_pct", "trail_arm_pct",
+                    "trail_distance_pct", "max_hold_seconds", "mode")},
                 "source": "autotuner",
             }
         report["evaluation"][mode] = {
