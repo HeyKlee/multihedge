@@ -39,5 +39,10 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(len(dash.api_exit_reason_series('grid')),1)
     def test_survival_exit_params_preserve_half_percent_precision(self):
         self.assertIn("SERIOUS.stop_loss_pct*100).toFixed(1)", dash._html())
+    def test_survival_status_exposes_trailing_policy(self):
+        status=dash._survival_risk_status(self.db)
+        self.assertEqual(status['MEME']['trail_arm_pct'],.08)
+        self.assertEqual(status['MEME']['trail_distance_pct'],.04)
+        self.assertIn('<th>Trail arm</th><th>Trail distance</th>',dash._html())
 
 if __name__=='__main__':unittest.main()

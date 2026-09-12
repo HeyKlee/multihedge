@@ -5,12 +5,12 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-# Memecoin scalp (fast): tight stops, swing for the big upside. This is the
-# default for anything in the dynamic universe that is not a curated backed coin.
+# Memecoin scalp (fast): tolerate ordinary volatility before protecting a
+# meaningful move. This is the default for dynamic, non-curated assets.
 MEME_TAKE_PROFIT_PCT = 0.20
 MEME_STOP_LOSS_PCT = -0.10
-MEME_TRAIL_ARM_PCT = 0.02
-MEME_TRAIL_DISTANCE_PCT = 0.01
+MEME_TRAIL_ARM_PCT = 0.08
+MEME_TRAIL_DISTANCE_PCT = 0.04
 MEME_MAX_HOLD_SECONDS = 900
 
 # Serious / backed coins (present in the config `coins` list, e.g. JUP, ETH):

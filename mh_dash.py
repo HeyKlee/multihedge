@@ -276,6 +276,8 @@ def _survival_risk_status(db_path: Path) -> dict:
         out[mode] = {
             "take_profit_pct": active["take_profit_pct"],
             "stop_loss_pct": active["stop_loss_pct"],
+            "trail_arm_pct": active["trail_arm_pct"],
+            "trail_distance_pct": active["trail_distance_pct"],
             "max_hold_seconds": active["max_hold_seconds"],
             "source": "autotuned_live" if approved else "default_locked",
             "shadow_candidate": override,
@@ -1631,10 +1633,10 @@ async function renderSurvival(){
     <div class="card"><h3>Open live wallet positions</h3><table><tr><th>Ticker</th><th>Mint</th><th>Qty</th><th>Entry</th><th>Notional</th><th>Peak</th><th>Mode</th></tr>${liveRows}</table></div>
   </div>
   <div class="card"><h3>Exit reasons &middot; paper incubator</h3><table><tr><th>Reason</th><th>Count</th></tr>${reasonRows}</table></div>
-  <div class="card"><h3>Active exit params &middot; auto-tuned from history</h3><table><tr><th>Class</th><th>Take profit</th><th>Stop loss</th><th>Max hold</th><th>Source</th></tr>
-    ${((s.risk_params||{}).MEME?'<tr><td><span class="pilltag no">MEME</span></td><td>'+(s.risk_params.MEME.take_profit_pct*100).toFixed(1)+'%</td><td>'+(s.risk_params.MEME.stop_loss_pct*100).toFixed(1)+'%</td><td>'+Math.round(s.risk_params.MEME.max_hold_seconds/60)+' min TP-miss fallback</td><td>'+(s.risk_params.MEME.source||'default')+'</td></tr>':'')}
-    ${((s.risk_params||{}).SERIOUS?'<tr><td><span class="pilltag ok">SERIOUS</span></td><td>'+(s.risk_params.SERIOUS.take_profit_pct*100).toFixed(1)+'%</td><td>'+(s.risk_params.SERIOUS.stop_loss_pct*100).toFixed(1)+'%</td><td>'+Math.round(s.risk_params.SERIOUS.max_hold_seconds/3600*10)/10+' h TP-miss fallback</td><td>'+(s.risk_params.SERIOUS.source||'default')+'</td></tr>':'')}
-  </table><div style="font-size:10.5px;color:var(--text-faint);margin-top:6px">Max hold only retries an exit after the recorded peak crossed TP but the sell did not complete. Age alone never closes a position. Stop loss remains unconditional. Tuned candidates can control paper exits, but live promotion remains locked.</div></div>
+  <div class="card"><h3>Active exit params &middot; evidence-gated policy</h3><table><tr><th>Class</th><th>Take profit</th><th>Stop loss</th><th>Trail arm</th><th>Trail distance</th><th>Max hold</th><th>Source</th></tr>
+    ${((s.risk_params||{}).MEME?'<tr><td><span class="pilltag no">MEME</span></td><td>'+(s.risk_params.MEME.take_profit_pct*100).toFixed(1)+'%</td><td>'+(s.risk_params.MEME.stop_loss_pct*100).toFixed(1)+'%</td><td>+'+(s.risk_params.MEME.trail_arm_pct*100).toFixed(1)+'%</td><td>'+(s.risk_params.MEME.trail_distance_pct*100).toFixed(1)+'% below peak</td><td>'+Math.round(s.risk_params.MEME.max_hold_seconds/60)+' min TP-miss fallback</td><td>'+(s.risk_params.MEME.source||'default')+'</td></tr>':'')}
+    ${((s.risk_params||{}).SERIOUS?'<tr><td><span class="pilltag ok">SERIOUS</span></td><td>'+(s.risk_params.SERIOUS.take_profit_pct*100).toFixed(1)+'%</td><td>'+(s.risk_params.SERIOUS.stop_loss_pct*100).toFixed(1)+'%</td><td>+'+(s.risk_params.SERIOUS.trail_arm_pct*100).toFixed(1)+'%</td><td>'+(s.risk_params.SERIOUS.trail_distance_pct*100).toFixed(1)+'% below peak</td><td>'+Math.round(s.risk_params.SERIOUS.max_hold_seconds/3600*10)/10+' h TP-miss fallback</td><td>'+(s.risk_params.SERIOUS.source||'default')+'</td></tr>':'')}
+  </table><div style="font-size:10.5px;color:var(--text-faint);margin-top:6px">MEME trailing protection arms only after a meaningful +8% move and permits a 4% pullback from peak. Max hold only retries an exit after the recorded peak crossed TP but the sell did not complete. Age alone never closes a position. Stop loss remains unconditional. Tuned candidates can control paper exits, but live promotion remains locked.</div></div>
   <div class="card"><h3>Survival &middot; live trade history (on-chain)</h3><div class="scroll-wrap"><table><tr><th>Coin</th><th>Side</th><th>When</th><th>Signature</th><th>State</th><th>Order</th></tr>${liveTr}</table></div></div>
   <div class="card"><h3>Paper incubator &middot; trade history</h3><div class="scroll-wrap"><table><tr><th>Coin</th><th>Side</th><th>Entry</th><th>Exit</th><th>P/L%</th><th>P/L$ (NZD)</th><th>Reason</th><th>Close</th><th>Mode</th></tr>${paperTr}</table></div></div>
   <div class="card"><h3>Decision log &middot; autonomous cycles</h3><div class="scroll-wrap"><table><tr><th>When</th><th>Action</th><th>Asset</th><th>State</th><th>Reason</th></tr>${cyc}</table></div></div>`;

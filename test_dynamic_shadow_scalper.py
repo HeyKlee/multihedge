@@ -100,7 +100,28 @@ class DynamicShadowScalperTests(unittest.TestCase):
         self.assertGreaterEqual(serious["max_hold_seconds"], 6 * 3600)
         self.assertEqual(meme["take_profit_pct"], 0.20)
         self.assertEqual(meme["stop_loss_pct"], -0.10)
+        self.assertEqual(meme["trail_arm_pct"], 0.08)
+        self.assertEqual(meme["trail_distance_pct"], 0.04)
         self.assertEqual(meme["max_hold_seconds"], 900)
+
+    def test_memecoin_trail_ignores_small_noise_then_protects_larger_move(self):
+        ds.tick(self.db, [candidate()], now=1000)
+        with sqlite3.connect(self.db) as con:
+            con.execute(
+                "UPDATE mh_dynamic_scalp_positions SET peak_usd=? WHERE mint=?",
+                (.00105, MINT),
+            )
+        # A 5% peak and ordinary pullback must not arm the wider MEME trail.
+        result = ds.tick(self.db, [candidate(price=.00102, change5=0)], now=1060)
+        self.assertEqual(result["closed"], 0)
+        with sqlite3.connect(self.db) as con:
+            con.execute(
+                "UPDATE mh_dynamic_scalp_positions SET peak_usd=? WHERE mint=?",
+                (.00110, MINT),
+            )
+        # Once up 8%+, a pullback exceeding 4% from peak protects the move.
+        result = ds.tick(self.db, [candidate(price=.00105, change5=0)], now=1120)
+        self.assertEqual(result["reasons"], {"trail_stop": 1})
 
 
 if __name__ == "__main__":

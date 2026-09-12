@@ -72,6 +72,19 @@ class LiveInventoryTests(unittest.TestCase):
         decision = li.forced_exit(self.db, {MINT: .00105}, now=1902)
         self.assertEqual(decision["exit_reason"], "max_hold")
 
+    def test_live_memecoin_trail_ignores_noise_then_protects_larger_move(self):
+        li.record_fill(self.db, intent(), {
+            "verified": True, "input_atomic": 1_000_000,
+            "output_atomic": 1_000_000_000,
+        }, ticker="PEPE", decimals=6, price_usd=.001, now=1000)
+        with li._connect(self.db) as con:
+            con.execute("UPDATE mh_live_inventory SET peak_usd=? WHERE mint=?", (.00105, MINT))
+        self.assertIsNone(li.forced_exit(self.db, {MINT: .00102}, now=1060))
+        with li._connect(self.db) as con:
+            con.execute("UPDATE mh_live_inventory SET peak_usd=? WHERE mint=?", (.00110, MINT))
+        decision = li.forced_exit(self.db, {MINT: .00105}, now=1120)
+        self.assertEqual(decision["exit_reason"], "trail_stop")
+
     def test_unregistered_wallet_token_cannot_be_treated_as_bot_inventory(self):
         self.assertIsNone(li.get_holding(self.db, MINT))
         self.assertIsNone(li.forced_exit(self.db, {MINT: .001}, now=1000))

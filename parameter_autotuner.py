@@ -97,8 +97,8 @@ def _simulate_trade(x: dict, params: dict, *, round_trip_cost_pct: float = 0.0) 
     tp = float(params["take_profit_pct"])
     sl = float(params["stop_loss_pct"])
     hold = float(params["max_hold_seconds"])
-    trail_arm = float(params.get("trail_arm_pct", 0.02))
-    trail_distance = float(params.get("trail_distance_pct", 0.01))
+    trail_arm = float(params.get("trail_arm_pct", 0.08))
+    trail_distance = float(params.get("trail_distance_pct", 0.04))
     entry = float(x["entry_usd"])
     opened = float(x["open_ts"])
     samples = x.get("samples") or []
@@ -217,8 +217,8 @@ def maybe_tune(db_path, cfg, *, now=None) -> dict:
                 for hold in _grid(mode)[2]:
                     cand = {
                         "take_profit_pct": tp, "stop_loss_pct": sl,
-                        "trail_arm_pct": incumbent.get("trail_arm_pct", 0.02),
-                        "trail_distance_pct": incumbent.get("trail_distance_pct", 0.01),
+                        "trail_arm_pct": incumbent.get("trail_arm_pct", 0.08),
+                        "trail_distance_pct": incumbent.get("trail_distance_pct", 0.04),
                         "max_hold_seconds": hold, "mode": mode,
                     }
                     tr, ho = _walk_forward(

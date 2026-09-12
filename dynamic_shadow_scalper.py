@@ -14,14 +14,6 @@ MIN_ENTRY_5M_PCT = 0.5
 MAX_ENTRY_5M_PCT = 8.0
 MIN_BUY_SELL_RATIO = 1.05
 
-# Memecoin scalp (fast) defaults; per-coin params come from live_inventory.
-TAKE_PROFIT_PCT = 0.20
-STOP_LOSS_PCT = -0.10
-TRAIL_ARM_PCT = 0.02
-TRAIL_DISTANCE_PCT = 0.01
-MAX_HOLD_SECONDS = 900
-
-
 def _connect(path: Path):
     con = sqlite3.connect(Path(path), timeout=30)
     con.row_factory = sqlite3.Row
