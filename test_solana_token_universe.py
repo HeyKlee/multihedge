@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import Mock
 
+import httpx
+
 import solana_token_universe as stu
 
 
@@ -137,6 +139,64 @@ class TokenUniverseTests(unittest.TestCase):
         self.assertEqual(result[0]["symbol"], MINT_A)
         self.assertFalse(result[0]["entry_eligible"])
         self.assertEqual(result[0]["market"]["latest_usd"], .001)
+
+    def test_rate_limited_metadata_is_retried_then_discovery_succeeds(self):
+        slept = []
+        original = stu._sleep
+        stu._sleep = slept.append
+        try:
+            get = Mock(side_effect=[
+                stu.FakeResponse(429, {}),
+                stu.FakeResponse(200, [token()]),
+                stu.FakeResponse(200, []),
+                stu.FakeResponse(200, []),
+                stu.FakeResponse(200, {"warnings": {MINT_A: []}}),
+            ])
+            result = stu.discover_candidates(CFG, api_key="key", now=NOW, get=get)
+        finally:
+            stu._sleep = original
+        self.assertEqual([row["mint"] for row in result], [MINT_A])
+        self.assertEqual(len(slept), 1)
+        self.assertGreater(slept[0], 0)
+
+    def test_persistent_rate_limit_fails_closed_after_bounded_retries(self):
+        slept = []
+        original = stu._sleep
+        stu._sleep = slept.append
+        try:
+            get = Mock(return_value=stu.FakeResponse(429, {}))
+            with self.assertRaises(stu.UpstreamUnavailable):
+                stu.discover_candidates(CFG, api_key="key", now=NOW, get=get)
+        finally:
+            stu._sleep = original
+        self.assertEqual(get.call_count, stu.MAX_ATTEMPTS)
+        self.assertEqual(len(slept), stu.MAX_ATTEMPTS - 1)
+
+    def test_persistent_upstream_error_denies_entries_as_token_denial(self):
+        get = Mock(return_value=stu.FakeResponse(503, {}))
+        with self.assertRaises(stu.UpstreamUnavailable) as caught:
+            stu.resolve_holdings([MINT_A], api_key="key", now=NOW, get=get)
+        # Existing fail-closed handlers only catch TokenDenied.
+        self.assertIsInstance(caught.exception, stu.TokenDenied)
+
+    def test_non_retryable_status_is_not_retried(self):
+        get = Mock(return_value=stu.FakeResponse(403, {}))
+        with self.assertRaisesRegex(stu.TokenDenied, "HTTP 403"):
+            stu.discover_candidates(CFG, api_key="key", now=NOW, get=get)
+        self.assertEqual(get.call_count, 1)
+
+    def test_transport_failure_is_retried_then_reported_upstream(self):
+        slept = []
+        original = stu._sleep
+        stu._sleep = slept.append
+        try:
+            get = Mock(side_effect=httpx.ConnectError("connection refused"))
+            with self.assertRaises(stu.UpstreamUnavailable):
+                stu.discover_candidates(CFG, api_key="key", now=NOW, get=get)
+        finally:
+            stu._sleep = original
+        self.assertEqual(get.call_count, stu.MAX_ATTEMPTS)
+        self.assertEqual(len(slept), stu.MAX_ATTEMPTS - 1)
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import math
+import time
 from typing import Callable
 
 import httpx
@@ -22,9 +23,26 @@ SHIELD_URL = "https://api.jup.ag/ultra/v1/shield"
 QUOTE_URL = "https://api.jup.ag/swap/v2/quote"
 PRICE_URL = "https://api.jup.ag/price/v3"
 
+# Jupiter returns 429 under burst load and transient 5xx during deploys. These
+# are retryable upstream conditions, not token safety verdicts, so they get a
+# bounded retry instead of aborting a whole autonomous cycle.
+RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+MAX_ATTEMPTS = 3
+RETRY_BASE_SECONDS = 1.5
+RETRY_MAX_SECONDS = 5.0
+
 
 class TokenDenied(RuntimeError):
     pass
+
+
+class UpstreamUnavailable(TokenDenied):
+    """Jupiter could not be reached or rate-limited every retry.
+
+    Subclasses TokenDenied so every existing fail-closed handler still blocks
+    entries, while cycle launchers can report an upstream outage instead of
+    dying with a bare traceback.
+    """
 
 
 class FakeResponse:
@@ -147,14 +165,45 @@ def _headers(api_key: str) -> dict:
     return {"x-api-key": api_key}
 
 
-def _get_json(get: Callable, url: str, *, api_key: str, params: dict | None = None):
-    response = get(url, headers=_headers(api_key), params=params, timeout=30)
-    if response.status_code != 200:
-        raise TokenDenied(f"Jupiter metadata HTTP {response.status_code}")
+def _sleep(seconds: float) -> None:
+    time.sleep(seconds)
+
+
+def _retry_delay(attempt: int, response=None) -> float:
+    """Backoff for one retry, honouring a capped Retry-After when present."""
+    requested = 0.0
     try:
-        return response.json()
-    except ValueError as exc:
-        raise TokenDenied("Jupiter metadata returned invalid JSON") from exc
+        requested = float(response.headers.get("Retry-After"))
+    except (AttributeError, TypeError, ValueError):
+        requested = 0.0
+    if requested <= 0:
+        requested = RETRY_BASE_SECONDS * (2 ** attempt)
+    return max(0.0, min(requested, RETRY_MAX_SECONDS))
+
+
+def _get_json(get: Callable, url: str, *, api_key: str, params: dict | None = None):
+    headers = _headers(api_key)
+    for attempt in range(MAX_ATTEMPTS):
+        last = attempt + 1 >= MAX_ATTEMPTS
+        try:
+            response = get(url, headers=headers, params=params, timeout=30)
+        except httpx.HTTPError as exc:
+            if last:
+                raise UpstreamUnavailable(
+                    f"Jupiter metadata transport error: {type(exc).__name__}") from exc
+            _sleep(_retry_delay(attempt))
+            continue
+        if response.status_code == 200:
+            try:
+                return response.json()
+            except ValueError as exc:
+                raise TokenDenied("Jupiter metadata returned invalid JSON") from exc
+        if response.status_code not in RETRYABLE_STATUS:
+            raise TokenDenied(f"Jupiter metadata HTTP {response.status_code}")
+        if last:
+            raise UpstreamUnavailable(f"Jupiter metadata HTTP {response.status_code}")
+        _sleep(_retry_delay(attempt, response))
+    raise UpstreamUnavailable("Jupiter metadata unavailable")
 
 
 def discover_candidates(cfg: dict, *, api_key: str, now: float, get=httpx.get) -> list[dict]:

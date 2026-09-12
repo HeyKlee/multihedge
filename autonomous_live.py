@@ -548,21 +548,29 @@ def queue_intent(cfg: dict, intent: TradeIntent) -> dict:
 def main() -> int:
     import yaml
     from live_inventory import list_holdings
-    from solana_token_universe import discover_candidates, resolve_holdings
+    from solana_token_universe import UpstreamUnavailable, discover_candidates, resolve_holdings
     root = Path(__file__).resolve().parent
     _load_selected_env(root / "deploy/data/.env")
     cfg = yaml.safe_load((root / "config.yaml").read_text(encoding="utf-8"))
     now = time.time()
-    candidates = discover_candidates(
-        cfg, api_key=os.getenv("JUPITER_API_KEY", ""), now=now
-    )
     db_path = Path(os.getenv(
         "MULTIHEDGE_EVIDENCE_DB", str(root / "deploy/data/multihedge.db")
     ))
     holdings = list_holdings(db_path)
-    resolved = resolve_holdings(
-        [row["mint"] for row in holdings], api_key=os.getenv("JUPITER_API_KEY", ""), now=now
-    )
+    try:
+        candidates = discover_candidates(
+            cfg, api_key=os.getenv("JUPITER_API_KEY", ""), now=now
+        )
+        resolved = resolve_holdings(
+            [row["mint"] for row in holdings], api_key=os.getenv("JUPITER_API_KEY", ""), now=now
+        )
+    except UpstreamUnavailable as exc:
+        # No fresh market data means no entry evidence. Report the outage
+        # honestly and open no risk rather than failing the whole cycle.
+        print(json.dumps({"state": "HOLD", "reason": "upstream_unavailable",
+                          "detail": str(exc)}, sort_keys=True,
+                         separators=(",", ":"), allow_nan=False))
+        return 0
     runtime = {row["mint"]: row for row in resolved}
     runtime.update({row["mint"]: row for row in candidates})
     cfg = with_runtime_coins(cfg, list(runtime.values()))

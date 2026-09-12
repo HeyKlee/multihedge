@@ -179,34 +179,41 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
             "reasons": reasons, "candidates": len(candidates)}
 
 
-if __name__ == "__main__":
-    import yaml
-    from live_inventory import forced_exit, list_holdings
-    from solana_token_universe import discover_candidates, resolve_holdings
+def run_cycle(cfg: dict, db_path: Path, *, now: float, api_key: str, get=None,
+              forced_path: Path | None = None) -> tuple[dict, int]:
+    """Run one shadow scalp cycle and return (result, exit_code).
 
-    root = Path(__file__).resolve().parent
-    cfg = yaml.safe_load((root / "config.yaml").read_text(encoding="utf-8"))
-    now = time.time()
-    candidates = discover_candidates(
-        cfg, api_key=os.getenv("JUPITER_API_KEY", ""), now=now
-    )
-    db_path = Path(os.getenv("MULTIHEDGE_EVIDENCE_DB", str(root / "multihedge.db")))
-    holdings = list_holdings(db_path)
-    with _connect(db_path) as con:
-        paper_mints = [row[0] for row in con.execute(
-            "SELECT mint FROM mh_dynamic_scalp_positions"
-        ).fetchall()]
-    resolved = resolve_holdings(
-        [row["mint"] for row in holdings] + paper_mints,
-        api_key=os.getenv("JUPITER_API_KEY", ""), now=now
-    )
+    An upstream metadata outage degrades honestly instead of crashing: no new
+    risk is opened, exit evaluation is reported as unevaluated, and any pending
+    forced exit is left untouched so a real decision can still reach the signer.
+    """
+    import httpx
+    from live_inventory import forced_exit, list_holdings
+    from solana_token_universe import UpstreamUnavailable, discover_candidates, resolve_holdings
+
+    get = httpx.get if get is None else get
+    try:
+        candidates = discover_candidates(cfg, api_key=api_key, now=now, get=get)
+        holdings = list_holdings(db_path)
+        with _connect(db_path) as con:
+            paper_mints = [row[0] for row in con.execute(
+                "SELECT mint FROM mh_dynamic_scalp_positions"
+            ).fetchall()]
+        resolved = resolve_holdings(
+            [row["mint"] for row in holdings] + paper_mints, api_key=api_key, now=now, get=get
+        )
+    except UpstreamUnavailable as exc:
+        return {"state": "SHADOW_SCALP_DEGRADED", "reason": str(exc),
+                "new_risk_blocked": True, "exits_unevaluated": True,
+                "opened": 0, "closed": 0, "candidates": 0}, 0
     all_tokens = {row["mint"]: row for row in resolved}
     all_tokens.update({row["mint"]: row for row in candidates})
     exit_decision = forced_exit(
         db_path, {mint: row["market"]["latest_usd"] for mint, row in all_tokens.items()}, now=now,
         cfg=cfg,
     )
-    forced_path = Path(os.getenv("MULTIHEDGE_FORCED_EXIT", "/tmp/multihedge_forced_exit.json"))
+    forced_path = (Path(os.getenv("MULTIHEDGE_FORCED_EXIT", "/tmp/multihedge_forced_exit.json"))
+                   if forced_path is None else Path(forced_path))
     forced_path.parent.mkdir(parents=True, exist_ok=True)
     temporary = forced_path.with_name(f".{forced_path.name}.{os.getpid()}.tmp")
     temporary.write_text(json.dumps(exit_decision or {}, sort_keys=True), encoding="utf-8")
@@ -220,4 +227,18 @@ if __name__ == "__main__":
         result["autotune"] = maybe_tune(db_path, cfg, now=now)
     except Exception as exc:  # never let a tuning failure stop the cycle
         result["autotune"] = {"state": "TUNING_FAILED", "error": type(exc).__name__}
+    return result, 0
+
+
+if __name__ == "__main__":
+    import yaml
+
+    root = Path(__file__).resolve().parent
+    result, code = run_cycle(
+        yaml.safe_load((root / "config.yaml").read_text(encoding="utf-8")),
+        Path(os.getenv("MULTIHEDGE_EVIDENCE_DB", str(root / "multihedge.db"))),
+        now=time.time(),
+        api_key=os.getenv("JUPITER_API_KEY", ""),
+    )
     print(json.dumps(result, sort_keys=True))
+    raise SystemExit(code)

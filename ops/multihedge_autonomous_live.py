@@ -27,6 +27,12 @@ def last_json(text):
     return None
 
 
+def tail(text, limit=400):
+    """Keep the last stderr/stdout lines so a failed step explains itself."""
+    lines = [line for line in (text or "").splitlines() if line.strip()]
+    return "\n".join(lines[-6:])[-limit:]
+
+
 def main():
     lock_path = DATA / "autonomous_live.lock"
     lock_path.touch(mode=0o600, exist_ok=True)
@@ -66,7 +72,8 @@ def main():
         shadow_result = last_json(shadow.stdout)
         if shadow.returncode != 0 or shadow_result is None:
             print(json.dumps({"state": "HOLD", "reason": "shadow_scalper_failed",
-                              "exit_code": shadow.returncode}))
+                              "exit_code": shadow.returncode,
+                              "stderr": tail(shadow.stderr)}))
             return 1
 
         forced_path = logs / "forced_exit.json"
@@ -101,7 +108,8 @@ def main():
         agent_result = last_json(agent.stdout)
         if agent.returncode != 0 or agent_result is None:
             print(json.dumps({"state": "HOLD", "reason": "agent_cycle_failed",
-                              "exit_code": agent.returncode}))
+                              "exit_code": agent.returncode,
+                              "stderr": tail(agent.stderr)}))
             return 1
 
         signer = run([
@@ -119,7 +127,8 @@ def main():
         signer_result = last_json(signer.stdout)
         if signer.returncode != 0 or signer_result is None:
             print(json.dumps({"state": "HOLD", "reason": "signer_cycle_failed",
-                              "agent": agent_result, "exit_code": signer.returncode}))
+                              "agent": agent_result, "exit_code": signer.returncode,
+                              "stderr": tail(signer.stderr)}))
             return 1
         print(json.dumps({"state": "AUTONOMOUS_CYCLE_COMPLETE", "shadow": shadow_result,
                           "agent": agent_result, "signer": signer_result}, sort_keys=True))

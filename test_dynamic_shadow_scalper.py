@@ -1,11 +1,27 @@
+import contextlib
+import json
 import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import Mock
 
 import dynamic_shadow_scalper as ds
+import solana_token_universe as stu
 
 MINT = "B5WTLaRwaUQpKk7ir1wniNB6m5o8GgMrimhKMYan2R6B"
+
+
+@contextlib.contextmanager
+def no_retry_sleep():
+    """Keep upstream retry tests instant while still recording the waits."""
+    slept = []
+    original = stu._sleep
+    stu._sleep = slept.append
+    try:
+        yield slept
+    finally:
+        stu._sleep = original
 
 
 def candidate(price=.001, change5=2.0, change1h=5.0, buy=20_000, sell=10_000):
@@ -122,6 +138,47 @@ class DynamicShadowScalperTests(unittest.TestCase):
         # Once up 8%+, a pullback exceeding 4% from peak protects the move.
         result = ds.tick(self.db, [candidate(price=.00105, change5=0)], now=1120)
         self.assertEqual(result["reasons"], {"trail_stop": 1})
+
+    def test_upstream_rate_limit_degrades_without_opening_risk(self):
+        cfg = {"live": {"autonomous": {"dynamic_universe": {"enabled": True, "max_candidates": 12}}}}
+        get = Mock(return_value=stu.FakeResponse(429, {}))
+        with no_retry_sleep():
+            result, code = ds.run_cycle(cfg, self.db, now=1000, api_key="key", get=get)
+        self.assertEqual(code, 0)
+        self.assertEqual(result["state"], "SHADOW_SCALP_DEGRADED")
+        self.assertTrue(result["new_risk_blocked"])
+        self.assertTrue(result["exits_unevaluated"])
+        self.assertEqual(result["opened"], 0)
+        with sqlite3.connect(self.db) as con:
+            tables = {row[0] for row in con.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'")}
+        self.assertNotIn("mh_dynamic_scalp_positions", tables)
+
+    def test_holding_price_failure_keeps_pending_exit_untouched(self):
+        import live_inventory
+        with live_inventory._connect(self.db) as con:
+            con.execute(
+                "INSERT INTO mh_live_inventory(mint,ticker,decimals,amount_atomic,"
+                "cost_usdc_atomic,entry_usd,peak_usd,opened_ts,updated_ts) "
+                "VALUES(?,?,?,?,?,?,?,?,?)",
+                (MINT, "PEPE", 6, 1000, 1_000_000, .001, .001, 0.0, 0.0),
+            )
+        pending = Path(self.tmp.name) / "forced_exit.json"
+        payload = json.dumps({"action": "SELL", "symbol": MINT, "exit_reason": "stop_loss"})
+        pending.write_text(payload)
+        cfg = {"live": {"autonomous": {"dynamic_universe": {"enabled": True}}}}
+        get = Mock(side_effect=[
+            stu.FakeResponse(200, []), stu.FakeResponse(200, []), stu.FakeResponse(200, []),
+            stu.FakeResponse(429, {}), stu.FakeResponse(429, {}), stu.FakeResponse(429, {}),
+        ])
+        with no_retry_sleep():
+            result, code = ds.run_cycle(
+                cfg, self.db, now=1000, api_key="key", get=get, forced_path=pending
+            )
+        self.assertEqual(code, 0)
+        self.assertEqual(result["state"], "SHADOW_SCALP_DEGRADED")
+        self.assertTrue(result["exits_unevaluated"])
+        self.assertEqual(pending.read_text(), payload)
 
 
 if __name__ == "__main__":
