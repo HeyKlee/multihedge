@@ -78,7 +78,8 @@ def refresh_params():
     TRAIL_ARM = P("TRAIL_ARM")
     TRAIL_DIST = P("TRAIL_DIST")
     CONFIDENCE_MIN = P("CONFIDENCE_MIN")
-    con = sqlite3.connect(DB_PATH, timeout=30)
+    con = sqlite3.connect(DB_PATH, check_same_thread=False,
+                          timeout=BUSY_TIMEOUT_SECONDS)
     try:
         con.execute("CREATE TABLE IF NOT EXISTS mh_parameter_application (trader TEXT PRIMARY KEY,settings_json TEXT,applied_ts REAL,checked_ts REAL)")
         settings = json.dumps(_PARAMS,sort_keys=True,allow_nan=False)
@@ -102,8 +103,23 @@ TRAIL_DIST = P("TRAIL_DIST")
 CONFIDENCE_MIN = P("CONFIDENCE_MIN")
 
 
+BUSY_TIMEOUT_SECONDS = 10.0
+
+
 def _connect():
-    con = sqlite3.connect(DB_PATH, check_same_thread=False)
+    """Open a connection with a BOUNDED wait for the write lock.
+
+    This module opens several connections per tick. The CREATE TABLE statements
+    below are not the problem (IF NOT EXISTS on an existing table performs no
+    write), but the WAIT is: a writer that cannot get the lock holds SQLite's
+    PENDING byte, which blocks new readers, and then waits for existing readers to
+    clear before taking EXCLUSIVE. On 2026-09-12 this loop was found holding
+    PENDING in /proc/locks while the busy handler spun, and nothing in the stack
+    could write for minutes. A bounded wait makes that a single failed operation
+    that retries next tick instead of a system-wide stall.
+    """
+    con = sqlite3.connect(DB_PATH, check_same_thread=False,
+                          timeout=BUSY_TIMEOUT_SECONDS)
     con.row_factory = sqlite3.Row
     con.execute("""
         CREATE TABLE IF NOT EXISTS mh_reasoner_accounts (

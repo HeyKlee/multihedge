@@ -197,8 +197,25 @@ def risk_params(mint: str, cfg: dict | None, db_path=None, *, allow_tuned: bool 
     return _default_params(mode)
 
 
+BUSY_TIMEOUT_SECONDS = 10.0
+
+
 def _connect(path: Path):
-    con = sqlite3.connect(Path(path), timeout=30)
+    """Open a connection with a BOUNDED wait for the write lock.
+
+    The wait matters more than it looks. When a writer cannot get the lock it
+    takes SQLite's PENDING byte first, which blocks every new reader, and then
+    waits for existing readers to clear before it can take EXCLUSIVE. If a reader
+    never clears, the writer spins in its busy handler while holding PENDING, and
+    the whole database is stalled for every process in every namespace. On
+    2026-09-12 exactly that wedged the container for minutes. A bounded wait turns
+    a system-wide stall into one failed operation that retries next cycle.
+
+    Note: the CREATE TABLE statements below are NOT the cause. `IF NOT EXISTS` on
+    an existing table performs no write and takes no lock, verified by running it
+    against a read-only database file.
+    """
+    con = sqlite3.connect(Path(path), timeout=BUSY_TIMEOUT_SECONDS)
     con.row_factory = sqlite3.Row
     con.execute(
         "CREATE TABLE IF NOT EXISTS mh_live_inventory ("
