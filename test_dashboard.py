@@ -45,4 +45,28 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(status['MEME']['trail_distance_pct'],.04)
         self.assertIn('<th>Trail arm</th><th>Trail distance</th>',dash._html())
 
+    def test_dashboard_uses_grouped_sidebar_information_architecture(self):
+        html=dash._html()
+        self.assertIn('class="app-shell"',html)
+        self.assertIn('class="sidebar"',html)
+        self.assertIn('Command',html)
+        self.assertIn('Traders',html)
+        self.assertIn('Autonomous',html)
+        for tab in ('overview','market','gate','strategies','reasoner','whales','memecoin','grid','survival'):
+            self.assertIn(f'data-tab="{tab}"',html)
+
+    def test_dashboard_defaults_to_overview_and_has_dynamic_page_context(self):
+        html=dash._html()
+        self.assertIn('data-tab="overview" class="active"',html)
+        self.assertIn("let TAB='overview'",html)
+        self.assertIn('id="pageTitle"',html)
+        self.assertIn('id="pageSubtitle"',html)
+        self.assertIn('const NAV_META=',html)
+
+    def test_dashboard_preserves_visible_trading_provenance(self):
+        html=dash._html()
+        self.assertIn('PAPER SIMULATION',html)
+        self.assertIn('real on-chain fills',html)
+        self.assertIn("kind==='live'?'LIVE':'PAPER'",html)
+
 if __name__=='__main__':unittest.main()
