@@ -96,6 +96,41 @@ class ContinuousOptimizerTests(unittest.TestCase):
         self.assertFalse(opt.valid_trade({"entry_px": 100.0, "qty": -0.1}))
         self.assertFalse(opt.valid_trade({"entry_px": 0.0, "qty": 0.1}))
 
+    def test_pnl_consistency_accepts_notional_scaled_dollars_only(self):
+        ok = {"entry_px": 0.2, "qty": 5.0, "realized_pct": 0.10, "realized_usd": 0.10}
+        self.assertTrue(opt.pnl_row_is_consistent(ok))
+        # usd == qty * pct omits the price factor: rejected, not silently repaired.
+        missing_price = {"entry_px": 0.2, "qty": 5.0, "realized_pct": 0.10, "realized_usd": 0.50}
+        self.assertFalse(opt.pnl_row_is_consistent(missing_price))
+        self.assertFalse(opt.pnl_row_is_consistent(
+            {"entry_px": None, "qty": 5.0, "realized_pct": 0.10, "realized_usd": 0.5}))
+
+    def test_scalper_loader_drops_inconsistent_rows_rather_than_trusting_them(self):
+        con = sqlite3.connect(":memory:")
+        con.row_factory = sqlite3.Row
+        con.execute(
+            "CREATE TABLE mh_trades(id INTEGER,coin TEXT,symbol TEXT,setup TEXT,side TEXT,"
+            "open_ts REAL,close_ts REAL,entry_px REAL,exit_px REAL,qty REAL,realized_pct REAL,"
+            "realized_usd REAL,exit_reason TEXT)")
+        con.executemany("INSERT INTO mh_trades VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", [
+            (1, "A", "A", "momentum_breakout", "LONG", 0.0, 10.0, 0.2, 0.22, 5.0, 0.10, 0.10, "take_profit"),
+            (2, "B", "B", "momentum_breakout", "LONG", 0.0, 20.0, 0.2, 0.22, 5.0, 0.10, 0.50, "take_profit"),
+        ])
+        rows = opt._load_scalper(con)
+        self.assertEqual([r["id"] for r in rows], [1])
+        con.close()
+
+
+    def test_markdown_renders_when_profit_factor_is_undefined(self):
+        # A period with no losing trades leaves profit_factor None; the weekly
+        # runner would otherwise crash instead of reporting.
+        rows = [opt.adjust_trade({"entry_px": 1.0, "qty": 1.0, "realized_usd": 0.05})
+                for _ in range(3)]
+        metrics = opt.performance_metrics(rows)
+        self.assertIsNone(metrics["profit_factor"])
+        self.assertEqual(opt._fmt_num(metrics["profit_factor"]), "n/a")
+        self.assertEqual(opt._fmt_num(1.2345), "1.234")
+
 
 if __name__ == "__main__":
     unittest.main()

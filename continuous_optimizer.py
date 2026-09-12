@@ -31,6 +31,22 @@ def valid_trade(trade):
         return False
 
 
+def pnl_row_is_consistent(row) -> bool:
+    """True when the persisted dollar P&L obeys usd == qty * entry_px * pct.
+
+    Rows written before the formula was corrected store usd == qty * pct, which
+    drops the price factor: on SOL (entry ~100) that understates P&L roughly 100x,
+    on JUP (entry ~0.2) it overstates it roughly 5x. The correct dollar figure is
+    recoverable, but repairing history would be manufacturing evidence, so the
+    evaluator excludes these rows and reports how many it dropped instead.
+    """
+    try:
+        notional = float(row["qty"]) * float(row["entry_px"])
+        return abs(float(row["realized_usd"]) - notional * float(row["realized_pct"])) <= 1e-6
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
 def adjust_trade(trade, per_side_bps=40.0, fixed_cost_usd=0.0):
     notional = float(trade["entry_px"]) * float(trade["qty"])
     cost = notional * (2.0 * float(per_side_bps) / 10000.0) + float(fixed_cost_usd)
@@ -183,7 +199,10 @@ def _iso(ts):
 
 def _load_scalper(con):
     rows = [dict(r) for r in con.execute("SELECT * FROM mh_trades ORDER BY close_ts,id")]
-    return [r for r in rows if trade_owner(r.get("setup")) == "scalper"]
+    return [
+        r for r in rows
+        if trade_owner(r.get("setup")) == "scalper" and pnl_row_is_consistent(r)
+    ]
 
 
 def grid_completed_rows(con):
@@ -199,7 +218,7 @@ def _trader_scorecards(con, per_side_bps):
     rows = [dict(r) for r in con.execute("SELECT * FROM mh_trades ORDER BY close_ts,id")]
     grouped = defaultdict(list)
     for row in rows:
-        if not valid_trade(row):
+        if not valid_trade(row) or not pnl_row_is_consistent(row):
             continue
         grouped[trade_owner(row.get("setup"))].append(adjust_trade(row, per_side_bps, 0.0))
     scorecards = {
@@ -251,6 +270,11 @@ def _data_quality(con):
         "SELECT COUNT(*) FROM mh_trades WHERE entry_px<=0 OR exit_px<=0 OR qty<=0 OR close_ts<open_ts OR realized_pct IS NULL OR realized_usd IS NULL"
     ).fetchone()[0]
     q["pnl_formula_mismatch_rows"] = con.execute(
+        "SELECT COUNT(*) FROM mh_trades WHERE ABS(realized_usd-qty*entry_px*realized_pct)>0.000001"
+    ).fetchone()[0]
+    # Rows the reconstruction above dropped for the same reason. Reported so a
+    # shrinking sample is visible in the verdict rather than silently absorbed.
+    q["pnl_rows_excluded_from_reconstruction"] = con.execute(
         "SELECT COUNT(*) FROM mh_trades WHERE ABS(realized_usd-qty*entry_px*realized_pct)>0.000001"
     ).fetchone()[0]
     q["duplicate_price_groups"] = con.execute(
@@ -367,6 +391,15 @@ def _fmt_pct(value):
     return f"{100.0 * float(value):.2f}%"
 
 
+def _fmt_num(value, places=3, missing="n/a"):
+    """Format a metric that is legitimately undefined for some samples.
+
+    profit_factor is None when a period has no losing trades, and a report that
+    cannot render is worse than one that says n/a.
+    """
+    return missing if value is None else f"{float(value):.{places}f}"
+
+
 def render_markdown(report):
     base = report["baseline"]
     quality = report["data_quality"]
@@ -383,13 +416,13 @@ def render_markdown(report):
         "## 2. Baseline",
         f"Source: `{report['run']['source_db']}` ({report['run']['source_sha256']}). Period: {report['run']['source_period_utc'][0]} to {report['run']['source_period_utc'][1]}. SQLite integrity: {report['run']['integrity']}.",
         f"Costs: {report['run']['cost_assumptions']['per_side_quote_impact_bps']:.0f} bps per side, {report['run']['cost_assumptions']['round_trip_bps']:.0f} bps round trip, fixed cost ${report['run']['cost_assumptions']['fixed_cost_usd_per_trade']:.2f}.",
-        f"Scalper: {base['n']} trades, gross P&L ${base['gross_profit_usd']:.4f}, modeled costs ${base['modeled_cost_usd']:.4f}, net P&L ${base['net_profit_usd']:.4f}, net return {_fmt_pct(base['net_return'])}, win rate {_fmt_pct(base['win_rate'])}, expectancy ${base['expectancy']:.4f}/trade, profit factor {base['profit_factor']:.3f}, maximum drawdown {_fmt_pct(base['max_drawdown'])}.",
+        f"Scalper: {base['n']} trades, gross P&L ${base['gross_profit_usd']:.4f}, modeled costs ${base['modeled_cost_usd']:.4f}, net P&L ${base['net_profit_usd']:.4f}, net return {_fmt_pct(base['net_return'])}, win rate {_fmt_pct(base['win_rate'])}, expectancy ${base['expectancy']:.4f}/trade, profit factor {_fmt_num(base['profit_factor'])}, maximum drawdown {_fmt_pct(base['max_drawdown'])}.",
         "",
         "| Trader | Closed trades | Gross P&L | Modeled costs | Net P&L | Net return | Max DD |",
         "|---|---:|---:|---:|---:|---:|---:|",
         *[f"| {name} | {m['n']} | ${m['gross_profit_usd']:.4f} | ${m['modeled_cost_usd']:.4f} | ${m['net_profit_usd']:.4f} | {_fmt_pct(m['net_return'])} | {_fmt_pct(m['max_drawdown'])} |" for name, m in scorecards.items()],
         "",
-        f"Data quality: {quality['invalid_trade_rows']} invalid trade row, {quality['pnl_formula_mismatch_rows']} P&L formula mismatches across all traders, and {quality['exact_duplicate_trade_groups']} exact duplicate groups. Scalper account reconciliation differs by ${scalper_recon['unexplained_difference_usd']:.4f}, so reconstructed returns are evidence for rejection, not proof of a clean deployable edge. Regime, confidence calibration, quote-failure rate, spread, and latency breakdowns are unavailable because those fields are not persisted at trade level.",
+        f"Data quality: {quality['invalid_trade_rows']} invalid trade row, {quality['pnl_formula_mismatch_rows']} P&L formula mismatches across all traders, and {quality['exact_duplicate_trade_groups']} exact duplicate groups. {quality['pnl_rows_excluded_from_reconstruction']} rows were excluded from this reconstruction because their persisted dollar P&L omits the entry-price factor (usd == qty*pct instead of qty*entry_px*pct); the figures above are therefore a smaller, cleaner sample, not a repaired ledger. Scalper account reconciliation differs by ${scalper_recon['unexplained_difference_usd']:.4f}, so reconstructed returns are evidence for rejection, not proof of a clean deployable edge. Regime, confidence calibration, quote-failure rate, spread, and latency breakdowns are unavailable because those fields are not persisted at trade level.",
         "",
         "## 3. Diagnosed weaknesses",
         "1. Scalper accounting omits configured quote impact from persisted trade P&L, so dashboard and strategy feedback overstate net performance. Confidence: high.",

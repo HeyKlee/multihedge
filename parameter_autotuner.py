@@ -170,6 +170,38 @@ def _walk_forward(excursions, params, *, holdout: float,
     )
 
 
+def _record_evaluation(db_path, report: dict, *, now: float) -> bool:
+    """Append one row per tuning pass so a silent no-op is distinguishable from
+    a correct decline. Returns True when the row was written.
+
+    Without this, "the gate correctly refused" and "the tuner has been broken
+    for a week" look identical in every log. A logging failure must never stop
+    tuning, so it is reported rather than raised.
+    """
+    detail = {
+        "state": report.get("state"),
+        "round_trip_cost_pct": report.get("round_trip_cost_pct"),
+        "tuned": sorted(report.get("tuned") or {}),
+        "evaluation": report.get("evaluation") or {},
+    }
+    try:
+        with _connect(db_path) as con:
+            con.execute(
+                "CREATE TABLE IF NOT EXISTS mh_optimization_log ("
+                "id INTEGER PRIMARY KEY, ts REAL, coin TEXT, setup TEXT, "
+                "event TEXT, detail TEXT)"
+            )
+            con.execute(
+                "INSERT INTO mh_optimization_log(ts,coin,setup,event,detail) "
+                "VALUES(?,?,?,?,?)",
+                (now, "*", "autotuner", "autotune_evaluation",
+                 json.dumps(detail, sort_keys=True, allow_nan=False, default=str)),
+            )
+    except sqlite3.Error:
+        return False
+    return True
+
+
 def maybe_tune(db_path, cfg, *, now=None) -> dict:
     """Run the autonomous tuning pass. Returns a summary dict; persists an
     override only when evidence supports a strict improvement."""
@@ -180,19 +212,21 @@ def maybe_tune(db_path, cfg, *, now=None) -> dict:
     if quote_bps < 0 or quote_bps > 500:
         raise ValueError("invalid paper quote cost")
     round_trip_cost_pct = 2 * quote_bps / 10000.0
-    report = {"state": "NO_CHANGE", "tuned": {}, "evaluation": {}}
+    report = {"state": "NO_CHANGE", "tuned": {}, "evaluation": {},
+              "round_trip_cost_pct": round(round_trip_cost_pct, 6)}
     for mode in ("MEME", "SERIOUS"):
         excursions = load_excursions(db_path, mode)
-        if len(excursions) < MIN_SAMPLE_CLOSED:
-            report["evaluation"][mode] = {
-                "state": "INSUFFICIENT_HISTORY",
-                "closed": len(excursions), "required": MIN_SAMPLE_CLOSED,
-            }
-            continue
         path_ready = [
             x for x in excursions if x.get("samples")
             and abs(float(x["samples"][0]["sample_ts"]) - float(x["open_ts"])) <= 1
         ]
+        if len(excursions) < MIN_SAMPLE_CLOSED:
+            report["evaluation"][mode] = {
+                "state": "INSUFFICIENT_HISTORY",
+                "closed": len(excursions), "path_ready": len(path_ready),
+                "required": MIN_SAMPLE_CLOSED,
+            }
+            continue
         if len(path_ready) < MIN_SAMPLE_CLOSED:
             report["evaluation"][mode] = {
                 "state": "INSUFFICIENT_PRICE_PATHS", "closed": len(excursions),
@@ -256,6 +290,7 @@ def maybe_tune(db_path, cfg, *, now=None) -> dict:
                 excursions, best, round_trip_cost_pct=round_trip_cost_pct), 4),
             "round_trip_cost_pct": round(round_trip_cost_pct, 6),
         }
+    report["evaluation_logged"] = _record_evaluation(db_path, report, now=now)
     return report
 
 

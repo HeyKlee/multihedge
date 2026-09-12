@@ -69,7 +69,11 @@ reasoner:
   POSITION_FRACTION: 0.5
   TAKE_PROFIT: 0.015
   STOP_LOSS: 0.015
-  MAX_HOLD_SECS: 10800
+  # Values here are the declared defaults. At runtime mh_reasoner._load_params
+  # reads DB table mh_reasoner_params FIRST, then this block, then code defaults,
+  # and the runtime override is what actually applies. Keep the two in sync:
+  # this declared 10800 while the applied override was 7200, so they disagreed.
+  MAX_HOLD_SECS: 7200
   TRAIL_ARM: 0.008
   TRAIL_DIST: 0.004
   CONFIDENCE_MIN: 0.35

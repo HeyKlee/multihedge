@@ -128,6 +128,10 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
                 )
                 continue
             realized_pct = price / entry - 1
+            # Paper notional is $1.00, so for this setup the dollar figure is
+            # numerically equal to the percent figure. Both columns are correct;
+            # the identity is notional * pct, which other setups scale by their
+            # own larger notional. Do not "fix" the equality as a units bug.
             realized_usd = PAPER_NOTIONAL_USD * realized_pct
             con.execute(
                 "INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,"
@@ -189,7 +193,9 @@ def run_cycle(cfg: dict, db_path: Path, *, now: float, api_key: str, get=None,
     """
     import httpx
     from live_inventory import forced_exit, list_holdings
-    from solana_token_universe import UpstreamUnavailable, discover_candidates, resolve_holdings
+    from solana_token_universe import (
+        TokenDenied, UpstreamUnavailable, discover_candidates, resolve_holdings,
+    )
 
     get = httpx.get if get is None else get
     try:
@@ -202,7 +208,13 @@ def run_cycle(cfg: dict, db_path: Path, *, now: float, api_key: str, get=None,
         resolved = resolve_holdings(
             [row["mint"] for row in holdings] + paper_mints, api_key=api_key, now=now, get=get
         )
-    except UpstreamUnavailable as exc:
+    except (UpstreamUnavailable, TokenDenied) as exc:
+        # Denied covers UpstreamUnavailable (it is a TokenDenied subclass) plus
+        # the missing/invalid-Jupiter-key raise in solana_token_universe._headers.
+        # Aborting here returns exit code 1, and the ops launcher stops the whole
+        # cycle on that, skipping the agent and signer steps so a genuine forced
+        # exit would go unsettled. Degrade instead: no new risk is opened, exits
+        # are reported unevaluated, and the signer still gets its turn.
         return {"state": "SHADOW_SCALP_DEGRADED", "reason": str(exc),
                 "new_risk_blocked": True, "exits_unevaluated": True,
                 "opened": 0, "closed": 0, "candidates": 0}, 0

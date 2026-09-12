@@ -1,3 +1,4 @@
+import json
 import sqlite3
 import tempfile
 import unittest
@@ -141,6 +142,32 @@ class AutotunerTests(unittest.TestCase):
         rep = pa.maybe_tune(self.db, cfg())
         self.assertEqual(rep["state"], "NO_CHANGE")
         self.assertIsNone(li._risk_params_override(self.db, "MEME"))
+
+    def test_every_pass_is_logged_so_a_silent_no_op_is_visible(self):
+        pa.maybe_tune(self.db, cfg(), now=1234.0)
+        with sqlite3.connect(self.db) as con:
+            rows = con.execute(
+                "SELECT ts,coin,setup,event,detail FROM mh_optimization_log").fetchall()
+        self.assertEqual(len(rows), 1)
+        ts, coin, setup, event, detail = rows[0]
+        self.assertEqual((ts, coin, setup, event), (1234.0, "*", "autotuner", "autotune_evaluation"))
+        payload = json.loads(detail)
+        self.assertEqual(payload["state"], "NO_CHANGE")
+        self.assertIn("MEME", payload["evaluation"])
+        self.assertIn("SERIOUS", payload["evaluation"])
+        self.assertAlmostEqual(payload["round_trip_cost_pct"], 0.008, places=9)
+
+    def test_declined_pass_reports_sample_progress_toward_the_gate(self):
+        # The gate reason must show how close the sample is, not just "no".
+        self._seed([excursion(MINT, 0.001, 0.0013, 0.00095, 900, 0.05,
+                              open_ts=float(i), close_ts=float(i + 900))
+                    for i in range(5)])
+        rep = pa.maybe_tune(self.db, cfg())
+        meme = rep["evaluation"]["MEME"]
+        self.assertEqual(meme["state"], "INSUFFICIENT_HISTORY")
+        self.assertEqual(meme["closed"], 5)
+        self.assertEqual(meme["path_ready"], 0)
+        self.assertEqual(meme["required"], pa.MIN_SAMPLE_CLOSED)
 
 
 if __name__ == "__main__":

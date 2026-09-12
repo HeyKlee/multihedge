@@ -181,5 +181,42 @@ class DynamicShadowScalperTests(unittest.TestCase):
         self.assertEqual(pending.read_text(), payload)
 
 
+    def test_missing_jupiter_key_degrades_instead_of_aborting_cycle(self):
+        # A missing or rejected provider credential must not abort the cycle:
+        # the launcher stops on a non-zero exit and would skip the signer step,
+        # leaving a real forced exit unsettled for that minute.
+        cfg = {"live": {"autonomous": {"dynamic_universe": {"enabled": True, "max_candidates": 12}}}}
+        result, code = ds.run_cycle(cfg, self.db, now=1000, api_key="")
+        self.assertEqual(code, 0)
+        self.assertEqual(result["state"], "SHADOW_SCALP_DEGRADED")
+        self.assertTrue(result["new_risk_blocked"])
+        self.assertTrue(result["exits_unevaluated"])
+        self.assertEqual(result["candidates"], 0)
+
+    def test_closed_shadow_trade_dollar_pnl_matches_notional_times_pct(self):
+        ds.tick(self.db, [candidate()], now=1000)
+        result = ds.tick(self.db, [candidate(price=.00122, change5=1)], now=1060)
+        self.assertEqual(result["closed"], 1)
+        with sqlite3.connect(self.db) as con:
+            pct, usd, qty, entry_px, exit_px = con.execute(
+                "SELECT realized_pct,realized_usd,qty,entry_px,exit_px FROM mh_trades"
+            ).fetchone()
+        # The dollar figure is notional-scaled percent. With a $1 paper notional
+        # the two columns are numerically equal, which is correct, not a bug.
+        self.assertAlmostEqual(usd, ds.PAPER_NOTIONAL_USD * pct, places=12)
+        self.assertAlmostEqual(usd, qty * (exit_px - entry_px), places=12)
+
+    def test_missing_jupiter_key_leaves_pending_exit_untouched(self):
+        pending = Path(self.tmp.name) / "forced_exit.json"
+        payload = json.dumps({"action": "SELL", "symbol": MINT, "exit_reason": "stop_loss"})
+        pending.write_text(payload)
+        cfg = {"live": {"autonomous": {"dynamic_universe": {"enabled": True}}}}
+        result, code = ds.run_cycle(
+            cfg, self.db, now=1000, api_key="", forced_path=pending)
+        self.assertEqual(code, 0)
+        self.assertEqual(result["state"], "SHADOW_SCALP_DEGRADED")
+        self.assertEqual(pending.read_text(), payload)
+
+
 if __name__ == "__main__":
     unittest.main()
