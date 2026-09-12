@@ -113,14 +113,84 @@ def set_risk_params_override(path, params: dict, *, source: str, sample_n: int) 
         )
 
 
+def _coin_risk_params_override(path, mint: str) -> dict | None:
+    """Read a persisted per-coin override for one mint, or None if none exists."""
+    try:
+        with _connect(path) as con:
+            row = con.execute(
+                "SELECT * FROM mh_coin_risk_params WHERE mint=?", (str(mint),)
+            ).fetchone()
+    except Exception:
+        return None
+    if row is None:
+        return None
+    try:
+        return {
+            "take_profit_pct": float(row["take_profit_pct"]),
+            "stop_loss_pct": float(row["stop_loss_pct"]),
+            "trail_arm_pct": float(row["trail_arm_pct"]),
+            "trail_distance_pct": float(row["trail_distance_pct"]),
+            "max_hold_seconds": float(row["max_hold_seconds"]),
+            "mode": str(row["mode"]),
+            "source": str(row["source"]),
+            "sample_n": int(row["sample_n"]),
+            "confidence": str(row["confidence"]),
+            "applied_ts": float(row["applied_ts"]),
+        }
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def set_coin_risk_params_override(path, mint: str, params: dict, *, source: str,
+                                  sample_n: int, confidence: str = "low") -> None:
+    """Persist a per-coin override so risk_params() uses it for that mint only.
+
+    Bounded by the table CHECK constraints. Callers must run their own gate
+    first; this function only enforces shape and bounds.
+    """
+    import time as _time
+    mode = params.get("mode")
+    if mode not in {"MEME", "SERIOUS"}:
+        raise ValueError("invalid mode")
+    if float(params["trail_distance_pct"]) >= float(params["trail_arm_pct"]):
+        raise ValueError("trail distance must be below its own arm")
+    if str(confidence) not in {"low", "medium", "high"}:
+        raise ValueError("invalid confidence")
+    with _connect(path) as con:
+        con.execute(
+            "INSERT INTO mh_coin_risk_params(mint,mode,ticker,take_profit_pct,"
+            "stop_loss_pct,trail_arm_pct,trail_distance_pct,max_hold_seconds,source,"
+            "sample_n,confidence,applied_ts) VALUES(?,?,?,?,?,?,?,?,?,?,?,?) "
+            "ON CONFLICT(mint) DO UPDATE SET "
+            "mode=excluded.mode,ticker=excluded.ticker,"
+            "take_profit_pct=excluded.take_profit_pct,"
+            "stop_loss_pct=excluded.stop_loss_pct,"
+            "trail_arm_pct=excluded.trail_arm_pct,"
+            "trail_distance_pct=excluded.trail_distance_pct,"
+            "max_hold_seconds=excluded.max_hold_seconds,"
+            "source=excluded.source,sample_n=excluded.sample_n,"
+            "confidence=excluded.confidence,applied_ts=excluded.applied_ts",
+            (str(mint), mode, str(params.get("ticker") or "UNKNOWN")[:24],
+             params["take_profit_pct"], params["stop_loss_pct"],
+             params["trail_arm_pct"], params["trail_distance_pct"],
+             params["max_hold_seconds"], source, int(sample_n),
+             str(confidence), _time.time()),
+        )
+
+
 def risk_params(mint: str, cfg: dict | None, db_path=None, *, allow_tuned: bool = False) -> dict:
     """Return per-coin exit params.
 
-    A persisted tuned override (written by the autonomous autotuner) takes
-    precedence for the coin's class; otherwise deterministic defaults apply.
+    Precedence for an allow_tuned (paper/shadow) caller: a per-coin override for
+    this exact mint, then a mode-level override, then deterministic defaults.
+    A live caller passes allow_tuned=False and always gets the defaults, so
+    nothing here can widen live risk.
     """
     mode = mode_for_mint(mint, cfg)
     if allow_tuned and db_path is not None:
+        coin = _coin_risk_params_override(db_path, mint)
+        if coin is not None:
+            return coin
         override = _risk_params_override(db_path, mode)
         if override is not None:
             return override
@@ -143,6 +213,20 @@ def _connect(path: Path):
         "stop_loss_pct REAL NOT NULL, trail_arm_pct REAL NOT NULL,"
         "trail_distance_pct REAL NOT NULL, max_hold_seconds REAL NOT NULL,"
         "source TEXT NOT NULL, sample_n INTEGER NOT NULL, applied_ts REAL NOT NULL,"
+        "CHECK(take_profit_pct BETWEEN 0.005 AND 0.60),"
+        "CHECK(stop_loss_pct BETWEEN -0.35 AND -0.005),"
+        "CHECK(max_hold_seconds BETWEEN 60 AND 604800))"
+    )
+    # Per-coin overrides, keyed by mint because the mint is the canonical asset
+    # identity and tickers collide. Written only by the per-coin reviewer, whose
+    # deterministic gate must pass first. Same bounds as the mode-level table.
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS mh_coin_risk_params ("
+        "mint TEXT PRIMARY KEY, mode TEXT NOT NULL, ticker TEXT NOT NULL,"
+        "take_profit_pct REAL NOT NULL, stop_loss_pct REAL NOT NULL,"
+        "trail_arm_pct REAL NOT NULL, trail_distance_pct REAL NOT NULL,"
+        "max_hold_seconds REAL NOT NULL, source TEXT NOT NULL,"
+        "sample_n INTEGER NOT NULL, confidence TEXT NOT NULL, applied_ts REAL NOT NULL,"
         "CHECK(take_profit_pct BETWEEN 0.005 AND 0.60),"
         "CHECK(stop_loss_pct BETWEEN -0.35 AND -0.005),"
         "CHECK(max_hold_seconds BETWEEN 60 AND 604800))"
