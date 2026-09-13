@@ -51,6 +51,7 @@ TRADER_REASONER = "reasoner"
 TRADER_WHALE_TRADER = "whale_trader"
 TRADER_MEMECOIN = "memecoin_trader"
 TRADERS = (TRADER_SCALPER, TRADER_REASONER, TRADER_WHALE_TRADER, TRADER_MEMECOIN)
+TRADER_DYNAMIC_SCALPER = "dynamic_scalper"
 
 SCHEMA_POS = """
 CREATE TABLE IF NOT EXISTS mh_positions (
@@ -173,6 +174,8 @@ def committed(trader):
         return _committed_from("mh_whale_positions", "symbol", "entry")
     if trader == TRADER_MEMECOIN:
         return _committed_from("mh_memecoin_positions", "symbol", "entry")
+    if trader == TRADER_DYNAMIC_SCALPER:
+        return _committed_from("mh_dynamic_scalp_positions", "mint", "entry_usd")
     # unknown trader: treat as zero to stay safe
     return 0.0
 

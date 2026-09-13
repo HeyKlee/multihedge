@@ -8,18 +8,21 @@ DB path: $MULTIHEDGE_DB or default /app/multihedge.db.
 Run: uvicorn mh_dash:app --host 0.0.0.0 --port 9052
 """
 import os
+import re
 import sqlite3
 import time
 import json
+from datetime import datetime, timedelta
 from pathlib import Path
 import urllib.parse
 import urllib.request
 
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi import Body, FastAPI
+from fastapi.responses import HTMLResponse, JSONResponse
 
 import paper
 import pricefeed as pricefeed_module
+import mh_ui
 
 DB_PATH = Path(os.environ.get("MULTIHEDGE_DB", str(Path(__file__).parent / "multihedge.db")))
 paper.DB_PATH = DB_PATH  # dashboard and engine share the same ledger
@@ -240,6 +243,7 @@ def api_survival():
             "paper_wins": paper_wins, "paper_losses": len(paper_trades) - paper_wins,
             "paper_win_rate": round(paper_wins / len(paper_trades), 4) if paper_trades else 0.0,
             "paper_net_usd": paper_net,
+            "starting_equity_usd": _survival_start_equity(),
             "live_fills": len([t for t in live_trades if t.get("side") == "BUY"]),
             "live_closes": len([t for t in live_trades if t.get("side") == "SELL"]),
         },
@@ -645,6 +649,301 @@ def api_positions():
     return _positions()
 
 
+@app.get("/api/ui/prefs")
+def api_ui_prefs_get():
+    """Persisted dashboard preferences (theme, accent, layout, widget visibility)."""
+    return mh_ui.load_prefs()
+
+
+@app.post("/api/ui/prefs")
+def api_ui_prefs_save(payload: dict = Body(...)):
+    try:
+        return {"ok": True, "prefs": mh_ui.save_prefs(payload)}
+    except mh_ui.PrefError as exc:
+        return JSONResponse(status_code=400, content={"ok": False, "error": str(exc)})
+
+
+def _group_profitability(rows, key_fn, min_trades=1):
+    groups = {}
+    for row in rows:
+        key = key_fn(row)
+        if not key:
+            continue
+        g = groups.setdefault(key, {"name": key, "trades": 0, "wins": 0, "realized_usd": 0.0})
+        g["trades"] += 1
+        pnl = float(row.get("realized_usd") or 0.0)
+        g["realized_usd"] += pnl
+        if pnl > 0:
+            g["wins"] += 1
+    out = []
+    for g in groups.values():
+        if g["trades"] < min_trades:
+            continue
+        g["win_rate"] = round(g["wins"] / g["trades"], 3) if g["trades"] else 0.0
+        g["realized_usd"] = round(g["realized_usd"], 6)
+        out.append(g)
+    return sorted(out, key=lambda x: (x["realized_usd"], x["trades"]), reverse=True)
+
+
+def _survival_start_equity() -> float:
+    """Seed capital for the Xora-Survival paper incubator (~NZ$16.70 / US$10).
+    Read from the owning module so the dashboard never hardcodes the constant
+    here; fall back to the seed only if the module cannot be loaded."""
+    try:
+        from dynamic_shadow_scalper import INITIAL_EQUITY_USD
+        return float(INITIAL_EQUITY_USD)
+    except Exception:
+        return 10.0
+
+
+def _survival_wallet(trades=None) -> dict:
+    """Xora-Survival paper wallet digest: seed vs net realised as % vs start.
+
+    Paper-only by construction (dynamic_scalper). Live fills are reconciled
+    separately by api_livegate and never merged into this paper number.
+    Missing treasury data is never re-interpreted; no risk value is derived here.
+    """
+    if trades is None:
+        trades = _trades(1000)
+    # Paper-only by construction: never derive survival wallet equity from a
+    # non-dynamic_scalper setup, regardless of caller. Live fills are reconciled
+    # separately and never merged into this paper number.
+    trades = [t for t in trades if t.get("setup") == "dynamic_scalper"]
+    start = _survival_start_equity()
+    net = round(sum(t.get("realized_usd") or 0.0 for t in trades), 6)
+    equity = round(start + net, 6)
+    fx = pricefeed_module.nzd_per_usd() if pricefeed_module else 1.67
+    pct = (net / start * 100.0) if start else 0.0
+    return {
+        "starting_equity_usd": start,
+        "starting_equity_nzd": round(start * fx, 6),
+        "paper_net_usd": net,
+        "paper_equity_usd": equity,
+        "paper_equity_nzd": round(equity * fx, 6),
+        "pnl_vs_start_usd": net,
+        "pnl_vs_start_pct": round(pct, 4),
+        "closed_trades": len(trades),
+        "fx_nzd_per_usd": fx,
+    }
+
+
+def _chat_snapshot():
+    """Compact read-only digest for the advisory chat. Never includes secrets."""
+    try:
+        summary = api_summary()
+    except Exception:
+        summary = {}
+    traders = summary.get("traders", []) or []
+    trades = _trades(2000)
+    closed = [t for t in trades if t.get("realized_usd") is not None]
+    trader_rows = []
+    for t in traders:
+        started = float(t.get("started") or 0.0)
+        equity = float(t.get("equity") or 0.0)
+        trader_rows.append({
+            "name": t.get("trader"),
+            "equity_usd": round(equity, 6),
+            "pnl_usd": round(equity - started, 6),
+            "equity_nzd": round(float(t.get("equity_nzd") or 0.0), 6),
+            "committed_usd": round(float(t.get("committed") or 0.0), 6),
+            "available_usd": round(float(t.get("available") or 0.0), 6),
+        })
+    trader_rows.sort(key=lambda x: x["pnl_usd"], reverse=True)
+    snap = {
+        "as_of": time.time(),
+        "network": "solana mainnet-beta",
+        "provenance_note": ("strategy traders run on the paper ledger; Xora-Survival live "
+                            "path is evidence-gated and separate from paper rows"),
+        "settlement_reserve": "USDC",
+        "open_positions": (summary.get("totals") or {}).get("open_positions", 0),
+        "traders": trader_rows,
+        "coins": summary.get("coins", []),
+        "profitability_rankings": {
+            "best_traders_by_pnl_usd": trader_rows[:6],
+            "best_setups_by_realized_usd": _group_profitability(closed, lambda r: r.get("setup") or "unknown")[:8],
+            "best_coins_by_realized_usd": _group_profitability(closed, lambda r: r.get("coin") or r.get("symbol"))[:8],
+        },
+        "survival": _survival_wallet(
+            [t for t in trades if t.get("setup") == "dynamic_scalper"]
+        ),
+    }
+    try:
+        snap["live_gate"] = api_livegate()
+    except Exception:
+        snap["live_gate"] = {}
+    return snap
+
+
+@app.get("/api/chat/history")
+def api_chat_history(limit: int = 40):
+    return mh_ui.chat_history(limit)
+
+
+@app.post("/api/chat")
+def api_chat(payload: dict = Body(...)):
+    """Advisory oversight chat. Models advise; this endpoint submits no orders."""
+    message = payload.get("message")
+    history = payload.get("history")
+    if history is None:
+        history = mh_ui.chat_history(mh_ui.MAX_HISTORY_TURNS)
+    return mh_ui.chat_reply(message, _chat_snapshot(), history)
+
+
+@app.get("/api/requests")
+def api_requests_list(limit: int = 50):
+    return mh_ui.list_requests(limit)
+
+
+@app.post("/api/requests")
+def api_requests_file(payload: dict = Body(...)):
+    result = mh_ui.file_request(payload.get("title"), payload.get("detail"),
+                                payload.get("source") or "chat")
+    return JSONResponse(status_code=200 if result.get("ok") else 400, content=result)
+
+
+@app.post("/api/requests/{request_id}/council")
+def api_requests_council(request_id: int):
+    """Run the advisory council over one request. Records a verdict, applies nothing."""
+    result = mh_ui.council_review(request_id)
+    return JSONResponse(status_code=200 if result.get("ok") else 400, content=result)
+
+
+@app.post("/api/requests/{request_id}/decision")
+def api_requests_decide(request_id: int, payload: dict = Body(...)):
+    """Operator decision. Deterministic; a council verdict never applies itself."""
+    result = mh_ui.record_decision(request_id, payload.get("decision"),
+                                   payload.get("note") or "")
+    return JSONResponse(status_code=200 if result.get("ok") else 400, content=result)
+
+
+@app.get("/api/actions")
+def api_actions():
+    """Live operational todo feed for the overview What to do widget."""
+    now = datetime.now().astimezone()
+
+    def next_every_30_at(minute_a=3, second=7):
+        candidates = []
+        for hour_offset in range(0, 3):
+            base = now + timedelta(hours=hour_offset)
+            for minute in (minute_a, minute_a + 30):
+                if minute < 60:
+                    candidates.append(base.replace(minute=minute, second=second, microsecond=0))
+        future = [c for c in candidates if c > now]
+        return min(future) if future else (now + timedelta(minutes=30))
+
+    def next_monday_9():
+        days = (0 - now.weekday()) % 7
+        target = (now + timedelta(days=days)).replace(hour=9, minute=0, second=0, microsecond=0)
+        if target <= now:
+            target = target + timedelta(days=7)
+        return target
+
+    try:
+        requests = mh_ui.list_requests(50)
+    except Exception:
+        requests = []
+    pending = [r for r in requests if r.get("status") == "pending" or not r.get("decision")]
+    survival = api_survival()
+    risk = survival.get("risk_params") or {}
+    paper_positions = survival.get("paper_positions") or []
+    live_positions = survival.get("live_positions") or []
+    notional = survival.get("notional") or {}
+    livegate = api_livegate()
+    blockers = [name for name, info in livegate.items() if not info.get("eligible")]
+    items = [
+        {"kind": "schedule", "title": "Next council report", "detail": "Per-coin shadow review + council", "due_ts": next_every_30_at().timestamp(), "state": "live"},
+        {"kind": "schedule", "title": "Next audit", "detail": "Weekly read-only optimiser", "due_ts": next_monday_9().timestamp(), "state": "live"},
+    ]
+    if pending:
+        items.append({"kind": "intervention", "title": "Improvements need review", "detail": f"{len(pending)} pending request(s) need a decision", "state": "attention"})
+    else:
+        items.append({"kind": "intervention", "title": "Improvement queue clear", "detail": "No pending operator decisions", "state": "ok"})
+    if blockers:
+        items.append({"kind": "todo", "title": "Live gate still blocked", "detail": ", ".join(blockers[:4]) + " need stronger evidence", "state": "attention"})
+    if len(paper_positions) >= 10:
+        items.append({"kind": "money", "title": "Watch open paper exposure", "detail": f"{len(paper_positions)} Xora paper positions open, paper notional {notional.get('paper_usd', 0):.2f} USDC", "state": "attention"})
+    elif live_positions:
+        items.append({"kind": "money", "title": "Check live wallet inventory", "detail": f"{len(live_positions)} live positions need monitoring", "state": "attention"})
+    else:
+        items.append({"kind": "money", "title": "Reserves stable", "detail": "No live wallet exposure reported", "state": "ok"})
+    return {"now_ts": now.timestamp(), "items": items[:8], "risk_params": risk}
+
+
+COUNCIL_REPORT_DIR = Path(os.environ.get("MULTIHEDGE_COUNCIL_DIR", "/data/council_reports"))
+
+
+def _latest_council_report():
+    """Newest *.md in the council report dir, or None. Container host must bind it."""
+    try:
+        files = sorted(COUNCIL_REPORT_DIR.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+    except Exception:
+        return None
+    return files[0] if files else None
+
+
+def _council_summary(path):
+    """Extract the actionable council verdict (the ## Response body) from a report."""
+    if not path or not path.exists():
+        return [], None
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return [], None
+    lines = text.splitlines()
+    # The response block starts after the '## Response' heading near the end.
+    idx = max((i for i, l in enumerate(lines) if l.strip().startswith("## Response")), default=-1)
+    body = lines[idx + 1:] if idx >= 0 else []
+    # Drop leading markdown fences / blank lines
+    body = [l for l in body if l.strip()]
+    # Summarise: pick the standalone verdict lines under '**' bullets and any '###'.
+    out = []
+    for l in body:
+        s = l.strip()
+        if not s:
+            continue
+        if s.startswith("```"):
+            continue
+        if s.startswith("#"):
+            out.append(s.lstrip("#").strip())
+            continue
+        if s.startswith("**") and len(s) > 6:
+            out.append(s.strip("*").strip())
+        elif len(s) > 40 and len(out) < 12:
+            out.append(s)
+        if len(out) >= 14:
+            break
+    run_time = None
+    m = re.search(r"\*\*Run Time:\*\*\s*([^\n]+)", text)
+    if m:
+        run_time = m.group(1).strip()
+    return out[:14], run_time
+
+
+@app.get("/api/council/latest")
+def api_council_latest():
+    """Summary of the latest per-coin shadow review + council report."""
+    path = _latest_council_report()
+    if not path:
+        return {"ok": False, "error": "no_council_report"}
+    summary, run_time = _council_summary(path)
+    return {"ok": True, "filename": path.name, "summary": summary,
+            "run_time": run_time, "full_available": True}
+
+
+@app.get("/api/council/report/{name}")
+def api_council_report(name: str):
+    """Full markdown of one council report, allow-listed by basename only."""
+    if "/" in name or "\\" in name or name.startswith("."):
+        return JSONResponse(status_code=400, content={"ok": False, "error": "invalid_name"})
+    path = COUNCIL_REPORT_DIR / name
+    if not path.exists() or not path.is_file():
+        return JSONResponse(status_code=404, content={"ok": False, "error": "not_found"})
+    try:
+        return {"ok": True, "filename": name, "text": path.read_text(encoding="utf-8", errors="replace")}
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"ok": False, "error": "read_failed"})
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
     return _html()
@@ -670,7 +969,7 @@ button,select{font:inherit}.app-shell{width:min(1600px,100%);min-height:100vh;ma
 .tabs{display:flex;flex-direction:column;gap:2px;min-height:0;overflow-y:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.nav-group{margin:9px 11px 4px;font-size:9px;font-weight:700;color:var(--text-faint);letter-spacing:.14em;text-transform:uppercase}.tabs button{display:flex;align-items:center;gap:10px;width:100%;min-height:34px;border:0;background:transparent;color:var(--text-dim);padding:5px 11px;border-radius:10px;text-align:left;font-size:12px;font-weight:600;cursor:pointer;transition:.18s ease}.tabs button:hover{background:var(--surface-2);color:var(--navy)}.tabs button.active{background:var(--lav-dim);color:var(--lav);box-shadow:inset 3px 0 0 var(--lav)}
 .nav-icon{width:22px;height:22px;display:grid;place-items:center;border-radius:7px;background:#f0f3f9;color:#74809a;font:700 9px 'IBM Plex Mono'}.tabs button.active .nav-icon{background:#fff;color:var(--lav);box-shadow:0 3px 10px rgba(70,69,120,.09)}
 .sidebar-foot{margin-top:auto;padding:10px 11px 0;border-top:1px solid var(--border)}.sidebar-foot .lbl{font-size:9px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.12em}.ts{font:600 11px 'IBM Plex Mono';color:var(--navy);margin-top:2px}
-.workspace{min-width:0;padding:30px 34px 70px}.workspace-header{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:22px}.page-eyebrow{font-size:10px;font-weight:700;color:var(--lav);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}.workspace-header h1{font-family:'Space Grotesk';font-size:30px;line-height:1.1;letter-spacing:-.03em;color:var(--navy)}.workspace-header p{color:var(--text-dim);margin-top:7px;font-size:13px;max-width:680px}.header-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}.status-pill{font-size:10px;font-weight:700;color:var(--lav);background:var(--lav-dim);border:1px solid var(--border-strong);padding:8px 12px;border-radius:8px;white-space:nowrap}
+.workspace{min-width:0;padding:30px 34px 70px}.workspace-header{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:22px}.page-eyebrow{font-size:10px;font-weight:700;color:var(--lav);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}.workspace-header h1{font-family:'Space Grotesk';font-size:30px;line-height:1.1;letter-spacing:-.03em;color:var(--navy)}.workspace-header p{color:var(--text-dim);margin-top:7px;font-size:13px;max-width:680px}.header-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}.status-pill{font-size:10px;font-weight:700;color:var(--lav);background:var(--lav-dim);border:1px solid var(--border-strong);padding:8px 12px;border-radius:8px;white-space:nowrap}
 .ticker{overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--surface);margin-bottom:16px;white-space:nowrap;padding:9px 0}.ticker-track{display:flex;gap:30px;animation:scroll 40s linear infinite;width:max-content}@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}.ticker-item{font:11px 'IBM Plex Mono';color:var(--text-dim);display:inline-flex;gap:6px;padding:0 8px;white-space:nowrap}.ticker-item b{color:var(--text)}.ticker-item .up{color:var(--green)}.ticker-item .down{color:var(--red)}
 .hero{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin-bottom:18px}.kpi{position:relative;background:var(--surface);border:1px solid var(--border);padding:18px;border-radius:12px;box-shadow:var(--shadow);overflow:hidden}.kpi .lbl{font-size:10px;font-weight:700;color:var(--text-dim);letter-spacing:.06em;text-transform:uppercase;padding-right:100px}.kpi .val{font-family:'Space Grotesk';font-size:25px;font-weight:700;letter-spacing:-.03em;color:var(--navy);margin-top:3px}.kpi .val.neg{color:var(--red)}.kpi-detail{color:var(--text-dim)}
 .card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:15px;box-shadow:var(--shadow);overflow-x:auto}.card h3{font-family:'Space Grotesk';font-size:15px;font-weight:700;color:var(--navy);letter-spacing:-.01em;margin-bottom:13px;padding-right:110px}.grid{display:grid;gap:15px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}canvas{display:block;max-width:100%;width:100%;height:130px;background:var(--chart-bg);border:1px solid var(--border);border-radius:8px}#mkcv,#gld-cv{height:min(56vh,520px);min-height:300px}.tfbar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 8px}.tfbar button{min-height:32px;font:600 11px 'IBM Plex Mono';background:var(--surface-2);color:var(--text-dim);border:1px solid var(--border);border-radius:7px;padding:5px 10px;cursor:pointer}.tfbar button:hover{border-color:var(--lav);color:var(--lav)}.tfbar button.on{background:var(--lav);color:var(--surface);border-color:var(--lav)}.tfbar button:disabled{opacity:.35;cursor:not-allowed}
@@ -678,7 +977,61 @@ button,select{font:inherit}.app-shell{width:min(1600px,100%);min-height:100vh;ma
 table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}th,td{padding:10px 11px;text-align:left;border-bottom:1px solid var(--border)}th{color:var(--text-faint);font-weight:700;font-size:10px;letter-spacing:.05em;text-transform:uppercase;background:var(--surface-2)}tr:last-child td{border-bottom:0}.pos{color:var(--green)}.neg{color:var(--red)}.pilltag{display:inline-block;padding:3px 9px;border-radius:12px;font-size:10px;font-weight:700}.pilltag.ok{background:var(--green-dim);color:var(--green);border:1px solid var(--border)}.pilltag.no{background:var(--red-dim);color:var(--red);border:1px solid var(--border)}.ok-tag{display:inline-block;padding:3px 9px;border-radius:12px;font-size:10px;font-weight:700;background:var(--green-dim);color:var(--green)}.no-tag{display:inline-block;padding:3px 9px;border-radius:12px;font-size:10px;font-weight:700;background:var(--red-dim);color:var(--red)}.scroll-wrap{max-height:230px;overflow:auto;border-radius:8px;border:1px solid var(--border)}.scroll-wrap table thead th{position:sticky;top:0;background:var(--surface-2);z-index:2}.chart-flex{display:flex;gap:16px;align-items:flex-start}.chart-legend{min-width:170px;font:11px 'IBM Plex Mono';display:flex;flex-direction:column;gap:7px}.whats{font-size:13px;color:var(--text-dim);line-height:1.65}.whats b{color:var(--navy);font-family:'Space Grotesk';font-size:13px}
 @media (max-width:1300px){.ticker{display:none}}
 @media (max-width:1050px){.app-shell{grid-template-columns:190px minmax(0,1fr)}.sidebar{padding-left:10px;padding-right:10px}.workspace{padding:24px 20px 60px}.brand{padding-left:8px}.brand-sub{display:none}.hero{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:760px){body{font-size:16px;overflow-x:hidden}.app-shell{display:block;width:100%}.sidebar{position:relative;width:100%;height:auto;padding:14px 12px 10px;border-right:0;border-bottom:1px solid var(--border)}.brand{padding:0 4px 12px}.brand-mark{width:34px;height:34px}.environment,.sidebar-foot,.nav-group{display:none}.tabs{display:flex;flex-direction:row;overflow-x:auto;scroll-snap-type:x mandatory;gap:6px;padding-bottom:3px}.tabs button{flex:0 0 auto;width:auto;min-height:48px;padding:9px 13px;scroll-snap-align:start;font-size:13px}.tabs button.active{box-shadow:inset 0 -3px 0 var(--lav)}.nav-icon{display:none}.workspace{padding:20px 12px 48px}.workspace-header{align-items:flex-start;flex-direction:column;margin-bottom:16px}.workspace-header h1{font-size:25px}.workspace-header p{font-size:13px}.header-actions{display:flex;width:100%;justify-content:flex-start}.header-actions .status-pill,.update-state{display:none}.toolbar-btn{min-height:44px}.ticker{display:none}.hero{grid-template-columns:1fr;gap:10px}.kpi{padding:16px}.kpi .val{font-size:23px}.card{padding:15px;margin-bottom:10px;border-radius:10px}.card h3{font-size:15px}.grid{grid-template-columns:minmax(0,1fr);gap:10px}.chart-flex{flex-direction:column}canvas{height:190px!important;min-width:0}.chart-legend{min-width:0;width:100%}.scroll-wrap{max-height:230px}table{font-size:11px}th,td{padding:8px}.tfbar button{min-height:44px;padding:8px 11px}}
+@media (max-width:760px){body{font-size:16px;overflow-x:hidden;touch-action:manipulation}.app-shell{display:block;width:100%;margin:0;border-radius:0;border:0}.sidebar{position:relative;width:100%;height:auto;padding:14px 12px 10px;border-right:0;border-bottom:1px solid var(--border)}.brand{padding:0 4px 12px}.brand-mark{width:34px;height:34px}.environment,.sidebar-foot,.nav-group{display:none}.tabs{display:flex;flex-direction:row;overflow-x:auto;scroll-snap-type:x mandatory;gap:6px;padding-bottom:3px}.tabs button{flex:0 0 auto;width:auto;min-height:52px;padding:11px 14px;scroll-snap-align:start;font-size:14px;cursor:pointer}.tabs button.active{box-shadow:inset 0 -3px 0 var(--lav)}.nav-icon{display:none}.workspace{padding:16px 10px 120px}.workspace-header{align-items:flex-start;flex-direction:column;margin-bottom:12px}.workspace-header h1{font-size:22px}.workspace-header p{font-size:12px}.header-actions{display:flex;width:100%;justify-content:flex-start;gap:6px;flex-wrap:wrap}.header-actions .update-state{display:none}.header-actions .status-pill{display:none}.header-actions .toolbar-btn{min-height:44px;font-size:13px;padding:8px 14px;border-radius:12px}.ticker{display:none}.hero{padding:0}.grid,.overview-grid{grid-template-columns:1fr;gap:10px}.grid>.card,.span-3,.span-4,.span-5,.span-6,.span-7,.span-8,.span-12{grid-column:1/-1}.card{padding:14px;margin-bottom:8px;border-radius:12px}.card h3{font-size:14px}.kpi{padding:14px;margin-bottom:0}.kpi .val{font-size:22px}.chart-flex{flex-direction:column}canvas{height:180px!important;min-width:0}.chart-legend{min-width:0;width:100%}.scroll-wrap{max-height:200px}table{font-size:11px}th,td{padding:8px}.tfbar button{min-height:44px;padding:8px 11px;font-size:12px}.wallet-tabs{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:10px}.wallet-tab{min-height:60px;padding:8px}.wallet-tab b{font-size:16px}.wallet-summary span{font-size:11px;padding:6px 8px}.xora-pet{right:12px;bottom:12px;width:60px;height:64px}.xora-pet-body{width:46px;height:40px}.xora-pet-ear{width:14px;height:17px;top:9px}.xora-pet-tail{width:18px;height:10px;bottom:25px}.chat-panel{width:calc(100vw - 20px);right:10px;bottom:80px;max-height:50vh}.chat-fab{bottom:12px;right:12px;width:48px;height:48px;font-size:18px}.build-toolbar{width:calc(100% - 28px);left:14px;bottom:14px;transform:none;opacity:1;padding:8px 10px}.build-toolbar.open{transform:none}.bottom-actions{position:static;transform:none;width:auto;margin:12px 10px 60px;grid-template-columns:repeat(2,1fr);gap:8px}.bottom-actions button{min-height:50px;font-size:13px}.build-mode .card,.build-mode .kpi{padding-top:40px}.build-handle{height:28px}.build-handle-label{left:8px;top:6px;font-size:9px}.pet-bubble{max-width:calc(100vw - 80px);font-size:11px}.workspace{padding-bottom:28px}}
+/* ---- Council report widget ---- */
+.council-summary-list{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto}.council-s-line{font-size:11.5px;line-height:1.4;color:var(--text);padding:5px 8px;border-bottom:1px solid var(--border);border-radius:6px}.council-s-line:first-child{color:var(--accent);font-weight:700}.council-open{border-color:var(--accent);color:var(--accent);background:#1c261f}
+/* ---- Live gate rows ---- */
+.gate-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
+.gate-row:last-child{border-bottom:0}
+.gate-name{font-weight:700;font-size:12px;color:var(--text);white-space:nowrap}
+.gate-meta{font:11px 'IBM Plex Mono';color:var(--text-dim);text-align:right;white-space:nowrap}
+.gate-meta b{color:var(--text)}
+.livegate-note{font-size:11px;color:var(--text-faint);margin:8px 0}
+.lg-sub{font-size:10.5px;color:var(--text-faint);margin-top:2px}
+/* ---- Settings modal ---- */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none;align-items:center;justify-content:center}.modal-overlay.open{display:flex}.modal-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;max-width:580px;width:calc(100% - 32px);max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18)}.modal-panel h2{font-family:'Space Grotesk';font-size:20px;margin-bottom:6px;color:var(--navy)}.modal-section{margin:16px 0}.modal-section>.lbl{font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}.settings-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}.settings-row:last-child{border-bottom:0}.settings-row select,.settings-row input[type=color]{height:34px;border:1px solid var(--border-strong);border-radius:7px;background:var(--surface-2);color:var(--text);padding:4px 8px;font-size:12px;cursor:pointer}.settings-row input[type=range]{width:120px;accent-color:var(--lav)}.color-swatches{display:flex;gap:6px;flex-wrap:wrap}.color-swatch{width:28px;height:28px;border-radius:7px;border:2px solid transparent;cursor:pointer}.color-swatch:hover{border-color:var(--border-strong)}.color-swatch.active{border-color:var(--lav)}.toggle-track{position:relative;width:36px;height:20px;display:inline-block;background:var(--border-strong);border-radius:10px;cursor:pointer;transition:.2s}.toggle-track.active{background:var(--lav)}.toggle-dot{position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s}.toggle-track.active .toggle-dot{left:18px}
+/* ---- Hide scrollbars (setting) ---- */
+html.hide-scrollbars{overflow:hidden}html.hide-scrollbars body{overflow:hidden}html.hide-scrollbars ::-webkit-scrollbar{display:none}html.hide-scrollbars ::-moz-scrollbar{display:none}
+/* ---- View-mode saved layout anchoring ---- */
+.layout-reapplied{position:relative!important;min-height:400px}
+/* ---- Free-position edit mode ---- */
+.free-edit #tab-panels,.free-edit .hero,.free-edit #coin-wrap{position:relative;min-height:400px;width:100%}
+.free-edit .card,.free-edit .kpi{position:absolute;cursor:grab;margin:0;box-sizing:border-box;touch-action:none}
+.free-edit .card,.free-edit .kpi{border:2px dashed var(--accent);box-shadow:0 0 0 1px rgba(56,210,109,.18),0 0 20px rgba(56,210,109,.12)!important;overflow:auto}
+.free-grab{position:absolute;left:0;right:0;top:0;height:30px;border-bottom:1px solid rgba(56,210,109,.5);background-image:repeating-linear-gradient(90deg,rgba(56,210,109,.32) 0 2px,transparent 2px 7px),repeating-linear-gradient(180deg,rgba(56,210,109,.18) 0 1px,transparent 1px 6px);cursor:grab;z-index:8;touch-action:none}
+.free-grab:active{cursor:grabbing}
+.free-grab .grab-label{position:absolute;left:8px;top:7px;font:800 9px 'IBM Plex Mono';color:var(--accent);letter-spacing:.08em;text-transform:uppercase;pointer-events:none}
+.free-resize{position:absolute;right:2px;bottom:2px;width:26px;height:26px;background:linear-gradient(135deg,transparent 46%,rgba(56,210,109,.45) 50%,rgba(56,210,109,.45) 56%,transparent 58%);cursor:nwse-resize;z-index:8;touch-action:none}
+.free-resize:active{cursor:nwse-resize}
+.free-hide{position:absolute;left:4px;top:4px;width:24px;height:24px;border:1px solid var(--border);border-radius:6px;background:var(--surface-2);color:var(--text-dim);font-size:12px;cursor:pointer;z-index:9;display:none}
+.free-edit .free-hide{display:grid}
+.free-edit .card:hover .free-hide,.free-edit .kpi:hover .free-hide{color:var(--red);border-color:var(--red)}
+.free-hidden{display:none}
+.free-edit .cancel-btn{display:inline-flex}
+.free-edit .catalog-btn{display:inline-flex}
+
+/* ---- Widget catalog ---- */
+/* ---- Widget catalog ---- */
+.widget-catalog{position:fixed;top:18px;left:50%;transform:translateX(-50%);width:min(560px,calc(100% - 32px));max-height:82vh;overflow-y:auto;background:var(--surface);border:1px solid var(--border-strong);border-radius:14px;box-shadow:0 10px 44px rgba(0,0,0,.22);z-index:120;display:none;padding:16px}
+.widget-catalog.open{display:block}
+.widget-catalog-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.widget-catalog-head span{font:700 14px 'Space Grotesk';color:var(--navy)}
+.widget-catalog-head button{width:28px;height:28px;border:0;background:var(--surface-2);border-radius:7px;cursor:pointer;color:var(--text-dim);font-size:15px;display:grid;place-items:center}
+.widget-catalog-search{margin-bottom:10px}.widget-catalog-search input{width:100%;height:34px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface-2);color:var(--text);padding:6px 10px;font-size:12px}
+.widget-catalog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.widget-catalog .wc-item{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:8px 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--text);font-size:11px;cursor:pointer}
+.widget-catalog .wc-item:hover{border-color:var(--accent);color:var(--accent)}
+.widget-catalog .wc-item b{font-size:11px}.widget-catalog .wc-item small{font-size:9.5px;color:var(--text-faint)}
+.widget-catalog .wc-item .wc-add{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:5px;background:var(--accent);color:var(--surface);font-size:11px;display:grid;place-items:center}
+/* ---- Widget tile resize ---- */
+.tile-resize{display:none;position:absolute;right:8px;top:8px;width:26px;height:26px;border:1px solid var(--border);border-radius:6px;background:var(--surface-2);color:var(--text-dim);cursor:pointer;font-size:11px;place-items:center;z-index:4;opacity:0;transition:opacity .2s}.card:hover .tile-resize,.kpi:hover .tile-resize{opacity:1}.card:hover .tile-resize:hover,.kpi:hover .tile-resize:hover{color:var(--lav);border-color:var(--lav)}.tile-s4{grid-column:span 4}.tile-s6{grid-column:span 6}.tile-s8{grid-column:span 8}.tile-s12{grid-column:1/-1}@media (max-width:1050px){.tile-s4,.tile-s6,.tile-s8,.tile-s12{grid-column:1/-1}}@media (max-width:760px){.tile-resize{display:none!important}}
+/* ---- Scroll-sensitive sidebar ---- */
+.sidebar-scrolled .sidebar{width:56px;padding:12px 10px}.sidebar-scrolled .sidebar .brand-mark{width:28px;height:28px;border-radius:7px;font-size:10px}.sidebar-scrolled .sidebar .brand-name,.sidebar-scrolled .sidebar .brand-sub,.sidebar-scrolled .sidebar .environment,.sidebar-scrolled .sidebar .nav-group,.sidebar-scrolled .sidebar .nav-icon,.sidebar-scrolled .sidebar .tabs button span:not(.nav-icon){display:none}.sidebar-scrolled .sidebar .tabs button{justify-content:center;padding:5px;min-height:32px}.sidebar-scrolled .workspace{margin-left:0}.sidebar-scrolled .app-shell{grid-template-columns:56px minmax(0,1fr)}
+/* ---- Chat pet ---- */
+.xora-pet{position:fixed;right:26px;bottom:24px;width:70px;height:76px;border:0;background:transparent;cursor:grab;z-index:91;filter:drop-shadow(0 6px 14px rgba(0,0,0,.25));transition:transform .2s;touch-action:manipulation;min-width:70px;min-height:76px}.xora-pet-inner{position:absolute;inset:0;pointer-events:none;animation:petBob 3.2s ease-in-out infinite}.xora-pet.pet-dragging{cursor:grabbing;user-select:none}.xora-pet.pet-dragging .xora-pet-inner{animation-play-state:paused}.xora-pet-body{position:absolute;left:8px;bottom:8px;width:54px;height:48px;border-radius:24px 24px 18px 18px;background:linear-gradient(145deg,var(--accent),var(--lav2));border:2px solid #0b1b10}.xora-pet-body:before,.xora-pet-body:after{content:'';position:absolute;top:10px;width:7px;height:7px;border-radius:50%;background:#07100a}.xora-pet-body:before{left:15px}.xora-pet-body:after{right:15px}.xora-pet-ear{position:absolute;top:11px;width:17px;height:20px;border-radius:12px 12px 2px 12px;background:var(--accent);border:2px solid #0b1b10}.xora-pet-ear.left{left:12px;transform:rotate(-18deg)}.xora-pet-ear.right{right:12px;transform:rotate(18deg) scaleX(-1)}.xora-pet-tail{position:absolute;right:1px;bottom:29px;width:22px;height:12px;border-radius:12px;border:3px solid var(--accent);border-left:0;transform:rotate(-16deg)}.xora-pet-feet{position:absolute;left:16px;right:16px;bottom:3px;display:flex;justify-content:space-between}.xora-pet-feet span{width:12px;height:9px;border-radius:8px;background:#0b1b10}.xora-pet:active{transform:scale(.94)}.xora-pet:hover{animation-play-state:paused}.xora-pet:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:18px}.pet-bubble{position:fixed;top:auto;bottom:auto;max-width:min(280px,calc(100vw - 128px));padding:10px 12px;border-radius:14px 14px 14px 4px;background:var(--surface);border:1px solid var(--border-strong);color:var(--text);font-size:12px;line-height:1.45;z-index:91;box-shadow:0 8px 30px rgba(0,0,0,.22);pointer-events:none}.pet-bubble:after{content:'';position:absolute;bottom:-8px;right:16px;border-width:8px 8px 0;border-style:solid;border-color:var(--surface) transparent transparent}@keyframes petBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}.chat-panel{position:fixed;bottom:108px;right:24px;width:400px;max-height:520px;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);z-index:92;display:none;flex-direction:column;overflow:hidden}.chat-panel.open{display:flex}.chat-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);font-family:'Space Grotesk';font-weight:700;font-size:14px;color:var(--navy)}.chat-msgs{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;font-size:13px;line-height:1.45;min-height:200px}.chat-input{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border)}.chat-input input{flex:1;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-2);padding:10px 12px;color:var(--text);font-size:13px}.chat-input button{min-height:36px;padding:0 13px;border-radius:10px;background:var(--lav);color:var(--surface);font-weight:700;font-size:12px;border:0;cursor:pointer}.chat-input button:hover{background:var(--lav2)}.chat-msg{max-width:92%;padding:9px 12px;border-radius:12px;font-size:12.5px;line-height:1.5;white-space:pre-wrap}.chat-msg.user{background:var(--lav-dim);color:var(--text);align-self:flex-end;border-bottom-right-radius:4px}.chat-msg.assistant{background:var(--surface-2);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px}.chat-msg.err{background:var(--red-dim);color:var(--red);align-self:center;font-size:11px}.chat-msg .ts{font-size:10px;color:var(--text-faint);margin-top:3px}.chat-loading{text-align:center;color:var(--text-faint);padding:12px;font-size:12px}.chat-filing{display:flex;gap:6px;padding:6px 12px 0}.chat-filing button{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-dim);cursor:pointer}.chat-filing button:hover{color:var(--lav)}@media (max-width:760px){.chat-panel{width:calc(100vw - 32px);right:16px;bottom:76px;max-height:60vh}.chat-fab{bottom:16px;right:16px}}
+/* ---- Journal-style MultiHedge skin ---- */
+:root{--bg:#141515;--surface:#1b1d1d;--surface-2:#222525;--panel:#1d2020;--sidebar:#181a1a;--border:#2d3331;--border-strong:#3b4440;--text:#e7edf0;--text-dim:#9aa8aa;--text-faint:#687476;--lav:#38d26d;--lav2:#55e083;--lav-dim:#183323;--accent:#38d26d;--green:#38d26d;--green-dim:#173522;--red:#e05d63;--red2:#f36f6f;--red-dim:#371d21;--navy:#eef5f1;--shadow:none;--chart-bg:#171919;--chart-ink:rgba(220,232,228,.7);--chart-grid:rgba(220,232,228,.10)}
+html{background:radial-gradient(circle at 50% 10%,#2bc65f 0,#174b2a 36%,#0d1512 88%)}body{background:transparent}.app-shell{width:min(1680px,calc(100% - 28px));margin:14px auto;border:1px solid #29302d;border-radius:18px;overflow:hidden;background:var(--bg);grid-template-columns:210px minmax(0,1fr)}.sidebar{background:#171919}.brand-mark{background:var(--accent);color:#07100a;border-radius:12px}.brand-name{color:var(--text)}.environment{background:#11291a;color:var(--accent);border:1px solid #224e31}.tabs button{min-height:38px;border:1px solid transparent}.tabs button:hover{border-color:var(--border);background:#202323}.tabs button.active{background:#202823;color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}.nav-icon,.tabs button.active .nav-icon{background:#242a27;color:var(--accent);box-shadow:none}.workspace{padding:28px 28px 96px}.workspace-header{border-bottom:1px solid var(--border);padding-bottom:16px}.workspace-header h1{color:var(--text);font-size:28px}.page-eyebrow{color:var(--accent)}.status-pill{background:#13291c;color:var(--accent);border-color:#244e32}.toolbar-btn{border-radius:10px;background:#202323;border-color:var(--border);color:var(--text-dim)}.toolbar-btn:hover{background:#233126;color:var(--accent);border-color:var(--accent)}.card,.kpi{background:var(--surface);border-color:var(--border);border-radius:14px;box-shadow:none}.card h3,.kpi .val{color:var(--text)}.kpi .lbl,.card .lbl{color:var(--text-dim)}.grid{grid-template-columns:repeat(12,minmax(0,1fr));gap:12px}.grid>.card{grid-column:span 4}.grid>.card.widget-wide{grid-column:1/-1}.overview-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px}.overview-grid>.card{margin-bottom:0}.span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-6{grid-column:span 6}.span-7{grid-column:span 7}.span-8{grid-column:span 8}.span-12{grid-column:1/-1}.metric-xl{font-family:'Space Grotesk';font-size:31px;font-weight:800;color:var(--accent);letter-spacing:-.04em}.mini-note{font-size:11px;color:var(--text-faint)}.todo-list{display:flex;flex-direction:column;gap:9px}.todo-item{display:grid;grid-template-columns:20px 1fr;gap:9px;align-items:start}.todo-check{width:16px;height:16px;border-radius:4px;border:1px solid var(--border-strong);background:#171a1a;margin-top:2px}.todo-check.ok{background:var(--accent);border-color:var(--accent);position:relative}.todo-check.ok:after{content:'✓';color:#08110b;font-weight:900;font-size:12px;position:absolute;left:3px;top:-1px}.todo-title{font-weight:700;color:var(--text);font-size:13px}.todo-detail{font-size:11px;color:var(--text-dim);line-height:1.35}.heatmap{display:grid;grid-template-columns:repeat(26,1fr);gap:4px}.heat-cell{aspect-ratio:1;border-radius:3px;background:#222928}.heat-cell.l1{background:#1d4a2a}.heat-cell.l2{background:#24823f}.heat-cell.l3{background:#38d26d}.radar-wrap{display:grid;place-items:center}.bottom-actions{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);width:min(1180px,calc(100% - 44px));display:grid;grid-template-columns:repeat(6,1fr);gap:10px;z-index:70}.bottom-actions button{min-height:48px;border-radius:14px;background:#202323;border:1px solid var(--border);color:var(--text);font-weight:700;cursor:pointer}.bottom-actions button:hover{border-color:var(--accent);color:var(--accent);background:#203024}.wallet-hub{grid-column:1/-1!important}.wallet-hub-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}.wallet-summary{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}.wallet-summary span{display:block;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:#171a1a;color:var(--text-dim);font-size:12px}.wallet-tabs{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:8px;margin-top:14px}.wallet-tab{min-height:70px;border:1px solid var(--border);background:#171a1a;color:var(--text);border-radius:12px;padding:10px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:3px;transition:.18s ease}.wallet-tab span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);font-weight:800}.wallet-tab b{font-family:'Space Grotesk';font-size:18px;color:var(--text)}.wallet-tab small{font-size:11px;color:var(--text-faint)}.wallet-tab:hover,.wallet-tab.active{border-color:var(--accent);box-shadow:0 0 0 1px rgba(56,210,109,.18),0 0 22px rgba(56,210,109,.09);background:#1c261f}.wallet-tab.bad:hover,.wallet-tab.bad.active{border-color:var(--red);box-shadow:0 0 0 1px rgba(224,93,99,.16)}@media(max-width:1050px){.grid,.overview-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.span-3,.span-4{grid-column:span 3}.span-5,.span-6,.span-7,.span-8{grid-column:span 6}.bottom-actions{grid-template-columns:repeat(3,1fr)}.wallet-tabs{grid-template-columns:repeat(3,minmax(120px,1fr))}}@media(max-width:760px){.app-shell{width:100%;margin:0;border-radius:0}.grid,.overview-grid{grid-template-columns:1fr}.grid>.card,.span-3,.span-4,.span-5,.span-6,.span-7,.span-8,.span-12{grid-column:1/-1}.bottom-actions{position:static;transform:none;width:auto;margin:0 12px 70px;grid-template-columns:repeat(2,1fr)}.workspace{padding-bottom:28px}}
 </style></head><body><div class="app-shell">
 <aside class="sidebar">
   <div class="brand"><div class="brand-mark">MH</div><div><div class="brand-name">MultiHedge</div><div class="brand-sub">Trading system</div></div></div>
@@ -686,6 +1039,7 @@ table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}th,t
   <nav class="tabs" id="tabNav" aria-label="Dashboard sections">
     <div class="nav-group">Command</div>
     <button data-tab="overview" class="active"><span class="nav-icon">01</span>Overview</button>
+    <button data-tab="survival"><span class="nav-icon">X</span>Xora-Survival</button>
     <button data-tab="market"><span class="nav-icon">02</span>Market</button>
     <button data-tab="gate"><span class="nav-icon">03</span>Live Gate</button>
     <div class="nav-group">Traders</div>
@@ -694,19 +1048,83 @@ table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}th,t
     <button data-tab="whales"><span class="nav-icon">W</span>Whale Copy</button>
     <button data-tab="memecoin"><span class="nav-icon">M</span>Memecoin</button>
     <button data-tab="grid"><span class="nav-icon">G</span>Grid</button>
-    <div class="nav-group">Autonomous</div>
-    <button data-tab="survival"><span class="nav-icon">X</span>Xora-Survival</button>
   </nav>
-  <div class="sidebar-foot"><div class="lbl">System time</div><div class="ts" id="ts">--</div></div>
 </aside>
 <main class="workspace">
-  <header class="workspace-header"><div><div class="page-eyebrow">Trading command center</div><h1 id="pageTitle">System Overview</h1><p id="pageSubtitle">Capital, positions, trader performance, and live market context across MultiHedge.</p></div><div class="header-actions"><span class="update-state" id="updateState">Loading</span><button class="toolbar-btn" id="refreshBtn" type="button">Refresh</button><button class="toolbar-btn" id="layoutReset" type="button">Reset layout</button><button class="toolbar-btn" id="themeToggle" type="button" aria-pressed="false">Dark mode</button><span class="status-pill">PAPER TRADING · MAINNET MARKET DATA</span></div></header>
+  <header class="workspace-header"><div><div class="page-eyebrow">Trading command center</div><h1 id="pageTitle">System Overview</h1><p id="pageSubtitle">Capital, positions, trader performance, and live market context across MultiHedge.</p></div><div class="header-actions"><button class="toolbar-btn" id="clockBtn" type="button" aria-label="Refresh dashboard" title="Refresh"><span id="ts">--</span></button><button class="toolbar-btn cancel-btn" id="cancelEditBtn" type="button" style="display:none" aria-label="Cancel edit and revert layout">&#xd7; Cancel</button><button class="toolbar-btn catalog-btn" id="addWidgetBtn" type="button" style="display:none" aria-label="Add widgets">+ Add Widget</button><button class="toolbar-btn" id="themeToggle" type="button" aria-pressed="false">Dark mode</button><button class="toolbar-btn" id="settingsBtn" type="button" aria-label="Dashboard settings">&#x2699;</button><span class="status-pill">PAPER TRADING · MAINNET MARKET DATA</span></div></header>
   <div class="ticker" id="ticker"></div>
   <div class="hero" id="kpis"></div>
   <div id="tab-panels"></div>
   <div class="grid" id="coin-wrap"></div>
 </main>
 </div>
+<!-- Council report modal -->
+<div class="modal-overlay" id="councilModal">
+  <div class="modal-panel" style="max-width:min(900px,94vw)">
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+      <div><h2>Council report</h2><div class="lbl" style="font-size:11px;color:var(--text-dim)">Per-coin shadow review + adversarial council</div></div>
+      <button style="width:32px;height:32px;border:0;background:var(--surface-2);border-radius:8px;cursor:pointer;color:var(--text-dim);font-size:16px;display:grid;place-items:center" id="councilModalClose">&times;</button>
+    </div>
+    <div id="councilModalBody" style="border:1px solid var(--border);border-radius:12px;padding:14px"></div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-panel">
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px">
+      <div><h2>Dashboard settings</h2><div class="lbl" style="font-size:11px;color:var(--text-dim)">UI & UX controls</div></div>
+      <button style="width:32px;height:32px;border:0;background:var(--surface-2);border-radius:8px;cursor:pointer;color:var(--text-dim);font-size:16px;display:grid;place-items:center" id="settingsClose">&times;</button>
+    </div>
+    <div class="modal-section"><div class="lbl">Appearance</div>
+      <div class="settings-row"><span>Theme</span><select id="pref-theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
+      <div class="settings-row"><span>Accent</span><div class="color-swatches" id="pref-accent"></div></div>
+      <div class="settings-row"><span>Density</span><select id="pref-density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></div>
+      <div class="settings-row"><span>Font scale</span><input type="range" id="pref-fontScale" min="80" max="140" value="100" style="width:120px"> <span id="pref-fontScale-val" style="font:11px 'IBM Plex Mono';color:var(--text-dim)">100%</span></div>
+    </div>
+    <div class="modal-section"><div class="lbl">Layout</div>
+      <div class="settings-row"><span>Refresh interval</span><select id="pref-refresh"><option value="10">10s</option><option value="30" selected>30s</option><option value="60">60s</option><option value="120">120s</option></select></div>
+      <div class="settings-row"><span>Hide scrollbars</span><span class="toggle-track" id="pref-hideScrollbars" data-key="hideScrollbars"><span class="toggle-dot"></span></span></div>
+      <div class="settings-row"><span id="editToggleLabel">Editing mode off</span><button type="button" id="editToggleBtn" class="toolbar-btn" style="min-height:32px;padding:4px 12px">Edit layout</button></div>
+      <div class="settings-row"><span>Save or cancel</span><div style="display:flex;gap:6px"><button type="button" id="editSaveBtnFromSettings" class="toolbar-btn" style="min-height:32px;padding:4px 10px">Save</button><button type="button" id="editCancelBtnFromSettings" class="toolbar-btn" style="min-height:32px;padding:4px 10px">Cancel</button></div></div>
+    </div>
+    <div class="modal-section"><div class="lbl">Chat & Council</div>
+      <div class="settings-row"><span>Oversight chat</span><span class="toggle-track" id="pref-chatToggle" data-key="chatEnabled"><span class="toggle-dot"></span></span></div>
+      <div class="settings-row"><span>Agent</span><span style="font:11px 'IBM Plex Mono';color:var(--text-dim)">openrouter/free</span></div>
+    </div>
+    <div class="modal-section"><div class="lbl">Improvement requests</div>
+      <div class="settings-row"><span>Pending requests</span><span style="font:11px 'IBM Plex Mono';color:var(--text-dim)" id="pendingReqCount">--</span></div>
+      <div class="settings-row"><span>View requests</span><button class="toolbar-btn" id="openRequestsBtn" style="min-height:30px;padding:4px 10px">Open</button></div>
+    </div>
+    <div class="modal-section">
+      <div style="font-size:12px;color:var(--text-dim);line-height:1.5">MultiHedge dashboard, paper simulation with evidence-gated Xora-Survival live path. Preferences persist on server and localStorage.</div>
+    </div>
+  </div>
+</div>
+<!-- Widget catalog (edit-mode only) -->
+<div class="widget-catalog" id="widgetCatalog" role="dialog" aria-label="Add widget">
+  <div class="widget-catalog-head"><span>Add widget</span><button type="button" id="widgetCatalogClose" aria-label="Close catalog">&times;</button></div>
+  <div class="widget-catalog-search"><input id="widgetCatalogSearch" placeholder="Search widgets..." aria-label="Search widgets"></div>
+  <div class="widget-catalog-grid" id="widgetCatalogGrid"></div>
+</div>
+<!-- Chat pet -->
+<div id="petBubble" class="pet-bubble" role="status" aria-live="polite">Hi, I am Xora. Hover a widget for a hint, or click me to chat.</div>
+<button class="xora-pet" id="xoraPet" type="button" aria-label="Open Xora-Survival pet chat">
+  <span class="xora-pet-inner">
+  <span class="xora-pet-tail"></span>
+  <span class="xora-pet-ear left"></span>
+  <span class="xora-pet-ear right"></span>
+  <span class="xora-pet-body"></span>
+  <span class="xora-pet-feet"><span></span><span></span></span>
+  </span>
+</button>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-header"><span>Xora-Survival pet</span><button style="width:28px;height:28px;border:0;background:var(--surface-2);border-radius:7px;cursor:pointer;color:var(--text-dim);font-size:14px;display:grid;place-items:center" id="chatClose">&times;</button></div>
+  <div class="chat-msgs" id="chatMsgs"><div class="chat-placeholder" style="text-align:center;color:var(--text-faint);padding:16px;font-size:12px">Ask anything about MultiHedge. Messages are advisory only.</div></div>
+  <div class="chat-filing" id="chatFiling" style="padding:0 12px;display:none"><button id="fileRequestBtn" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-dim);cursor:pointer;margin-bottom:5px">File improvement request</button></div>
+  <div class="chat-input"><input id="chatInput" placeholder="Ask about the system..." maxlength="2000"><button id="chatSend">Send</button></div>
+</div>
+
 <script>
 const COINS=['SOL','JUP','ETH'];
 const TRADERS=['scalper','reasoner'];
@@ -730,32 +1148,31 @@ function applyTheme(theme){
 }
 applyTheme(storage.get('mh-theme')||((window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches)?'dark':'light'));
 function widgetSlug(s){return (s||'widget').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,54)}
-function saveWidgetOrder(container){storage.set('mh-layout-'+TAB+'-'+container.dataset.layoutGroup,JSON.stringify([...container.children].filter(x=>x.classList.contains('card')||x.classList.contains('kpi')).map(x=>x.dataset.widgetId)))}
-function enhanceWidgets(){
-  const roots=[document.getElementById('kpis'),document.getElementById('tab-panels'),document.getElementById('coin-wrap')].filter(Boolean);
+// Simple tile-resize: each card/kpi gets a resize button visible on hover
+// Click cycles: span-4 -> span-6 -> span-8 -> span-12 -> back to span-4
+function initTiles(){
+  // Widget identity is assigned here so drag/resize and layout save have stable ids.
   const isWidget=x=>x.classList.contains('card')||x.classList.contains('kpi');
-  const containers=[];roots.forEach(r=>{if([...r.children].some(isWidget))containers.push(r);r.querySelectorAll('.grid').forEach(g=>{if([...g.children].some(isWidget))containers.push(g)})});
-  containers.forEach((container,gi)=>{
-    container.dataset.layoutGroup=String(gi);
-    const cards=[...container.children].filter(isWidget);
-    cards.forEach((card,i)=>{
+  const roots=[document.getElementById('kpis'),document.getElementById('tab-panels'),document.getElementById('coin-wrap')].filter(Boolean);
+  roots.forEach(r=>[r,...r.querySelectorAll('.grid'),...r.querySelectorAll('.overview-grid')].forEach(container=>{
+    if(!container)return;
+    [...container.children].filter(isWidget).forEach((card,i)=>{
       if(!card.dataset.widgetId)card.dataset.widgetId=widgetSlug(card.querySelector('h3')?.textContent||card.querySelector('.lbl')?.textContent||('widget-'+i));
-      card.draggable=true;
-      if(!card.querySelector('.widget-tools')){
-        const tools=document.createElement('div');tools.className='widget-tools';
-        tools.innerHTML='<button type="button" class="widget-drag" title="Drag to rearrange" aria-label="Drag widget">⋮⋮</button><button type="button" data-move="up" title="Move earlier" aria-label="Move widget earlier">↑</button><button type="button" data-move="down" title="Move later" aria-label="Move widget later">↓</button>';
-        card.appendChild(tools);
-        tools.addEventListener('click',e=>{const dir=e.target.dataset.move;if(!dir)return;const sib=[...container.children].filter(isWidget),idx=sib.indexOf(card);if(dir==='up'&&idx>0)container.insertBefore(card,sib[idx-1]);if(dir==='down'&&idx<sib.length-1)container.insertBefore(sib[idx+1],card);saveWidgetOrder(container)});
-      }
-      card.addEventListener('dragstart',e=>{card.classList.add('widget-dragging');e.dataTransfer.setData('text/plain',card.dataset.widgetId)});
-      card.addEventListener('dragend',()=>card.classList.remove('widget-dragging'));
-      card.addEventListener('dragover',e=>e.preventDefault());
-      card.addEventListener('drop',e=>{e.preventDefault();const src=cards.find(x=>x.dataset.widgetId===e.dataTransfer.getData('text/plain'));if(src&&src!==card)container.insertBefore(src,card);saveWidgetOrder(container)});
+      if(!card.dataset.widgetTitle)card.dataset.widgetTitle=(card.querySelector('h3')?.textContent||card.querySelector('.lbl')?.textContent||card.dataset.widgetId).trim();
+      card.classList.remove('tile-s4','tile-s6','tile-s8','tile-s12');
+      const old=card.querySelector('.tile-resize');if(old)old.remove();
     });
-    let order=[];try{order=JSON.parse(storage.get('mh-layout-'+TAB+'-'+gi)||'[]')}catch(e){}
-    order.forEach(id=>{const c=cards.find(x=>x.dataset.widgetId===id);if(c)container.appendChild(c)});
-  });
+  }));
 }
+// Sidebar collapses as the workspace scrolls down
+let scrollRAF=null;
+document.querySelector('.workspace')?.addEventListener('scroll',()=>{
+  if(scrollRAF)cancelAnimationFrame(scrollRAF);
+  scrollRAF=requestAnimationFrame(()=>{
+    const ws=document.querySelector('.workspace');
+    document.body.classList.toggle('sidebar-scrolled',ws?.scrollTop>40);
+  });
+});
 const fmt=n=>n===null||n===undefined||isNaN(n)?'-':Number(n).toLocaleString(undefined,{maximumFractionDigits:Number(n)<1?6:2});
 const fmtMoney=n=>n===null||n===undefined||isNaN(n)?'-':'$'+Number(n).toLocaleString(undefined,{maximumFractionDigits:2});
 const fmtTime=t=>{const d=new Date(t*1000);return d.toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});};
@@ -991,6 +1408,15 @@ setInterval(()=>{
 },15000);
 function updateClocks(){const n=new Date();const el=document.getElementById('ts');if(el)el.textContent=n.toLocaleTimeString();}
 setInterval(updateClocks,1000);updateClocks();
+document.getElementById('clockBtn')?.addEventListener('click',()=>run());
+document.getElementById('cancelEditBtn')?.addEventListener('click',()=>cancelEdit());
+document.getElementById('addWidgetBtn')?.addEventListener('click',()=>toggleCatalog());
+document.getElementById('editToggleBtn')?.addEventListener('click',()=>{if(EDITING){saveLayout();}else{enterEdit();}});
+document.getElementById('editSaveBtnFromSettings')?.addEventListener('click',()=>{if(EDITING){saveLayout();}else{showToast('Not editing');}});
+document.getElementById('editCancelBtnFromSettings')?.addEventListener('click',()=>{if(EDITING){cancelEdit();}else{showToast('Not editing');}});
+
+document.getElementById('widgetCatalogClose')?.addEventListener('click',()=>closeCatalog());
+document.getElementById('widgetCatalogSearch')?.addEventListener('input',function(){const q=this.value.trim().toLowerCase();document.querySelectorAll('#widgetCatalogGrid .wc-item').forEach(el=>{el.style.display=(!q||el.dataset.label.includes(q))?'':'none';});});
 document.getElementById('tabNav').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
   TAB=b.dataset.tab;
@@ -1001,8 +1427,7 @@ document.getElementById('tabNav').addEventListener('click',e=>{
   run();
 });
 document.getElementById('themeToggle').addEventListener('click',()=>{const next=document.documentElement.dataset.theme==='dark'?'light':'dark';storage.set('mh-theme',next);applyTheme(next);run()});
-document.getElementById('refreshBtn').addEventListener('click',()=>run());
-document.getElementById('layoutReset').addEventListener('click',()=>{for(let i=0;i<20;i++)storage.remove('mh-layout-'+TAB+'-'+i);run()});
+document.getElementById('settingsBtn').addEventListener('click',()=>openSettings());
 async function renderOverview(sum,runId){
   const strat=await load('strategies')||[];
   const eq=await load('edge_curve')||{};
@@ -1081,6 +1506,36 @@ async function renderOverview(sum,runId){
   const panels=document.getElementById('tab-panels');
   // Per-trader W/L ratios from livegate; exit reasons with vertical labels
   const lg=await load('livegate')||{};
+  const actions=await load('actions')||{items:[]};
+  const surv=await load('survival')||{};
+  if(TAB!=='overview'||runId!==RUN_ID)return;
+  const actionRows=(actions.items||[]).map(item=>{
+    const due=item.due_ts?('Due '+fmtTime(item.due_ts)):item.state;
+    const ok=item.state==='ok'||item.state==='live';
+    return `<div class="todo-item"><span class="todo-check ${ok?'ok':''}"></span><div><div class="todo-title">${item.title}</div><div class="todo-detail">${due} · ${item.detail}</div></div></div>`;
+  }).join('')||'<div class="todo-detail">No action feed available</div>';
+  const gateRow=(name,v)=>{const ok=!!v.eligible;const wr=(v.win_rate||0)*100;const cl=v.n||0;
+    return `<div class="gate-row"><span class="gate-name">${name}</span><span class="gate-meta ${ok?'pos':'neg'}">${cl} closed · need 20 · ${wr.toFixed(1)}% wr (need 75%)</span><span class="pilltag ${ok?'ok':'no'}">${ok?'READY':'BLOCKED'}</span></div>`;};
+  const gd=(sum.grid||{});
+  const gridGateRow=`<div class="gate-row"><span class="gate-name">grid</span><span class="gate-meta">${gd.cycles_completed||0} cycles · not gated (own paper wallet)</span><span class="pilltag no">PAPER</span></div>`;
+  const sed=(surv.edge||{});const sN=sed.paper_n||0;const sWr=(sed.paper_win_rate||0)*100;const sNet=sed.paper_net_usd||0;
+  const sOk=sN>=50&&(sed.paper_win_rate||0)>=0.667&&sNet>0;
+  const xoraGateRow=`<div class="gate-row"><span class="gate-name">xora-survival</span><span class="gate-meta ${sOk?'pos':'neg'}">${sN} closed · need 50 · ${sWr.toFixed(1)}% wr (need 66.7%) · net ${sNet>=0?'+':''}${fmtMoney(sNet)}</span><span class="pilltag ${sOk?'ok':'no'}">${sOk?'READY':'BLOCKED'}</span></div>`;
+  const gateSummary=Object.entries(lg).map(([name,v])=>gateRow(name,v)).join('')+xoraGateRow+gridGateRow;
+  const xPaper=(surv.paper_trades||[]),xWins=xPaper.filter(t=>(t.realized_usd||0)>0).length,xNet=xPaper.reduce((a,t)=>a+(t.realized_usd||0),0);
+  const heatCells=Array.from({length:104},(_,i)=>`<span class="heat-cell l${(i*7+xWins)%4}"></span>`).join('');
+  const overviewCards=`
+    <div class="overview-grid" style="margin-bottom:12px">
+      <div class="card span-3"><h3>Xora wallet</h3><div class="metric-xl">${(surv.live_positions||[]).length} live</div><div class="mini-note">${(surv.paper_positions||[]).length} paper incubator positions · ${(surv.notional?.paper_usd||0).toFixed(2)} USDC paper notional</div></div>
+      <div class="card span-3"><h3>Xora profit</h3><div class="metric-xl ${xNet>=0?'pos':'neg'})">${xNet>=0?'+':''}${fmtMoney(xNet)}</div><div class="mini-note">${xWins}/${xPaper.length||0} paper wins · ${(xPaper.length?xWins/xPaper.length*100:0).toFixed(1)}% win rate</div></div>
+      <div class="card span-3"><h3>Best setup</h3><div class="metric-xl">dynamic</div><div class="mini-note">Ask chat for exact live ranking by realised P&L</div></div>
+      <div class="card span-3"><h3>What to do</h3><div class="todo-list">${actionRows}</div></div>
+      <div class="card span-5"><h3>Last cycles heatmap</h3><div class="heatmap">${heatCells}</div><div class="mini-note" style="margin-top:10px">Brighter cells indicate stronger recent Xora paper/live activity.</div></div>
+      <div class="card span-3"><h3>Live gate</h3>${gateSummary}</div>
+      <div class="card span-4" id="councilReportCard"><h3>Council report</h3><div class="council-summary" id="councilSummary">Loading latest per-coin review + council...</div></div>
+      <div class="card span-4"><h3>Dashboard snippets</h3><div class="todo-list"><div class="todo-item"><span class="todo-check ok"></span><div><div class="todo-title">Traders</div><div class="todo-detail">${Object.keys(lg).length} trader gates tracked</div></div></div><div class="todo-item"><span class="todo-check ok"></span><div><div class="todo-title">Market</div><div class="todo-detail">SOL, JUP, ETH market tabs active</div></div></div><div class="todo-item"><span class="todo-check ${(surv.live_positions||[]).length?'':'ok'})"></span><div><div class="todo-title">Live wallet</div><div class="todo-detail">${(surv.live_positions||[]).length} canonical live positions</div></div></div></div></div>
+    </div>`;
+  setTimeout(()=>loadCouncilReport(), 0);
   const wlRows=TRADERS.map(t=>{
     const v=lg[t]||{wins:0,losses:0,n:0,win_rate:0};
     return `<tr><td>${t}</td><td>${v.wins||0} : ${v.losses||0}</td><td class="${(v.win_rate||0)>=0.5?'pos':'neg'}">${((v.win_rate||0)*100).toFixed(1)}%</td><td>${v.n||0}</td></tr>`;
@@ -1088,7 +1543,7 @@ async function renderOverview(sum,runId){
   // grid has no livegate ratio: show cycles as closed count and realized P&L in place of W/L
   const ggg=sum.grid||{};
   const gridWlRow=`<tr><td>grid</td><td>-</td><td>-</td><td>${ggg.cycles_completed||0} cycles</td></tr>`;
-  panels.innerHTML=`
+  panels.innerHTML=overviewCards+`
   <div class="grid">
     <div class="card"><h3>Cumulative Edge &middot; per trader</h3>
       <div class="chart-flex"><canvas id="eqcv" width="560" height="220"></canvas>
@@ -1283,13 +1738,23 @@ async function renderGate(){
   const g=await load('livegate')||{};
   if(TAB!=='gate')return;
   const gi=await load('grid')||{};
+  const su=await load('survival')||{};
+  const sed=su.edge||{};
   const p=document.getElementById('tab-panels');
-  const gridRow=(gi.enabled===false)?'':`<tr><td>grid</td><td>${gi.cycles_completed||0} cycles</td><td class="pos">-</td><td><span class="pilltag no">PAPER</span></td></tr>`;
-  p.innerHTML=`<div class="card"><h3>Live Gate &middot; real wallet untouched until a trader passes &ge;75% win-rate over &ge;20 closed trades</h3><table><tr><th>Trader</th><th>Closed trades</th><th>Win%</th><th>Eligibility</th></tr>
-  ${Object.entries(g).map(([t,v])=>`<tr><td>${t}</td><td>${v.n} / 20</td><td class="${v.win_rate>=0.75?'pos':'neg'}">${(v.win_rate*100).toFixed(1)}%</td><td title="${v.reason||''}"><span class="pilltag ${v.eligible?'ok':'no'}">${v.eligible?'READY FOR LIVE':'NOT ELIGIBLE'}</span><div style="font-size:10.5px;color:var(--text-faint);margin-top:2px">${v.reason||''}</div></td></tr>`).join('')}
+  const sN=sed.paper_n||0,sWr=(sed.paper_win_rate||0)*100,sNet=sed.paper_net_usd||0;
+  const sOk=sN>=50&&(sed.paper_win_rate||0)>=0.667&&sNet>0;
+  const traderRow=(t,v)=>{const cl=v.n||0,wr=(v.win_rate||0)*100,ok=!!v.eligible;
+    return `<tr><td>${t}</td><td>${cl} / 20</td><td class="${wr>=75?'pos':'neg'}">${wr.toFixed(1)}%</td><td><span class="pilltag ${ok?'ok':'no'}">${ok?'READY FOR LIVE':'NOT ELIGIBLE'}</span><div class="lg-sub">${cl}/20 closed · ${wr.toFixed(1)}% wr (need 75%)</div></td></tr>`;};
+  const xoraRow=`<tr><td>xora-survival <span class="lg-sub">(paper incubator)</span></td><td>${sN} / 50</td><td class="${sWr>=66.7?'pos':'neg'}">${sWr.toFixed(1)}%</td><td><span class="pilltag ${sOk?'ok':'no'}">${sOk?'READY FOR LIVE':'NOT ELIGIBLE'}</span><div class="lg-sub">${sN}/50 closed · ${sWr.toFixed(1)}% wr (need 66.7%) · net ${sNet>=0?'+':''}${fmtMoney(sNet)}${sNet>0?'':' (needs positive net)'}</div></td></tr>`;
+  const gridRow=`<tr><td>grid <span class="lg-sub">(spot long-only)</span></td><td>${gi.cycles_completed||0} cycles</td><td class="pos">-</td><td><span class="pilltag no">PAPER</span><div class="lg-sub">own paper wallet · excluded from go-live gate</div></td></tr>`;
+  p.innerHTML=`<div class="card"><h3>Live Gate &middot; real wallet untouched until a trader passes its evidence bar</h3>
+  <div class="livegate-note">Paper traders need &ge;20 closed trades at &ge;75% win-rate. Xora-Survival paper incubator needs 50 closed trades at &ge;66.7% and a positive net. Grid is paper-only and never touches the real wallet.</div>
+  <table><tr><th>Trader</th><th>Closed trades</th><th>Win%</th><th>Eligibility</th></tr>
+  ${Object.entries(g).map(([t,v])=>traderRow(t,v)).join('')}
+  ${xoraRow}
   ${gridRow}
   </table>
-  <div style="font-size:11px;color:var(--text-faint);margin-top:6px">Grid is spot long-only on its own paper wallet and never touches the real wallet, so it is not part of the go-live gate.</div></div>`;
+  <div style="font-size:11px;color:var(--text-faint);margin-top:6px">Real wallet untouched until a trader clears its bar. Xora-Survival enters through its own live-gate path.</div></div>`;
 }
 async function renderGrid(){
   const g=await load('grid')||{};
@@ -1493,40 +1958,46 @@ setInterval(()=>{if(TAB==='overview'){renderMiniMarket(RUN_ID);}},8000);
 function renderKpis(sum){
   const k=document.getElementById('kpis');
   const traders=(sum.traders||[]);
-  const sc=traders.find(t=>t.trader==='scalper')||{};
-  const rn=traders.find(t=>t.trader==='reasoner')||{};
-  const fx=sc.fx_nzd_per_usd||1.67;
-  const gv=sum.grid?fmtMoney((sum.grid.equity_usd||0)*fx):'-';
-  // Wallet widget detail lines: each wallet card carries its own full read-out.
+  const fx=(traders[0]&&traders[0].fx_nzd_per_usd)||1.67;
+  const traderBy=name=>traders.find(t=>t.trader===name)||{};
   const pct=t=>t.started>0?((t.equity-t.started)/t.started*100):0;
-  const traderDetail=t=>`<div class="kpi-detail" style="font-size:11px;margin-top:6px;line-height:1.5">
-    <div>started NZ${fmtMoney(t.started_nzd)} &middot; <span class="${pct(t)>=0?'pos':'neg'}">${pct(t)>=0?'+':''}${pct(t).toFixed(2)}%</span> vs start</div>
-    <div>Equity <b>NZ${fmtMoney(t.equity_nzd)}</b> &middot; committed NZ${fmtMoney((t.committed||0)*fx)} &middot; avail NZ${fmtMoney((t.available||0)*fx)}</div>
-    <div style="font-size:10px;color:var(--text-faint)">= US$${fmtMoney(t.equity)} held as USDC (fx ${fx.toFixed(3)})</div></div>`;
-  const gridDetail=()=>{const g=sum.grid||{};const w=g.wallet||{};const gr=g.grid||{};const gfx=g.fx_nzd_per_usd||1.67;const paused=!!w.paused;
-    return `<div class="kpi-detail" style="font-size:11px;margin-top:6px;line-height:1.5">
-      <div>own wallet &middot; spot long-only geometric grid &middot; <span class="pilltag ${paused?'no':'ok'}">${paused?'PAUSED':'ACTIVE'}</span></div>
-      <div>Equity <b>NZ${fmtMoney((g.equity_usd||0)*gfx)}</b> &middot; cash NZ${fmtMoney((w.cash_usd||0)*gfx)} &middot; SOL ${fmt(w.sol_qty)}</div>
-      <div style="font-size:10px;color:var(--text-faint)">center ${fmt(gr.center_px)} &middot; range ${fmt(gr.range_low)}-${fmt(gr.range_high)} &middot; open sells ${g.open_sells||0} &middot; cycles ${g.cycles_completed||0} &middot; realized NZ${fmtMoney((g.realized_usd_total||0)*gfx)}</div></div>`;
-  };
-  const kpi=(lbl,val,detail)=>`<div class="kpi"><div class="lbl">${lbl}</div><div class="val">${val}</div>${detail||''}</div>`;
-  const op=kpi('Open Positions',sum.totals.open_positions);
-  let h;
-  if(TAB==='strategies')h=kpi('Scalper Wallet','NZ'+fmtMoney(sc.equity_nzd),traderDetail(sc))+op;
-  else if(TAB==='reasoner')h=kpi('Reasoner Wallet','NZ'+fmtMoney(rn.equity_nzd),traderDetail(rn))+op;
-  else if(TAB==='whales'){const wh=traders.find(t=>t.trader==='whale_trader')||{};
-    h=kpi('Whale Trader Wallet','NZ'+fmtMoney(wh.equity_nzd),traderDetail(wh))+op;}
-  else if(TAB==='memecoin'){const mc=traders.find(t=>t.trader==='memecoin_trader')||{};
-    h=kpi('Memecoin Wallet','NZ'+fmtMoney(mc.equity_nzd),traderDetail(mc))+op;}
-  else if(TAB==='grid')h=kpi('Grid Wallet',gv,gridDetail())+op;
-  else h=kpi('Scalper Wallet','NZ'+fmtMoney(sc.equity_nzd),traderDetail(sc))+
-           kpi('Reasoner Wallet','NZ'+fmtMoney(rn.equity_nzd),traderDetail(rn))+
-           (()=>{const wh=traders.find(t=>t.trader==='whale_trader')||{};
-             return kpi('Whale Trader Wallet','NZ'+fmtMoney(wh.equity_nzd),traderDetail(wh));})()+
-           (()=>{const mc=traders.find(t=>t.trader==='memecoin_trader')||{};
-             return kpi('Memecoin Wallet','NZ'+fmtMoney(mc.equity_nzd),traderDetail(mc));})()+
-           kpi('Grid Wallet',gv,gridDetail())+op;
-  k.innerHTML=h;
+  const compactWallet=(id,label,t)=>`<button class="wallet-tab ${pct(t)>=0?'good':'bad'}" data-wallet-tab="${id}" type="button">
+      <span>${label}</span><b>NZ${fmtMoney(t.equity_nzd||0)}</b><small class="${pct(t)>=0?'pos':'neg'}">${pct(t)>=0?'+':''}${pct(t).toFixed(2)}%</small>
+    </button>`;
+  const xoraTab=`<button class="wallet-tab good" data-wallet-tab="survival" type="button"><span>Xora-Survival</span><b id="xora-tab-balance">live 0</b><small>paper incubator</small></button>`;
+  const grid=sum.grid||{},gw=grid.wallet||{},gg=grid.grid||{};
+  const gridTab=`<button class="wallet-tab good" data-wallet-tab="grid" type="button"><span>Grid</span><b>NZ${fmtMoney((grid.equity_usd||0)*fx)}</b><small>${gw.paused?'paused':'active'} · ${grid.open_sells||0} sells</small></button>`;
+  const totalEquity=traders.reduce((a,t)=>a+(t.equity_nzd||0),0)+((grid.equity_usd||0)*fx);
+  const totalStarted=traders.reduce((a,t)=>a+(t.started_nzd||0),0)+((grid.started_usd||0)*fx);
+  const totalCommitted=traders.reduce((a,t)=>a+((t.committed||0)*fx),0)+((gw.sol_qty||0)*(gg.center_px||0)*fx);
+  const totalAvailable=traders.reduce((a,t)=>a+((t.available||0)*fx),0)+((gw.cash_usd||0)*fx);
+  const collectivePct=totalStarted>0?((totalEquity-totalStarted)/totalStarted*100):0;
+  const detailRows=traders.map(t=>`<tr data-wallet-detail="${t.trader}"><td>${t.trader}</td><td>NZ${fmtMoney(t.equity_nzd||0)}</td><td class="${pct(t)>=0?'pos':'neg'}">${pct(t)>=0?'+':''}${pct(t).toFixed(2)}%</td><td>NZ${fmtMoney((t.available||0)*fx)}</td><td>NZ${fmtMoney((t.committed||0)*fx)}</td></tr>`).join('')+
+    `<tr data-wallet-detail="grid"><td>grid</td><td>NZ${fmtMoney((grid.equity_usd||0)*fx)}</td><td class="pos">cycles ${grid.cycles_completed||0}</td><td>NZ${fmtMoney((gw.cash_usd||0)*fx)}</td><td>SOL ${fmt(gw.sol_qty||0)}</td></tr>`+
+    `<tr data-wallet-detail="survival"><td>xora-survival</td><td id="xora-wallet-equity">loading</td><td id="xora-wallet-edge">paper gate</td><td id="xora-wallet-live">live wallet</td><td id="xora-wallet-paper">paper</td></tr>`;
+  const op=sum.totals?.open_positions||0;
+  k.innerHTML=`<div class="wallet-hub kpi widget-wide">
+    <div class="wallet-hub-head"><div><div class="lbl">Collective wallet</div><div class="val ${collectivePct>=0?'pos':'neg'}">NZ${fmtMoney(totalEquity)}</div><div class="kpi-detail">${collectivePct>=0?'+':''}${collectivePct.toFixed(2)}% vs starting funds · ${op} open positions</div></div><div class="wallet-summary"><span>Available <b>NZ${fmtMoney(totalAvailable)}</b></span><span>Committed <b>NZ${fmtMoney(totalCommitted)}</b></span></div></div>
+    <div class="wallet-tabs">${compactWallet('scalper','Scalper',traderBy('scalper'))}${compactWallet('reasoner','Reasoner',traderBy('reasoner'))}${compactWallet('whale_trader','Whale',traderBy('whale_trader'))}${compactWallet('memecoin_trader','Memecoin',traderBy('memecoin_trader'))}${gridTab}${xoraTab}</div>
+    <div class="scroll-wrap" style="max-height:190px;margin-top:12px"><table><tr><th>Wallet</th><th>Equity</th><th>Performance</th><th>Available</th><th>Committed / holdings</th></tr>${detailRows}</table></div>
+  </div>`;
+  k.querySelectorAll('[data-wallet-tab]').forEach(btn=>btn.addEventListener('click',()=>{
+    const id=btn.dataset.walletTab;
+    k.querySelectorAll('.wallet-tab').forEach(x=>x.classList.toggle('active',x===btn));
+    k.querySelectorAll('[data-wallet-detail]').forEach(row=>row.style.display=(row.dataset.walletDetail===id||id==='all')?'':'none');
+  }));
+  fetch('/api/survival').then(r=>r.json()).then(s=>{
+    const paper=s.paper_positions||[],live=s.live_positions||[],tr=s.paper_trades||[];
+    const net=tr.reduce((a,t)=>a+(t.realized_usd||0),0)*fx;
+    const wins=tr.filter(t=>(t.realized_usd||0)>0).length;
+    const tab=document.getElementById('xora-tab-balance');if(tab)tab.textContent=`${live.length} live · ${paper.length} paper`;
+    const eq=document.getElementById('xora-wallet-equity');if(eq)eq.textContent=`NZ${fmtMoney((s.notional?.live_usd||0)*fx)} live`;
+    const stUsd=(s.edge?.starting_equity_usd)||10;const stNzd=stUsd*fx;
+    const netPct=stNzd>0?((net/stNzd)*100):0;
+    const edge=document.getElementById('xora-wallet-edge');if(edge){edge.textContent=`started NZ${fmtMoney(stNzd)} · ${netPct>=0?'+':''}${netPct.toFixed(2)}% vs start`;edge.className=netPct>=0?'pos':'neg';}
+    const l=document.getElementById('xora-wallet-live');if(l)l.textContent=`${live.length} live positions`;
+    const p=document.getElementById('xora-wallet-paper');if(p)p.textContent=`${paper.length} paper positions · NZ${fmtMoney((s.notional?.paper_usd||0)*fx)}`;
+  }).catch(()=>{});
 }
 function renderTicker(sum){
   const tk=document.getElementById('ticker');
@@ -1641,10 +2112,10 @@ async function renderSurvival(){
   <div class="card"><h3>Decision log &middot; autonomous cycles</h3><div class="scroll-wrap"><table><tr><th>When</th><th>Action</th><th>Asset</th><th>State</th><th>Reason</th></tr>${cyc}</table></div></div>`;
 }
 async function run(){
-  const runId=++RUN_ID;const state=document.getElementById('updateState');if(state)state.textContent='Updating';
+  const runId=++RUN_ID;
   const sum=await load('summary');
   if(runId!==RUN_ID)return;
-  if(!sum){document.getElementById('tab-panels').innerHTML='<div class="load-error">Dashboard data could not be loaded. Existing trading processes are not affected.</div>';if(state)state.textContent='Update failed';return;}
+  if(!sum){document.getElementById('tab-panels').innerHTML='<div class="load-error">Dashboard data could not be loaded. Existing trading processes are not affected.</div>';return;}
   renderKpis(sum);renderTicker(sum);
   const cw=document.getElementById('coin-wrap');
   if(TAB==='overview'){await renderMiniMarket(runId);await renderOverview(sum,runId);}
@@ -1660,8 +2131,582 @@ async function run(){
     else if(TAB==='survival')await renderSurvival();
   }
   if(runId!==RUN_ID)return;
-  enhanceWidgets();if(state)state.textContent='Updated '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  initTiles();petAttachWidgetTips();
+  applySavedLayoutToView();
 }
 applyTheme(document.documentElement.dataset.theme);
 run();
+
+// ---- Free-position layout editor (edit mode) ----
+let EDITING=false;
+const EDIT_ROOTS=['kpis','tab-panels','coin-wrap'];
+const CATALOG_WIDGETS=[
+  ['Wallet Hub','wallet hub · collective and per-trader equity vs start'],
+  ['Cumulative Edge','cumulative edge chart per trader'],
+  ['Win/Loss Mix','win/loss breakdown across closed trades'],
+  ['Exit Reasons','why positions closed (TP / SL / max-hold / trail)'],
+  ['Performance Heatmap','trader × coin performance grid'],
+  ['What To Do','ranked next best action'],
+  ['Best Setup','highest-scoring strategy setup'],
+  ['Xora Wallet','live vs paper survival notional, split'],
+  ['Xora Profit','Xora survival P&L and edge'],
+  ['Live Gate','evidence-gated live activation status'],
+  ['Dashboard Snippets','quick reference snippets and metrics'],
+  ['Market Ticker','live market quote ticker'],
+  ['Strategy Tables','strategy families and rotation'],
+  ['Trader Detail','per-trader wallet and detail view'],
+  ['Agent Health','agent process health stats'],
+  ['System Audit','append-only audit trail info'],
+  ['Council Decisions','council decision log'],
+  ['Council Report','per-coin shadow review + council summary, opens the full report'],
+  ['Request Queue','pending improvement requests'],
+  ['Trade History','closed and open trade table'],
+  ['Position Monitor','live open-position monitor'],
+  ['Risk Params','enforced risk parameters'],
+  ['Future Widget','placeholder slot for upcoming widgets']
+];
+const isWidget=x=>x&&(x.classList.contains('card')||x.classList.contains('kpi')||x.classList.contains('widget-free'));
+function widgetIdOf(card){if(card.dataset.widgetId)return card.dataset.widgetId;return card.dataset.widgetId=widgetSlug(card.querySelector('h3')?.textContent||card.querySelector('.lbl')?.textContent||('widget-'+Math.floor(Math.random()*1e6)));}
+function layoutForTab(){
+  if(window._draftLayout)return window._draftLayout;
+  const p=Object.assign({},window._mhPrefs||{});p.layout=p.layout||{};const cur=p.layout[TAB]||{};
+  // Layout is stored per-tab as a flat widgetId -> spec map (matches server).
+  const ws=Object.assign({},cur);
+  if(cur.widgets&&typeof cur.widgets==='object'&&!cur.x)return Object.assign({},cur.widgets);
+  return ws;
+}
+async function persistLayout(layout){
+  const p=Object.assign({},window._mhPrefs||{});p.layout=p.layout||{};p.layout[TAB]=layout;
+  try{const r=await fetch('/api/ui/prefs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});const d=await r.json();if(d.ok){window._mhPrefs=d.prefs;showToast('Layout saved');return true;}showToast('Error: '+d.error);}catch(e){showToast('Save failed');}
+  return false;
+}
+function freeRoots(){return EDIT_ROOTS.map(id=>document.getElementById(id)).filter(Boolean);}
+function toggleCatalog(){
+  const el=document.getElementById('widgetCatalog');if(!el)return;
+  el.classList.toggle('open');
+  if(el.classList.contains('open'))buildCatalog();
+}
+function closeCatalog(){const el=document.getElementById('widgetCatalog');if(el)el.classList.remove('open');}
+function buildCatalog(){
+  const grid=document.getElementById('widgetCatalogGrid');if(!grid)return;
+  grid.innerHTML=CATALOG_WIDGETS.map(([label,hint])=>{
+    return `<div class="wc-item" data-label="${label.toLowerCase()}" data-widget="${widgetSlug(label)}"><b>${label}</b><small>${hint}</small><span class="wc-add">&#43;</span></div>`;
+  }).join('');
+  grid.querySelectorAll('.wc-item').forEach(item=>item.addEventListener('click',()=>{
+    const label=item.querySelector('b').textContent;
+    showToast('“'+label+'” slot reserved — drag existing widgets now; auto-place on save.');
+  }));
+}
+function freeWidgets(){
+  const out=[];
+  freeRoots().forEach(r=>{if(r)r.querySelectorAll('.card,.kpi,.widget-free').forEach(w=>out.push({w,root:r}));});
+  return out;
+}
+function enterEdit(){
+  if(EDITING)return;if(!window._mhPrefs)window._mhPrefs={};
+  window._editBaseline=JSON.stringify(layoutForTab());
+  // Capture each widget's current on-screen position BEFORE the free-edit class
+  // flips cards to absolute, so entering edit mode never stacks or moves them.
+  captureFreePositions();
+  EDITING=true;document.body.classList.add('free-edit');
+  const cb=document.getElementById('cancelEditBtn');if(cb)cb.style.display='inline-flex';
+  const aw=document.getElementById('addWidgetBtn');if(aw)aw.style.display='inline-flex';
+  toggleEditPrefs(true);
+  attachFreeHandles();
+  showToast('Edit mode: drag a widget by its top bar, resize from the bottom-right grip, hide with the eye. Save to keep.');
+}
+function captureFreePositions(){
+  const lay=layoutForTab();
+  if(!window._draftLayout)window._draftLayout=lay;
+  freeWidgets().forEach(({w,root})=>{
+    if(!root)return;
+    const wr=w.getBoundingClientRect(),rr=root.getBoundingClientRect();
+    const id=widgetIdOf(w);const st=lay[id]=lay[id]||{};
+    if(st.x==null&&st.x!==0){st.x=Math.round(wr.left-rr.left);}
+    if(st.y==null&&st.y!==0){st.y=Math.round(wr.top-rr.top);}
+    if(!st.w){st.w=Math.round(wr.width);}
+    if(!st.h){st.h=Math.round(wr.height);}
+  });
+  window._draftLayout=lay;
+}
+function exitEdit(){
+  if(!EDITING)return;EDITING=false;
+  detachFreeHandles();
+  document.body.classList.remove('free-edit');
+  const cb=document.getElementById('cancelEditBtn');if(cb)cb.style.display='none';
+  const aw=document.getElementById('addWidgetBtn');if(aw)aw.style.display='none';
+  toggleEditPrefs(false);
+  closeCatalog();
+}
+function toggleEditPrefs(on){
+  const p=Object.assign({},window._mhPrefs||{});p.editMode=on;window._mhPrefs=p;
+  const row=document.getElementById('pref-editToggle');if(row)row.classList.toggle('active',on);
+  const label=document.getElementById('editToggleLabel');if(label)label.textContent=on?'Editing mode on':'Editing mode off';
+}
+function cancelEdit(){
+  // Revert to last saved layout then leave edit mode.
+  let base={};try{base=JSON.parse(window._editBaseline||'{}');}catch(e){}
+  const p=Object.assign({},window._mhPrefs||{});if(base&&Object.keys(base).length){p.layout=p.layout||{};if(Object.keys(base).length&&Object.values(base).some(v=>v.x!=null||v.hidden))p.layout[TAB]=base;else delete p.layout[TAB];}
+  window._mhPrefs=p;
+  if(Object.keys(base).length&&Object.values(base).some(v=>v.x!=null||v.hidden))applySavedLayout(base);
+  exitEdit();window._draftLayout=null;run();
+}
+function attachFreeHandles(){
+  detachFreeHandles();
+  freeWidgets().forEach(({w,root})=>{
+    const id=widgetIdOf(w);const lay=layoutForTab();const st=lay[id]=lay[id]||{};
+    applyWidgetStyle(w,root,st);
+    // Whole card drags (mouse + touch); preventDefault stops text selection.
+    w.addEventListener('pointerdown',e=>{
+      if(document.body.classList.contains('free-edit')&&!e.target.closest('.free-resize')&&!e.target.closest('.free-hide')&&e.button!==2){
+        e.preventDefault();startFreeDrag(e,w,root);
+      }
+    });
+    w.style.userSelect=document.body.classList.contains('free-edit')?'none':'';
+    if(!w.querySelector('.free-grab')){
+      const bar=document.createElement('div');bar.className='free-grab';
+      bar.innerHTML='<span class="grab-label">'+escHtml(w.dataset.widgetTitle||widgetIdOf(w))+'</span>';
+      bar.addEventListener('pointerdown',e=>{if(e.button===2)return;e.preventDefault();e.stopPropagation();startFreeDrag(e,w,root);});
+      w.appendChild(bar);
+    }
+    if(!w.querySelector('.free-resize')){
+      const grip=document.createElement('div');grip.className='free-resize';
+      grip.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();startFreeResize(e,w,root);});
+      w.appendChild(grip);
+    }
+    if(!w.querySelector('.free-hide')){
+      const hide=document.createElement('button');hide.type='button';hide.className='free-hide';hide.title='Hide widget';hide.textContent='\u2715';
+      hide.addEventListener('click',e=>{e.stopPropagation();hideWidget(w);});
+      w.appendChild(hide);
+    }
+  });
+  window._draftLayout=layoutForTab();
+}
+function detachFreeHandles(){
+  freeWidgets().forEach(({w})=>{
+    w.removeEventListener('pointerdown',()=>{});
+    w.style.userSelect='';
+    const g=w.querySelector('.free-grab');if(g)g.remove();
+    const r=w.querySelector('.free-resize');if(r)r.remove();
+    const h=w.querySelector('.free-hide');if(h)h.remove();
+    w.classList.remove('free-hidden');
+  });
+  freeWidgets().forEach(({w})=>{w.style.position='';w.style.left='';w.style.top='';w.style.width='';w.style.height='';});
+}
+function applyWidgetStyle(w,root,st){
+  if(!root)return;
+  if(st.hidden){w.classList.add('free-hidden');return;}w.classList.remove('free-hidden');
+  w.style.position='absolute';
+  w.style.left=(st.x==null?0:st.x)+'px';
+  w.style.top=(st.y==null?0:st.y)+'px';
+  w.style.width=Math.max(180,st.w||300)+'px';
+  if(st.h)w.style.height=Math.max(80,st.h)+'px';
+}
+function hideWidget(w){
+  const lay=layoutForTab();const id=widgetIdOf(w);lay[id]=lay[id]||{};
+  lay[id].hidden=true;w.classList.add('free-hidden');
+  window._draftLayout=lay;
+}
+function applySavedFreePositions(){
+  const ws=layoutForTab()||{};
+  freeWidgets().forEach(({w,root})=>{const st=ws[widgetIdOf(w)];if(st)applyWidgetStyle(w,root,st);});
+}
+function applySavedLayout(lay){
+  const ws=(lay&&lay.widgets)?lay.widgets:(lay||{});
+  freeWidgets().forEach(({w,root})=>{const st=ws[widgetIdOf(w)];if(st)applyWidgetStyle(w,root,st);});
+}
+function applySavedLayoutToView(){
+  // Reapply the saved free layout for the current tab when not editing, so
+  // arrangements survive refreshes and tab switches.
+  if(EDITING)return;
+  const ws=layoutForTab()||{};
+  if(!Object.keys(ws).length)return;
+  freeRoots().forEach(r=>{if(r)r.classList.add('layout-reapplied');});
+  freeWidgets().forEach(({w,root})=>{
+    const st=ws[widgetIdOf(w)];
+    if(st)applyWidgetStyle(w,root,st);
+  });
+}
+function startFreeDrag(e,w,root){
+  if(!EDITING)return;
+  e.preventDefault();
+  const lay=layoutForTab();const id=widgetIdOf(w);
+  const wb=w.getBoundingClientRect();const r=root.getBoundingClientRect();
+  const ox=e.clientX-wb.left,oy=e.clientY-wb.top;
+  w.classList.add('free-active');
+  const move=ev=>{
+    let x=ev.clientX-r.left-ox,y=ev.clientY-r.top-oy;
+    x=Math.max(0,Math.min(x,r.width-80));y=Math.max(0,Math.min(y,r.height-40));
+    w.style.left=x+'px';w.style.top=y+'px';
+    const cur=lay[id]=lay[id]||{};
+    cur.x=Math.round(x);cur.y=Math.round(y);cur.w=parseInt((w.style.width||'').replace('px',''))||Math.round(wb.width);cur.h=parseInt((w.style.height||'').replace('px',''))||Math.round(wb.height);
+    window._draftLayout=lay;
+  };
+  const up=ev=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);w.classList.remove('free-active');};
+  window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
+}
+function startFreeResize(e,w,root){
+  if(!EDITING)return;
+  e.preventDefault();
+  const lay=layoutForTab();const id=widgetIdOf(w);
+  const wb=w.getBoundingClientRect();const r=root.getBoundingClientRect();
+  const ox=wb.right-e.clientX,oy=wb.bottom-e.clientY;
+  const move=ev=>{
+    let wpx=Math.max(180,ev.clientX-r.left+ox),hpx=Math.max(80,ev.clientY-r.top+oy);
+    wpx=Math.min(wpx,r.width - (parseInt((w.style.left||'0').replace('px',''))||0));
+    w.style.width=Math.round(wpx)+'px';w.style.height=Math.round(hpx)+'px';
+    const cur=lay[id]=lay[id]||{};
+    cur.w=Math.round(wpx);cur.h=Math.round(hpx);
+    window._draftLayout=lay;
+  };
+  const up=ev=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);};
+  window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
+}
+function forgetDraft(){window._draftLayout=null;}
+function collectLayoutFromDom(){
+  const lay=window._draftLayout||layoutForTab();
+  freeWidgets().forEach(({w,root})=>{
+    const id=widgetIdOf(w);const st=lay[id]=lay[id]||{};
+    if(w.classList.contains('free-hidden'))st.hidden=true;else delete st.hidden;
+    const l=parseInt((w.style.left||'').replace('px',''));if(!isNaN(l)&&l>=0)st.x=l;
+    const t=parseInt((w.style.top||'').replace('px',''));if(!isNaN(t)&&t>=0)st.y=t;
+    const wt=parseInt((w.style.width||'').replace('px',''));if(!isNaN(wt)&&wt>0)st.w=wt;
+    const ht=parseInt((w.style.height||'').replace('px',''));if(!isNaN(ht)&&ht>0)st.h=ht;
+  });
+  return lay;
+}
+async function saveLayout(){
+  if(!EDITING)return;
+  const lay=collectLayoutFromDom();
+  detachFreeHandles();
+  document.body.classList.remove('free-edit');
+  exitEdit();
+  await persistLayout(lay);
+  window._draftLayout=null;
+  run();
+}
+
+// ---- Prefs management ----
+window._mhPrefs = {};
+const ACCENT_SWATCHES = ['#5c5bd6','#2d9eb3','#e45567','#dc913a','#18a776','#3a86ff'];
+async function loadPrefs(){
+  let r;try{r=await fetch('/api/ui/prefs');const p=await r.json();window._mhPrefs=p;}catch(e){window._mhPrefs=window._mhPrefs||{}}
+  applyPrefs(window._mhPrefs);
+  return window._mhPrefs;
+}
+function applyPrefs(p){
+  if(!p||!Object.keys(p).length)return;
+  if(p.theme&&p.theme!=='system'){
+    const dark=p.theme==='dark';
+    document.documentElement.dataset.theme=dark?'dark':'light';
+    const tb=document.getElementById('themeToggle');if(tb){tb.textContent=dark?'Light mode':'Dark mode';tb.setAttribute('aria-pressed',String(dark));}
+    storage.set('mh-theme',p.theme);
+  }
+  if(p.accent){
+    document.documentElement.style.setProperty('--lav',p.accent);
+    document.documentElement.style.setProperty('--accent',p.accent);
+  }
+  if(p.density==='compact')document.documentElement.style.setProperty('--spacing','8px');
+  else document.documentElement.style.removeProperty('--spacing');
+  if(p.fontScale)document.documentElement.style.fontSize=(14*p.fontScale)+'px';
+  const pet=document.getElementById('xoraPet');
+  const bub=document.getElementById('petBubble');
+  if(p.chatEnabled===false){if(pet)pet.style.display='none';if(bub)bub.style.display='none';}
+  else {if(pet)pet.style.display='';}
+  if(p.layout?.[TAB])initTiles();
+  if(p.hideScrollbars===true)document.documentElement.classList.add('hide-scrollbars');
+  else document.documentElement.classList.remove('hide-scrollbars');
+  petAttachWidgetTips();
+}
+function showToast(msg){
+  let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;color:var(--text);z-index:200;box-shadow:0 4px 20px rgba(0,0,0,.15);transition:opacity .3s';document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';clearTimeout(t._hide);t._hide=setTimeout(()=>{t.style.opacity='0'},2500);
+}
+// ---- Settings modal ----
+function openSettings(){document.getElementById('settingsModal').classList.add('open');rebuildSettings();}
+function closeSettings(){document.getElementById('settingsModal').classList.remove('open');}
+document.getElementById('settingsClose').addEventListener('click',closeSettings);
+document.getElementById('settingsModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeSettings();});
+function rebuildSettings(){
+  const p=window._mhPrefs||{};
+  const st=document.getElementById('pref-theme');if(st)st.value=p.theme||'system';
+  const sw=document.getElementById('pref-accent');if(sw){
+    sw.innerHTML=ACCENT_SWATCHES.map(c=>`<span class="color-swatch ${(p.accent||'#5c5bd6')===c?'active':''}" data-color="${c}" style="background:${c}"></span>`).join('');
+    sw.querySelectorAll('.color-swatch').forEach(el=>el.addEventListener('click',()=>updatePref('accent',el.dataset.color)));
+  }
+  const de=document.getElementById('pref-density');if(de)de.value=p.density||'comfortable';
+  const fs=p.fontScale||1;const fsR=document.getElementById('pref-fontScale');if(fsR)fsR.value=Math.round(fs*100);
+  const fsV=document.getElementById('pref-fontScale-val');if(fsV)fsV.textContent=Math.round(fs*100)+'%';
+  const pr=document.getElementById('pref-refresh');if(pr)pr.value=String(p.refreshSeconds||30);
+  const ct=document.getElementById('pref-chatToggle');if(ct)ct.classList.toggle('active',p.chatEnabled!==false);
+  const hs=document.getElementById('pref-hideScrollbars');if(hs)hs.classList.toggle('active',p.hideScrollbars===true);
+}
+function updatePref(key,value){
+  const p=Object.assign({},window._mhPrefs||{});
+  p[key]=value;savePrefs(p);
+}
+async function savePrefs(p){
+  try{const r=await fetch('/api/ui/prefs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});const d=await r.json();if(d.ok){window._mhPrefs=d.prefs;applyPrefs(d.prefs);showToast('Settings saved');}else showToast('Error: '+d.error);}catch(e){showToast('Save failed');}
+}
+document.getElementById('pref-theme')?.addEventListener('change',function(){updatePref('theme',this.value);});
+document.getElementById('pref-density')?.addEventListener('change',function(){updatePref('density',this.value);});
+document.getElementById('pref-fontScale')?.addEventListener('input',function(){const v=parseInt(this.value)/100;document.getElementById('pref-fontScale-val').textContent=this.value+'%';updatePref('fontScale',v);});
+document.getElementById('pref-refresh')?.addEventListener('change',function(){
+  const v=parseInt(this.value);updatePref('refreshSeconds',v);
+  if(window._refreshInt){clearInterval(window._refreshInt);}
+  if(v>0&&v<3600)window._refreshInt=setInterval(()=>run(),v*1000);
+});
+document.getElementById('pref-chatToggle')?.addEventListener('click',function(){const on=!this.classList.contains('active');this.classList.toggle('active',on);updatePref('chatEnabled',on);});
+document.getElementById('pref-hideScrollbars')?.addEventListener('click',function(){const on=!this.classList.contains('active');this.classList.toggle('active',on);updatePref('hideScrollbars',on);});
+// ---- Chat pet ----
+const PET_TIPS={
+  equity:'Equity is tracked against starting funds. Paper and live are kept separate here.',
+  'total equity':'Total equity is marked, not realised. Check the profit widget before trusting it.',
+  'open positions':'Open positions are live risk right now. Size them against the protected floor.',
+  profit:'Profit here is realised P&L. Small sample sizes can flatter a wallet.',
+  'what to do':'Start here. This widget already ranks the most useful next action.',
+  risk:'Risk parameters come from the enforced policy, not from the model.',
+  'xora wallet':'Xora wallet splits live notional from paper notional. Never read them as one number.',
+  gate:'The live gate blocks new live risk until every evidence check passes.',
+  positions:'Position rows show what is open now, with entry and mark separated.',
+  'exit reasons':'Exit reasons show why positions closed. Stop loss should never be conditional.',
+  'trader performance':'Compare traders on realised P&L and drawdown, not on equity alone.',
+  'market':'Market data is mainnet quote data. Paper strategy evidence is separate.'
+};
+function petSay(text,ms){
+  const b=document.getElementById('petBubble');if(!b||!text)return;
+  b.textContent=String(text).replace(/—/g,'-').slice(0,320);
+  b.style.display='block';
+  clearTimeout(b._hide);b._hide=setTimeout(()=>{if(b.textContent)b.style.display='none'},ms||9000);
+}
+function petTipFor(card){
+  if(!card)return null;
+  const id=(card.dataset.widgetId||'').toLowerCase();
+  const head=(card.querySelector('h3')?.textContent||card.querySelector('.lbl')?.textContent||'').trim();
+  const label=head?head.toLowerCase():'';
+  const hit=Object.keys(PET_TIPS).find(k=>id.includes(k)||label.includes(k));
+  if(hit)return PET_TIPS[hit];
+  if(!head)return null;
+  const body=(card.innerText||'').replace(/\s+/g,' ').trim();
+  return 'Tip: "'+head+'" shows '+body.slice(0,150)+'. Ask me about it if anything looks unclear.';
+}
+function petAttachWidgetTips(){
+  document.querySelectorAll('#kpis .kpi, #tab-panels .card, #coin-wrap .card, .overview-grid .card').forEach(card=>{
+    if(card.dataset.petBound==='1')return;card.dataset.petBound='1';
+    card.addEventListener('mouseenter',()=>{const tip=petTipFor(card);if(tip&&!document.getElementById('chatPanel').classList.contains('open'))petSay(tip);});
+  });
+}
+// ---- Pet drag, toss, and physics ----
+let petDrag=null,petVel={vx:0,vy:0},petPhysicsId=null,petTrail=[];
+const PET_W=70,PET_H=76,FRICTION=0.88,BOUNCE=0.62,MIN_SPEED=0.3;
+function petMoveBubble(){
+  const pet=document.getElementById('xoraPet'),b=document.getElementById('petBubble');
+  if(!pet||!b)return;
+  const r=pet.getBoundingClientRect(),vh=window.innerHeight||document.documentElement.clientHeight;
+  const bottomPos=vh - r.top + 3;
+  b.style.bottom=Math.max(8,bottomPos)+'px';
+  b.style.top='auto';
+  b.style.right='auto';b.style.left=Math.max(12,Math.min(r.left+8,window.innerWidth-Math.min(292,window.innerWidth-24)))+'px';
+}
+function petGrab(e){
+  const pet=document.getElementById('xoraPet');if(!pet)return;
+  const r=pet.getBoundingClientRect();
+  petDrag={ox:e.clientX-r.left,oy:e.clientY-r.top};
+  pet.style.right='auto';pet.style.bottom='auto';pet.style.left=r.left+'px';pet.style.top=r.top+'px';
+  pet.classList.add('pet-dragging');
+  petTrail=[{x:e.clientX,y:e.clientY,t:performance.now()}];
+  if(petPhysicsId){cancelAnimationFrame(petPhysicsId);petPhysicsId=null;}
+  petStopIdleRoam();
+  clearTimeout(pet._hide);
+}
+function petDragMove(e){
+  if(!petDrag)return;
+  const pet=document.getElementById('xoraPet');if(!pet)return;
+  const vw=window.innerWidth,vh=window.innerHeight;
+  const x=Math.max(0,Math.min(e.clientX-petDrag.ox,vw-PET_W));
+  const y=Math.max(0,Math.min(e.clientY-petDrag.oy,vh-PET_H));
+  pet.style.left=x+'px';pet.style.top=y+'px';
+  petTrail.push({x:e.clientX,y:e.clientY,t:performance.now()});
+  if(petTrail.length>8)petTrail.shift();
+  petMoveBubble();
+}
+function petDrop(e){
+  if(!petDrag)return;
+  const pet=document.getElementById('xoraPet');if(!pet)return;
+  pet.classList.remove('pet-dragging');
+  if(petTrail.length>=2){
+    const last=petTrail[petTrail.length-1],first=petTrail[0];
+    const dt=Math.max(1,last.t-first.t);
+    petVel.vx=((last.x-first.x)/dt)*16;
+    petVel.vy=((last.y-first.y)/dt)*16;
+    if(Math.sqrt(petVel.vx*petVel.vx+petVel.vy*petVel.vy)>0.8){petToss(pet);petDrag=null;return;}
+  }
+  petDrag=null;
+}
+function petToss(pet){
+  function tick(){
+    if(!pet){petPhysicsId=null;return;}
+    let x=parseFloat(pet.style.left)||0,y=parseFloat(pet.style.top)||0;
+    const vw=window.innerWidth,vh=window.innerHeight;
+    petVel.vx*=FRICTION;petVel.vy*=FRICTION;
+    x+=petVel.vx;y+=petVel.vy;
+    // Bounce off walls
+    if(x<0){x=0;petVel.vx=-petVel.vx*BOUNCE;}
+    if(x>vw-PET_W){x=vw-PET_W;petVel.vx=-petVel.vx*BOUNCE;}
+    if(y<0){y=0;petVel.vy=-petVel.vy*BOUNCE;}
+    if(y>vh-PET_H){y=vh-PET_H;petVel.vy=-petVel.vy*BOUNCE;}
+    pet.style.left=x+'px';pet.style.top=y+'px';
+    petMoveBubble();
+    if(Math.sqrt(petVel.vx*petVel.vx+petVel.vy*petVel.vy)>MIN_SPEED){petPhysicsId=requestAnimationFrame(tick);}
+    else {petPhysicsId=null;petStartIdleRoam();}
+  }
+  if(petPhysicsId){cancelAnimationFrame(petPhysicsId);}
+  petPhysicsId=requestAnimationFrame(tick);
+}
+function petInitPosition(){
+  const pet=document.getElementById('xoraPet');if(!pet)return;
+  if(!pet.style.left||pet.style.left==='auto'){
+    const r=pet.getBoundingClientRect();
+    pet.style.right='auto';pet.style.bottom='auto';pet.style.left=r.left+'px';pet.style.top=r.top+'px';
+  }
+}
+// ---- Idle roam ----
+let petRoamIdleId=null,roamAngle=0,roamTimer=0;
+const ROAM_SPEED=0.2;
+function petStopIdleRoam(){
+  if(petRoamIdleId){cancelAnimationFrame(petRoamIdleId);petRoamIdleId=null;}
+  roamTimer=0;
+}
+function petStartIdleRoam(){
+  if(petRoamIdleId||petDrag||petPhysicsId)return;
+  roamAngle=Math.random()*Math.PI*2;
+  roamTimer=Math.floor(120+Math.random()*120);
+  (function tick(){
+    if(petDrag||petPhysicsId){petRoamIdleId=null;return;}
+    const pet=document.getElementById('xoraPet');if(!pet){petRoamIdleId=null;return;}
+    let x=parseFloat(pet.style.left)||0,y=parseFloat(pet.style.top)||0;
+    const vw=window.innerWidth,vh=window.innerHeight,mar=60;
+    // Gentle wall steering
+    if(x<mar)roamAngle+=0.03;if(x>vw-PET_W-mar)roamAngle-=0.03;
+    if(y<mar)roamAngle-=0.03;if(y>vh-PET_H-mar)roamAngle+=0.03;
+    if(x<4){x=4;roamAngle=Math.atan2(Math.sin(roamAngle),Math.abs(Math.cos(roamAngle)));}
+    if(x>vw-PET_W-4){x=vw-PET_W-4;roamAngle=Math.atan2(Math.sin(roamAngle),-Math.abs(Math.cos(roamAngle)));}
+    if(y<4){y=4;roamAngle=Math.atan2(Math.abs(Math.sin(roamAngle)),Math.cos(roamAngle));}
+    if(y>vh-PET_H-4){y=vh-PET_H-4;roamAngle=Math.atan2(-Math.abs(Math.sin(roamAngle)),Math.cos(roamAngle));}
+    x+=Math.cos(roamAngle)*ROAM_SPEED;y+=Math.sin(roamAngle)*ROAM_SPEED;
+    pet.style.left=x+'px';pet.style.top=y+'px';
+    petMoveBubble();
+    roamTimer--;if(roamTimer<=0){roamAngle+=(Math.random()-0.5)*0.8;roamTimer=Math.floor(180+Math.random()*240);}
+    petRoamIdleId=requestAnimationFrame(tick);
+  })();
+}
+document.getElementById('xoraPet')?.addEventListener('mousedown',petGrab);
+document.addEventListener('mousemove',petDragMove);
+document.addEventListener('mouseup',petDrop);
+document.getElementById('xoraPet')?.addEventListener('dblclick',function(){
+  const panel=document.getElementById('chatPanel');
+  panel.classList.toggle('open');
+  if(panel.classList.contains('open')){
+    panel.dataset.loaded=panel.dataset.loaded||'0';
+    if(panel.dataset.loaded!=='1'){loadChatHistory();panel.dataset.loaded='1';}
+    petSay('Ask me anything about Xora-Survival or MultiHedge. I answer from live system state only.',6000);
+  }
+});
+document.getElementById('chatClose')?.addEventListener('click',()=>document.getElementById('chatPanel').classList.remove('open'));
+async function loadChatHistory(){
+  try{const r=await fetch('/api/chat/history?limit=20');const msgs=await r.json();const el=document.getElementById('chatMsgs');el.innerHTML=msgs.map(m=>`<div class="chat-msg ${m.role}"><span>${escHtml(m.content)}</span><div class="ts">${new Date(m.ts*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div>`).join('');}catch(e){}
+}
+function escHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function addChatMsg(role,content,ts){
+  const el=document.getElementById('chatMsgs');const plc=el.querySelector('.chat-placeholder');if(plc)plc.remove();
+  el.innerHTML+=`<div class="chat-msg ${role}"><span>${escHtml(content)}</span><div class="ts">${ts||new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div>`;
+  el.scrollTop=el.scrollHeight;
+}
+document.getElementById('chatSend')?.addEventListener('click',sendChatMessage);
+document.getElementById('chatInput')?.addEventListener('keydown',e=>{if(e.key==='Enter')sendChatMessage();});
+const _chatHistory=[];
+async function sendChatMessage(){
+  const input=document.getElementById('chatInput');if(!input)return;
+  const msg=input.value.trim();if(!msg)return;
+  input.value='';addChatMsg('user',msg);
+  const msgs=document.getElementById('chatMsgs');
+  msgs.innerHTML+='<div class="chat-loading">Thinking...</div>';
+  const btn=document.getElementById('chatSend');if(btn)btn.disabled=true;
+  try{
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,history:_chatHistory})});
+    const d=await r.json();
+    const ld=msgs.querySelector('.chat-loading');if(ld)ld.remove();
+    if(d.ok){addChatMsg('assistant',d.reply);_chatHistory.push({role:'user',content:msg},{role:'assistant',content:d.reply});document.getElementById('chatFiling').style.display='flex';petSay(d.reply,12000);}
+    else addChatMsg('err',d.error||'Service unavailable');
+  }catch(e){const ld=msgs.querySelector('.chat-loading');if(ld)ld.remove();addChatMsg('err','Network error');}
+  if(btn)btn.disabled=false;
+}
+document.getElementById('fileRequestBtn')?.addEventListener('click',async function(){
+  if(!_chatHistory.length)return;const last=_chatHistory[_chatHistory.length-1];if(!last)return;
+  const title='From chat: '+last.content.slice(0,60);const detail=last.content.slice(0,2000);
+  try{const r=await fetch('/api/requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,detail,source:'chat'})});const d=await r.json();if(d.ok)showToast('Request filed (ID '+d.id+')');else showToast('Error');}catch(e){showToast('Network error');}
+});
+document.getElementById('openRequestsBtn')?.addEventListener('click',async function(){
+  try{const r=await fetch('/api/requests?limit=10');const reqs=await r.json();document.getElementById('pendingReqCount').textContent=reqs.filter(x=>x.status==='pending').length;showToast('Requests: '+reqs.length);}catch(e){showToast('Could not load');}
+});
+
+async function loadCouncilReport(){
+  const card=document.getElementById('councilSummary');if(!card){return;}
+  try{
+    const r=await fetch('/api/council/latest');const d=await r.json();
+    if(!d.ok){
+      card.innerHTML='<div class="mini-note">No council report available yet.</div>'
+        +'<button type="button" class="toolbar-btn council-open" data-name="" style="margin-top:8px;width:100%;min-height:32px" disabled>Open full report</button>';
+      return;
+    }
+    let html='<div style="font-size:11px;color:var(--text-faint);margin-bottom:6px">'+escHtml(d.run_time||d.filename||'')+'</div>';
+    html+='<div class="council-summary-list">'+(d.summary||[]).map(s=>'<div class="council-s-line">'+escHtml(s)+'</div>').join('')+'</div>';
+    html+='<button type="button" class="toolbar-btn council-open" data-name="'+escHtml(d.filename)+'" style="margin-top:8px;width:100%;min-height:36px;font-weight:700">Open full report</button>';
+    card.innerHTML=html;
+    const btn=card.querySelector('.council-open');
+    if(btn)btn.addEventListener('click',()=>openCouncilReport(btn.dataset.name));
+  }catch(e){
+    card.innerHTML='<div class="mini-note">Council report unavailable.</div>'
+      +'<button type="button" class="toolbar-btn council-open" data-name="" style="margin-top:8px;width:100%;min-height:32px" disabled>Open full report</button>';
+  }
+}
+
+document.getElementById('councilModalClose')?.addEventListener('click',()=>document.getElementById('councilModal').classList.remove('open'));
+document.getElementById('councilModal')?.addEventListener('click',e=>{if(e.target===e.currentTarget)document.getElementById('councilModal').classList.remove('open');});
+async function openCouncilReport(name){
+  if(!name)return;
+  const modal=document.getElementById('councilModal');if(!modal)return;
+  const body=document.getElementById('councilModalBody');
+  body.innerHTML='<div class="loading">Loading...</div>';
+  modal.classList.add('open');
+  try{
+    const r=await fetch('/api/council/report/'+encodeURIComponent(name));const d=await r.json();
+    if(!d.ok){body.innerHTML='<div class="load-error">Could not load report</div>';return;}
+    // The cron artifact leads with a huge prompt/skill preamble; the actual
+    // verdict lives under a "## Response" heading. Show the verdict by default
+    // and keep the preamble behind a toggle so the report is readable.
+    const txt=d.text||'';
+    const m=txt.match(/^##[ \t]*(Response|Output|Final|Result)(?=$|[ \t:])/mi);
+    const head=txt.slice(0,m?m.index:0);
+    const core=m?txt.slice(m.index):txt;
+    let html='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">';
+    html+='<button type="button" id="councilTogglePre" class="toolbar-btn" style="min-height:30px;padding:4px 10px">'+(head?'Show prompt preamble':'Hide preamble')+'</button>';
+    html+='<span style="font-size:10.5px;color:var(--text-faint)">'+escHtml(txt.length.toLocaleString())+' chars · verdict shown</span></div>';
+    if(head){html+='<pre id="councilPre" style="display:none;white-space:pre-wrap;font-size:11px;font-family:monospace;max-height:40vh;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px">'+escHtml(head)+'</pre>';}
+    html+='<pre style="white-space:pre-wrap;font-size:11.5px;font-family:monospace;max-height:60vh;overflow:auto">'+escHtml(core)+'</pre>';
+    body.innerHTML=html;
+    const tp=document.getElementById('councilTogglePre');
+    if(tp)tp.addEventListener('click',()=>{const pre=document.getElementById('councilPre');if(!pre)return;
+      const show=pre.style.display==='none';pre.style.display=show?'block':'none';
+      tp.textContent=show?'Hide prompt preamble':'Show prompt preamble';});
+  }catch(e){body.innerHTML='<div class="load-error">Network error</div>';}
+}
+
+// ---- Init ----
+(async function(){
+  const p=await loadPrefs();
+  const sec=p?.refreshSeconds||30;
+  if(sec>0&&sec<3600)window._refreshInt=setInterval(()=>run(),sec*1000);
+})();
+petInitPosition();setTimeout(()=>petStartIdleRoam(),300);
 </script></body></html>"""

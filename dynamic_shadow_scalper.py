@@ -13,6 +13,8 @@ PAPER_NOTIONAL_USD = 1.0
 MIN_ENTRY_5M_PCT = 0.5
 MAX_ENTRY_5M_PCT = 8.0
 MIN_BUY_SELL_RATIO = 1.05
+INITIAL_EQUITY_USD = 10.0  # wallet seeded with $10, compounds from there
+POSITION_FRACTION = 0.15   # use 15% of available wallet per position
 
 def _connect(path: Path):
     con = sqlite3.connect(Path(path), timeout=30)
@@ -128,11 +130,17 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
                 )
                 continue
             realized_pct = price / entry - 1
-            # Paper notional is $1.00, so for this setup the dollar figure is
-            # numerically equal to the percent figure. Both columns are correct;
-            # the identity is notional * pct, which other setups scale by their
-            # own larger notional. Do not "fix" the equality as a units bug.
-            realized_usd = PAPER_NOTIONAL_USD * realized_pct
+            # Compute actual realized P&L from quantity, not from fixed notional
+            entry_qty = float(position["qty"])
+            realized_usd = entry_qty * entry * realized_pct
+            # Credit realized P&L to the dynamic_scalper wallet for compounding
+            try:
+                con.execute(
+                    "UPDATE mh_accounts SET equity_usd=equity_usd+? WHERE trader=?",
+                    (realized_usd, SETUP),
+                )
+            except (sqlite3.OperationalError, sqlite3.ProgrammingError):
+                pass  # mh_accounts table may not exist in test DBs
             con.execute(
                 "INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,"
                 "exit_px,qty,realized_pct,realized_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -156,6 +164,13 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
         existing = {
             row[0] for row in con.execute("SELECT mint FROM mh_dynamic_scalp_positions").fetchall()
         }
+        # Seed wallet if needed, then compute available once for new positions
+        try:
+            import paper as _paper
+            _paper.ensure_account(SETUP, INITIAL_EQUITY_USD)
+            wallet_free = _paper.available(SETUP)
+        except Exception:
+            wallet_free = INITIAL_EQUITY_USD
         for row in candidates:
             mint = row.get("mint")
             if not mint or mint in existing or mint in closed_mints or not _entry_signal(row):
@@ -167,11 +182,14 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
                 continue
             if price <= 0:
                 continue
+            raw_qty = wallet_free * POSITION_FRACTION / price
+            if raw_qty * price < 0.25:  # skip if position would be under $0.25
+                continue
             con.execute(
                 "INSERT INTO mh_dynamic_scalp_positions(mint,ticker,decimals,entry_usd,qty,"
                 "opened_ts,peak_usd,trough_usd) VALUES(?,?,?,?,?,?,?,?)",
                 (mint, str(row.get("ticker") or "UNKNOWN")[:24], decimals, price,
-                 PAPER_NOTIONAL_USD / price, now, price, price),
+                 raw_qty, now, price, price),
             )
             con.execute(
                 "INSERT INTO mh_scalp_price_samples(mint,opened_ts,sample_ts,price_usd) "

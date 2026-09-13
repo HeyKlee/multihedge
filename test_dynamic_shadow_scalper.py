@@ -201,9 +201,7 @@ class DynamicShadowScalperTests(unittest.TestCase):
             pct, usd, qty, entry_px, exit_px = con.execute(
                 "SELECT realized_pct,realized_usd,qty,entry_px,exit_px FROM mh_trades"
             ).fetchone()
-        # The dollar figure is notional-scaled percent. With a $1 paper notional
-        # the two columns are numerically equal, which is correct, not a bug.
-        self.assertAlmostEqual(usd, ds.PAPER_NOTIONAL_USD * pct, places=12)
+        # The dollar figure is now actual P&L from quantity, not fixed notional.
         self.assertAlmostEqual(usd, qty * (exit_px - entry_px), places=12)
 
     def test_missing_jupiter_key_leaves_pending_exit_untouched(self):
@@ -216,6 +214,30 @@ class DynamicShadowScalperTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(result["state"], "SHADOW_SCALP_DEGRADED")
         self.assertEqual(pending.read_text(), payload)
+
+    def test_compounding_credits_profit_to_wallet_and_scales_position_size(self):
+        """After a winning trade, wallet equity grows and the next position is larger."""
+        # Create mh_accounts table and seed the dynamic_scalper wallet
+        con = sqlite3.connect(self.db)
+        con.execute("CREATE TABLE IF NOT EXISTS mh_accounts (trader TEXT PRIMARY KEY,equity_usd REAL,started_usd REAL)")
+        con.execute("INSERT OR IGNORE INTO mh_accounts(trader,equity_usd,started_usd) VALUES(?,?,?)",
+                    (ds.SETUP, ds.INITIAL_EQUITY_USD, ds.INITIAL_EQUITY_USD))
+        con.commit()
+        con.close()
+
+        # Open a position, then close with profit
+        ds.tick(self.db, [candidate()], now=1000)
+        entry_result = ds.tick(self.db, [candidate(price=.00122, change5=1)], now=1060)
+        self.assertEqual(entry_result["closed"], 1)
+
+        # Verify wallet equity increased by the realized P&L
+        con = sqlite3.connect(self.db)
+        eq = con.execute("SELECT equity_usd FROM mh_accounts WHERE trader=?", (ds.SETUP,)).fetchone()[0]
+        trade = con.execute("SELECT realized_usd FROM mh_trades").fetchone()
+        con.close()
+        realized = trade[0]
+        self.assertGreater(eq, ds.INITIAL_EQUITY_USD)
+        self.assertAlmostEqual(eq, ds.INITIAL_EQUITY_USD + realized, places=10)
 
 
 if __name__ == "__main__":
