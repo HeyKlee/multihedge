@@ -6,14 +6,37 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import time
 
 ROOT = Path("/home/kelly/multihedge")
 DATA = ROOT / "deploy/data"
 IMAGE = "deploy-multihedge"
 
 
-def run(command):
-    return subprocess.run(command, text=True, capture_output=True, timeout=180, check=False)
+LOCKED_MARKERS = ("database is locked", "database is busy")
+
+
+def run(command, attempts=3, delay=5):
+    """Run a step, retrying only on transient SQLite contention.
+
+    In delete-journal mode a writer's commit briefly holds an EXCLUSIVE lock,
+    so a kelly one-shot step can wedge on "database is locked" when the
+    persistent multihedge daemon writes at the same moment. Retry only that
+    condition with backoff; never retry real failures (bad env, missing
+    files, auth), which should surface immediately instead of being masked.
+    Each docker run reads current DB state and aborts before its write
+    commits on a lock, so re-running is safe and idempotent.
+    """
+    last = None
+    for attempt in range(attempts):
+        last = subprocess.run(command, text=True, capture_output=True,
+                              timeout=180, check=False)
+        if last.returncode == 0 or not any(
+                marker in (last.stderr or "") for marker in LOCKED_MARKERS):
+            return last
+        if attempt < attempts - 1:
+            time.sleep(delay * (attempt + 1))
+    return last
 
 
 def last_json(text):
