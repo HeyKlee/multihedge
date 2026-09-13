@@ -26,6 +26,22 @@ SURVIVAL = {"edge": {}, "live_positions": [], "paper_positions": [], "exit_reaso
             "risk_params": {}, "live_trades": [], "paper_trades": [], "cycles": [],
             "notional": {"paper_usd": 0, "live_usd": 0}}
 
+XORA_SUMMARY = {
+    "ok": True,
+    "wallet": {"starting_equity_usd": 10.0, "paper_net_usd": 1.72, "paper_equity_usd": 11.72,
+               "paper_equity_nzd": 19.57, "starting_equity_nzd": 16.7, "pnl_vs_start_usd": 1.72,
+               "pnl_vs_start_pct": 0.172, "closed_trades": 107, "fx_nzd_per_usd": 1.67},
+    "edge": {"live_n": 2, "live_fills": 2, "live_closes": 0, "paper_n": 107, "paper_wins": 63,
+             "paper_win_rate": 0.5888, "paper_net_usd": 1.72, "starting_equity_usd": 10.0},
+    "positions": {"live": 0, "paper": 12},
+    "notional": {"paper_usd": 13.0, "live_usd": 0},
+    "risk": {"promotion_enabled": False, "defaults": {}},
+    "history": [{"kind": "paper", "coin": "EMBER", "side": "LONG", "pnl_usd": 0.33, "reason": "take_profit"}],
+    "top_exit_reasons": [["trail_stop", 42], ["stop_loss", 36], ["take_profit", 17], ["max_hold", 13]],
+    "council": {"available": True, "filename": "2026-09-14_00-20-15.md",
+                "verdict": ["2 coins acted on, 0 applied.", "EMBER & STONK proposals."]},
+}
+
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -60,6 +76,7 @@ class DashboardFrontendTests(unittest.TestCase):
         def route(r):
             path = urlparse(r.request.url).path
             if path == "/api/summary": data = SUMMARY
+            elif path == "/api/xora/summary": data = XORA_SUMMARY
             elif path == "/api/survival": data = SURVIVAL
             elif path == "/api/grid": data = {"enabled": False}
             elif path in ("/api/market", "/api/strategies", "/api/trades", "/api/positions", "/api/exit_reason_series"): data = []
@@ -186,6 +203,26 @@ class DashboardFrontendTests(unittest.TestCase):
         self.assertIn("What to do", body)
         self.assertIn("Xora wallet", body)
         self.assertIn("Xora profit", body)
+
+    def test_xora_summary_widget_renders_live_stats_and_open_report(self):
+        # Regression: the Gate pill used a broken compound .toFixed(0) on a
+        # string concat, which threw and fell back to "Xora summary unavailable".
+        # The widget must render real stats and expose an Open full report button.
+        self.page.wait_for_selector("#councilSummary")
+        self.page.wait_for_function(
+            "() => { const c=document.getElementById('councilSummary');"
+            " return c && c.innerText.length > 40 && !/unavailable|offline/i.test(c.innerText); }",
+            timeout=6000)
+        text = self.page.locator("#councilSummary").inner_text()
+        for needle in ("EQUITY", "START", "NET P/L", "WIN RATE", "CLOSED", "GATE",
+                       "SCOPE & POLICY", "RECENT HISTORY", "COUNCIL VERDICT"):
+            self.assertIn(needle, text)
+        self.assertIn("107 / 50", text)          # paper closed / threshold
+        self.assertIn("EMBER", text)             # recent history row
+        self.assertIn("2 coins acted on", text)  # council verdict
+        self.assertTrue(self.page.locator("#councilSummary .council-open").is_visible())
+        self.assertEqual(self.page.locator("#councilSummary .council-open").inner_text(),
+                         "Open full report")
 
     def enter_edit_mode(self):
         # Edit toggle lives in the Settings modal.

@@ -256,6 +256,71 @@ def api_survival():
     }
 
 
+@app.get("/api/xora/summary")
+def api_xora_summary():
+    """Widget summary: live Xora-Survival stats (wallet, edge, gate, history)
+    plus the latest council verdict. Composes existing calls — no extra cron:
+    /api/survival already carries stats/scope/history for Xora-Survival."""
+    survival = api_survival()
+    edge = survival.get("edge") or {}
+    wallet = _survival_wallet()
+    risk = survival.get("risk_params") or {}
+    exit_reasons = survival.get("exit_reasons") or {}
+    paper_trades = survival.get("paper_trades") or []
+    live_trades = survival.get("live_trades") or []
+    # Compact history digest (last 25 closed paper + live fills)
+    history = []
+    for t in paper_trades[:25]:
+        history.append({
+            "kind": "paper", "coin": t.get("symbol") or t.get("coin") or "?",
+            "side": t.get("side") or "CLOSE", "pnl_usd": t.get("realized_usd") or 0.0,
+            "ts": t.get("close_ts") or t.get("open_ts") or 0,
+            "reason": t.get("exit_reason") or "",
+        })
+    for t in live_trades[:10]:
+        history.append({
+            "kind": "live", "coin": t.get("symbol") or t.get("coin") or "?",
+            "side": t.get("side") or "FILL", "pnl_usd": None,
+            "ts": t.get("ts") or t.get("open_ts") or 0,
+            "reason": "",
+        })
+    history.sort(key=lambda x: x.get("ts") or 0, reverse=True)
+    top_reasons = sorted(exit_reasons.items(), key=lambda kv: kv[1], reverse=True)[:4]
+    # Council verdict (best-effort; may be absent)
+    path = _latest_council_report()
+    council = {"available": False}
+    if path:
+        summary, run_time = _council_summary(path)
+        council = {"available": True, "filename": path.name, "run_time": run_time,
+                   "verdict": summary[:6]}
+    return {
+        "ok": True,
+        "wallet": wallet,
+        "edge": {
+            "live_n": edge.get("live_n", 0),
+            "live_fills": edge.get("live_fills", 0),
+            "live_closes": edge.get("live_closes", 0),
+            "paper_n": edge.get("paper_n", 0),
+            "paper_wins": edge.get("paper_wins", 0),
+            "paper_win_rate": edge.get("paper_win_rate", 0.0),
+            "paper_net_usd": edge.get("paper_net_usd", 0.0),
+            "starting_equity_usd": edge.get("starting_equity_usd", 0.0),
+        },
+        "notional": survival.get("notional") or {},
+        "positions": {
+            "live": len(survival.get("live_positions") or []),
+            "paper": len(survival.get("paper_positions") or []),
+        },
+        "risk": {
+            "promotion_enabled": bool(risk.get("promotion_enabled")),
+            "defaults": (risk.get("defaults") or {}) if isinstance(risk, dict) else {},
+        },
+        "history": history[:20],
+        "top_exit_reasons": top_reasons,
+        "council": council,
+    }
+
+
 def _survival_risk_status(db_path: Path) -> dict:
     """Report live params and any separate shadow-tuned candidate truthfully."""
     try:
@@ -980,6 +1045,15 @@ table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}th,t
 @media (max-width:760px){body{font-size:16px;overflow-x:hidden;touch-action:manipulation}.app-shell{display:block;width:100%;margin:0;border-radius:0;border:0}.sidebar{position:relative;width:100%;height:auto;padding:14px 12px 10px;border-right:0;border-bottom:1px solid var(--border)}.brand{padding:0 4px 12px}.brand-mark{width:34px;height:34px}.environment,.sidebar-foot,.nav-group{display:none}.tabs{display:flex;flex-direction:row;overflow-x:auto;scroll-snap-type:x mandatory;gap:6px;padding-bottom:3px}.tabs button{flex:0 0 auto;width:auto;min-height:52px;padding:11px 14px;scroll-snap-align:start;font-size:14px;cursor:pointer}.tabs button.active{box-shadow:inset 0 -3px 0 var(--lav)}.nav-icon{display:none}.workspace{padding:16px 10px 120px}.workspace-header{align-items:flex-start;flex-direction:column;margin-bottom:12px}.workspace-header h1{font-size:22px}.workspace-header p{font-size:12px}.header-actions{display:flex;width:100%;justify-content:flex-start;gap:6px;flex-wrap:wrap}.header-actions .update-state{display:none}.header-actions .status-pill{display:none}.header-actions .toolbar-btn{min-height:44px;font-size:13px;padding:8px 14px;border-radius:12px}.ticker{display:none}.hero{padding:0}.grid,.overview-grid{grid-template-columns:1fr;gap:10px}.grid>.card,.span-3,.span-4,.span-5,.span-6,.span-7,.span-8,.span-12{grid-column:1/-1}.card{padding:14px;margin-bottom:8px;border-radius:12px}.card h3{font-size:14px}.kpi{padding:14px;margin-bottom:0}.kpi .val{font-size:22px}.chart-flex{flex-direction:column}canvas{height:180px!important;min-width:0}.chart-legend{min-width:0;width:100%}.scroll-wrap{max-height:200px}table{font-size:11px}th,td{padding:8px}.tfbar button{min-height:44px;padding:8px 11px;font-size:12px}.wallet-tabs{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:10px}.wallet-tab{min-height:60px;padding:8px}.wallet-tab b{font-size:16px}.wallet-summary span{font-size:11px;padding:6px 8px}.xora-pet{right:12px;bottom:12px;width:60px;height:64px}.xora-pet-body{width:46px;height:40px}.xora-pet-ear{width:14px;height:17px;top:9px}.xora-pet-tail{width:18px;height:10px;bottom:25px}.chat-panel{width:calc(100vw - 20px);right:10px;bottom:80px;max-height:50vh}.chat-fab{bottom:12px;right:12px;width:48px;height:48px;font-size:18px}.build-toolbar{width:calc(100% - 28px);left:14px;bottom:14px;transform:none;opacity:1;padding:8px 10px}.build-toolbar.open{transform:none}.bottom-actions{position:static;transform:none;width:auto;margin:12px 10px 60px;grid-template-columns:repeat(2,1fr);gap:8px}.bottom-actions button{min-height:50px;font-size:13px}.build-mode .card,.build-mode .kpi{padding-top:40px}.build-handle{height:28px}.build-handle-label{left:8px;top:6px;font-size:9px}.pet-bubble{max-width:calc(100vw - 80px);font-size:11px}.workspace{padding-bottom:28px}}
 /* ---- Council report widget ---- */
 .council-summary-list{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto}.council-s-line{font-size:11.5px;line-height:1.4;color:var(--text);padding:5px 8px;border-bottom:1px solid var(--border);border-radius:6px}.council-s-line:first-child{color:var(--accent);font-weight:700}.council-open{border-color:var(--accent);color:var(--accent);background:#1c261f}
+/* ---- Xora summary widget ---- */
+.xora-sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:8px;margin-bottom:12px}
+.xora-sum-col{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;min-height:58px;display:flex;flex-direction:column;justify-content:center;gap:3px}
+.xora-metric-label{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint)}
+.xora-metric-val{font:16px 'IBM Plex Mono';font-weight:600;color:var(--text);white-space:nowrap}
+.xora-sum-section{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.xora-section-label{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-faint);display:block;margin-bottom:6px}
+.xora-hist{display:flex;flex-direction:column;gap:3px;max-height:170px;overflow:auto}
+.xora-hist-row{font-size:11px;color:var(--text-dim);padding:3px 2px;border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* ---- Live gate rows ---- */
 .gate-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
 .gate-row:last-child{border-bottom:0}
@@ -2650,25 +2724,57 @@ document.getElementById('openRequestsBtn')?.addEventListener('click',async funct
   try{const r=await fetch('/api/requests?limit=10');const reqs=await r.json();document.getElementById('pendingReqCount').textContent=reqs.filter(x=>x.status==='pending').length;showToast('Requests: '+reqs.length);}catch(e){showToast('Could not load');}
 });
 
+function fmtUsd(n){return (n==null?'-':(n>=0?'+':'')+(+n).toFixed(2));}
 async function loadCouncilReport(){
   const card=document.getElementById('councilSummary');if(!card){return;}
+  const fallback=(msg)=>{card.innerHTML='<div class="mini-note">'+escHtml(msg)+'</div>'
+    +'<div class="xora-sum-col"><div class="xora-metric"><span class="xora-metric-label">Status</span><span class="xora-metric-val">offline</span></div></div>';};
   try{
-    const r=await fetch('/api/council/latest');const d=await r.json();
-    if(!d.ok){
-      card.innerHTML='<div class="mini-note">No council report available yet.</div>'
-        +'<button type="button" class="toolbar-btn council-open" data-name="" style="margin-top:8px;width:100%;min-height:32px" disabled>Open full report</button>';
-      return;
+    const r=await fetch('/api/xora/summary');const d=await r.json();
+    if(!d.ok){fallback('Xora summary unavailable.');return;}
+    const w=d.wallet||{},e=d.edge||{},pos=d.positions||{},not=d.notional||{},risk=d.risk||{};
+    const council=d.council||{};
+    const gateOk=((e.paper_n||0)>=50&&(e.paper_win_rate||0)>=0.667&&(e.paper_net_usd||0)>0);
+    const hist=d.history||[];
+    const reasons=d.top_exit_reasons||[];
+    // Stats columns
+    let html='<div class="xora-sum-grid">';
+    const col=(label,val,cls)=>'<div class="xora-sum-col"><span class="xora-metric-label">'+label+'</span><span class="xora-metric-val '+ (cls||'') +'">'+val+'</span></div>';
+    html+=col('Equity','$'+(w.paper_equity_usd==null?'-':(+w.paper_equity_usd).toFixed(2)));
+    html+=col('Start','$'+((e.starting_equity_usd||0)).toFixed(2));
+    html+=col('Net P/L','$'+(e.paper_net_usd>=0?'+':'')+(+e.paper_net_usd).toFixed(2), e.paper_net_usd>=0?'pos':'neg');
+    html+=col('Win rate',((e.paper_win_rate||0)*100).toFixed(1)+'% · '+((e.paper_wins||0))+'W', (e.paper_win_rate||0)>=0.5?'pos':'neg');
+    html+=col('Closed',((e.paper_n||0)+' / 50'));
+    html+=col('Live fills',((e.live_fills||0))+'B / '+((e.live_closes||0))+'S');
+    html+=col('Positions','<span class="pos">'+((pos.live||0))+'L</span> · '+((pos.paper||0))+'P');
+    html+=col('Notional','$'+(+(not.paper_usd||0)).toFixed(2)+' paper');
+    html+=col('Gate',gateOk?'<span class="pilltag ok">READY</span>':'<span class="pilltag no">'+String(e.paper_n||0)+'/50 · '+(((e.paper_win_rate||0)*100)).toFixed(0)+'%</span>');
+    html+='</div>';
+    // Plans / scope / policy
+    html+='<div class="xora-sum-section"><span class="xora-section-label">Scope &amp; policy</span><div style="font-size:11px;color:var(--text-dim);line-height:1.5">'
+      +'<div>· Incubator allowed: <b>'+(risk.promotion_enabled?'YES (approved promotion)':'NO (locked)')+'</b></div>'
+      +'<div>· USDC reserve only · SOL fees · mainnet-beta</div>'
+      +'<div>· Paper: <b>'+((pos.paper||0))+'</b> open · Live: <b>'+((pos.live||0))+'</b></div>'
+      +'<div>· Exit reasons: '+(reasons.map(x=>escHtml(x[0])+'&times;'+x[1]).join(' · ')||'none')+'</div>'
+      +'</div></div>';
+    // History (last 8)
+    html+='<div class="xora-sum-section"><span class="xora-section-label">Recent history</span><div class="xora-hist">'
+      +(hist.slice(0,8).map(h=>'<div class="xora-hist-row"><span class="'+(h.kind==='live'?'pos':'')+'">'+escHtml(h.kind.toUpperCase())+'</span> <b>'+escHtml(h.coin)+'</b> '+escHtml(h.side)+' <span class="'+(h.pnl_usd==null?'':h.pnl_usd>=0?'pos':'neg')+'">'+fmtUsd(h.pnl_usd)+'</span> <span style="color:var(--text-faint)">'+escHtml(h.reason||'')+'</span></div>').join('')||'<div class="mini-note">No history yet</div>')
+      +'</div></div>';
+    // Council verdict
+    html+='<div class="xora-sum-section"><span class="xora-section-label">Council verdict</span>';
+    if(council.available){
+      html+='<div class="council-summary-list">'+(council.verdict||[]).map(s=>'<div class="council-s-line">'+escHtml(s)+'</div>').join('')+'</div>';
+      html+='<button type="button" class="toolbar-btn council-open" data-name="'+escHtml(council.filename||'')+'" style="margin-top:8px;width:100%;min-height:36px;font-weight:700">Open full report</button>';
+    }else{
+      html+='<div class="mini-note">No council report yet.</div>';
+      html+='<button type="button" class="toolbar-btn council-open" data-name="" style="margin-top:8px;width:100%;min-height:32px" disabled>Open full report</button>';
     }
-    let html='<div style="font-size:11px;color:var(--text-faint);margin-bottom:6px">'+escHtml(d.run_time||d.filename||'')+'</div>';
-    html+='<div class="council-summary-list">'+(d.summary||[]).map(s=>'<div class="council-s-line">'+escHtml(s)+'</div>').join('')+'</div>';
-    html+='<button type="button" class="toolbar-btn council-open" data-name="'+escHtml(d.filename)+'" style="margin-top:8px;width:100%;min-height:36px;font-weight:700">Open full report</button>';
+    html+='</div>';
     card.innerHTML=html;
     const btn=card.querySelector('.council-open');
     if(btn)btn.addEventListener('click',()=>openCouncilReport(btn.dataset.name));
-  }catch(e){
-    card.innerHTML='<div class="mini-note">Council report unavailable.</div>'
-      +'<button type="button" class="toolbar-btn council-open" data-name="" style="margin-top:8px;width:100%;min-height:32px" disabled>Open full report</button>';
-  }
+  }catch(e){fallback('Xora summary unavailable.');}
 }
 
 document.getElementById('councilModalClose')?.addEventListener('click',()=>document.getElementById('councilModal').classList.remove('open'));
