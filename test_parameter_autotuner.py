@@ -120,6 +120,11 @@ class AutotunerTests(unittest.TestCase):
         # leaves at +5.0% on the same path. That must be adoptable once the
         # 30-sample evidence gate is met.
         self._seed_with_paths(n=pa.MIN_SAMPLE_CLOSED)
+        import dynamic_shadow_scalper as ds
+        with ds._connect(self.db) as con:
+            con.executemany("INSERT INTO mh_scalp_policy_evidence VALUES(?,?,?,0)",
+                            [(MINT, float(i * 10_000), pa.policy_signature(li._default_params("MEME")))
+                             for i in range(pa.MIN_SAMPLE_CLOSED)])
         rep = pa.maybe_tune(self.db, cfg())
         self.assertEqual(rep["state"], "TUNED", rep)
         got = li._risk_params_override(self.db, "MEME")

@@ -67,8 +67,8 @@ def recent_trades(db_path, mint: str, limit: int = TRADES_PER_COIN) -> list[dict
             rows = con.execute(
                 "SELECT id,coin,symbol,setup,side,open_ts,close_ts,entry_px,exit_px,"
                 "qty,realized_pct,realized_usd,exit_reason FROM mh_trades "
-                "WHERE coin=? ORDER BY close_ts DESC LIMIT ?",
-                (str(mint), int(limit)),
+                "WHERE coin=? AND setup=? ORDER BY close_ts DESC LIMIT ?",
+                (str(mint), SETUP, int(limit)),
             ).fetchall()
     except sqlite3.Error:
         return []
@@ -257,7 +257,11 @@ def coin_case(db_path, cfg, mint: str, ticker: str | None = None,
         "trades": trades,
         "metrics": metrics(trades),
     }
-    case["paths_available"] = len(trackable(db_path, mint))
+    import parameter_autotuner as pa
+    paths = trackable(db_path, mint)
+    case["paths_available"] = len(pa.policy_cohort(db_path, paths, params))
+    case["paths_recorded"] = len(paths)
+    case["paths_excluded_policy"] = len(paths) - case["paths_available"]
     case["findings"] = diagnose(case)
     return case
 
@@ -322,6 +326,12 @@ def replay_verdict(db_path, cfg, mint: str, candidate: dict, *, cost_pct: float)
     if len(rows) < MIN_PATHS_FOR_PROPOSAL:
         return {"authorized": False, "reason": "insufficient_replayable_paths",
                 "paths": len(rows), "required": MIN_PATHS_FOR_PROPOSAL}
+    total_paths = len(rows)
+    rows = pa.policy_cohort(db_path, rows, incumbent)
+    if len(rows) < MIN_PATHS_FOR_PROPOSAL:
+        return {"authorized": False, "reason": "insufficient_policy_history",
+                "paths": len(rows), "total_paths": total_paths,
+                "excluded_policy": total_paths - len(rows), "required": MIN_PATHS_FOR_PROPOSAL}
     train, holdout = _split(rows)
     if not train or not holdout:
         return {"authorized": False, "reason": "chronological_split_too_small", "paths": len(rows)}

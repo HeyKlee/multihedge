@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import math
 from pathlib import Path
 import json
 import os
@@ -51,6 +52,11 @@ def _connect(path: Path):
         "mint TEXT NOT NULL,opened_ts REAL NOT NULL,sample_ts REAL NOT NULL,"
         "price_usd REAL NOT NULL,PRIMARY KEY(mint,opened_ts,sample_ts))"
     )
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS mh_scalp_policy_evidence ("
+        "mint TEXT NOT NULL,opened_ts REAL NOT NULL,policy_json TEXT NOT NULL,"
+        "mixed INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(mint,opened_ts))"
+    )
     return con
 
 
@@ -81,7 +87,8 @@ def _entry_signal(row: dict) -> bool:
     except (KeyError, TypeError, ValueError):
         return False
     return (
-        MIN_ENTRY_5M_PCT <= change5 <= MAX_ENTRY_5M_PCT
+        all(math.isfinite(v) for v in (change5, change1h, buy, sell))
+        and MIN_ENTRY_5M_PCT <= change5 <= MAX_ENTRY_5M_PCT
         and change1h > 0
         and sell > 0
         and buy / sell >= MIN_BUY_SELL_RATIO
@@ -95,12 +102,35 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
     scalp fast; backed coins day-trade over hours.
     """
     from live_inventory import risk_params, mode_for_mint
+    from parameter_autotuner import policy_signature
     by_mint = {row.get("mint"): row for row in candidates if isinstance(row, dict)}
     opened = 0
     closed = 0
     reasons: dict[str, int] = {}
     closed_mints = set()
+    # Resolve policy before acquiring the writer lock: risk_params opens its
+    # own connection and may initialise override tables on a fresh database.
+    with _connect(db_path) as policy_con:
+        observed_mints = {r[0] for r in policy_con.execute('SELECT mint FROM mh_dynamic_scalp_positions')}
+    observed_mints.update(m for m in by_mint if m)
+    policies = {mint: risk_params(mint, cfg, db_path=db_path, allow_tuned=True)
+                for mint in observed_mints}
     with _connect(db_path) as con:
+        # Keep wallet, closes and allocations in one transaction on the explicit DB.
+        con.execute("BEGIN IMMEDIATE")
+        con.execute("CREATE TABLE IF NOT EXISTS mh_accounts (trader TEXT PRIMARY KEY, "
+                    "equity_usd REAL NOT NULL, started_usd REAL NOT NULL)")
+        account = con.execute("SELECT equity_usd FROM mh_accounts WHERE trader=?", (SETUP,)).fetchone()
+        if account is None:
+            history = con.execute("SELECT qty,entry_px,realized_pct,realized_usd FROM mh_trades WHERE setup=?", (SETUP,)).fetchall()
+            for trade in history:
+                values = [float(v) for v in trade]
+                if (not all(math.isfinite(v) for v in values)
+                        or abs(values[0] * values[1] * values[2] - values[3]) > 1e-7):
+                    raise ValueError("invalid incubator history; wallet reconciliation blocked")
+            equity = INITIAL_EQUITY_USD + sum(float(t["realized_usd"]) for t in history)
+            con.execute("INSERT INTO mh_accounts(trader,equity_usd,started_usd) VALUES(?,?,?)",
+                        (SETUP, equity, INITIAL_EQUITY_USD))
         positions = con.execute("SELECT * FROM mh_dynamic_scalp_positions").fetchall()
         for position in positions:
             row = by_mint.get(position["mint"])
@@ -110,9 +140,14 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
                 price = float(row["market"]["latest_usd"])
             except (KeyError, TypeError, ValueError):
                 continue
-            if price <= 0:
+            if not math.isfinite(price) or price <= 0:
                 continue
-            params = risk_params(position["mint"], cfg, db_path=db_path, allow_tuned=True)
+            params = policies[position["mint"]]
+            # Never label legacy positions retrospectively. A policy change
+            # during observation makes the whole path ineligible for adoption.
+            con.execute("UPDATE mh_scalp_policy_evidence SET mixed=1 "
+                        "WHERE mint=? AND opened_ts=? AND policy_json<>?",
+                        (position["mint"], position["opened_ts"], policy_signature(params)))
             con.execute(
                 "INSERT OR IGNORE INTO mh_scalp_price_samples(mint,opened_ts,sample_ts,price_usd) "
                 "VALUES(?,?,?,?)",
@@ -134,13 +169,10 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
             entry_qty = float(position["qty"])
             realized_usd = entry_qty * entry * realized_pct
             # Credit realized P&L to the dynamic_scalper wallet for compounding
-            try:
-                con.execute(
-                    "UPDATE mh_accounts SET equity_usd=equity_usd+? WHERE trader=?",
-                    (realized_usd, SETUP),
-                )
-            except (sqlite3.OperationalError, sqlite3.ProgrammingError):
-                pass  # mh_accounts table may not exist in test DBs
+            con.execute(
+                "UPDATE mh_accounts SET equity_usd=equity_usd+? WHERE trader=?",
+                (realized_usd, SETUP),
+            )
             con.execute(
                 "INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,"
                 "exit_px,qty,realized_pct,realized_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -164,13 +196,11 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
         existing = {
             row[0] for row in con.execute("SELECT mint FROM mh_dynamic_scalp_positions").fetchall()
         }
-        # Seed wallet if needed, then compute available once for new positions
-        try:
-            import paper as _paper
-            _paper.ensure_account(SETUP, INITIAL_EQUITY_USD)
-            wallet_free = _paper.available(SETUP)
-        except Exception:
-            wallet_free = INITIAL_EQUITY_USD
+        equity = float(con.execute("SELECT equity_usd FROM mh_accounts WHERE trader=?", (SETUP,)).fetchone()[0])
+        committed = float(con.execute("SELECT COALESCE(SUM(qty*entry_usd),0) FROM mh_dynamic_scalp_positions").fetchone()[0])
+        if not math.isfinite(equity) or not math.isfinite(committed):
+            raise ValueError("invalid incubator wallet balance")
+        wallet_free = max(0.0, equity - committed)
         for row in candidates:
             mint = row.get("mint")
             if not mint or mint in existing or mint in closed_mints or not _entry_signal(row):
@@ -180,7 +210,7 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
                 decimals = int(row["decimals"])
             except (KeyError, TypeError, ValueError):
                 continue
-            if price <= 0:
+            if not math.isfinite(price) or price <= 0:
                 continue
             raw_qty = wallet_free * POSITION_FRACTION / price
             if raw_qty * price < 0.25:  # skip if position would be under $0.25
@@ -195,6 +225,10 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
                 "INSERT INTO mh_scalp_price_samples(mint,opened_ts,sample_ts,price_usd) "
                 "VALUES(?,?,?,?)", (mint, now, now, price),
             )
+            params = policies[mint]
+            con.execute("INSERT INTO mh_scalp_policy_evidence(mint,opened_ts,policy_json,mixed) VALUES(?,?,?,0)",
+                        (mint, now, policy_signature(params)))
+            wallet_free -= raw_qty * price
             existing.add(mint)
             opened += 1
     return {"state": "SHADOW_SCALP_COMPLETE", "opened": opened, "closed": closed,

@@ -55,7 +55,11 @@ class CoinReviewBase(unittest.TestCase):
                  qty, pct, usd, reason))
 
     def add_path(self, mint, prices=(1.0, 1.085, 1.05, 1.02), opened=0.0, reason="trail_stop"):
-        with sqlite3.connect(self.db) as con:
+        import dynamic_shadow_scalper as ds
+        import parameter_autotuner as pa
+        with ds._connect(self.db) as con:
+            con.execute("INSERT INTO mh_scalp_policy_evidence VALUES(?,?,?,0)",
+                        (mint, opened, pa.policy_signature(li._default_params(li.mode_for_mint(mint, cfg())))))
             con.execute(
                 "INSERT INTO mh_scalp_excursions VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                 (mint, "X", li.mode_for_mint(mint, cfg()), prices[0], max(prices), min(prices),

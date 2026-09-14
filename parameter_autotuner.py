@@ -20,6 +20,7 @@ same override store is what risk_params()/forced_exit() actually consume.
 from __future__ import annotations
 
 import json
+import math
 import os
 from pathlib import Path
 import sqlite3
@@ -61,6 +62,13 @@ SERIOUS_TRAIL_ARM_GRID = (0.008, 0.015, 0.030)
 SERIOUS_TRAIL_DIST_GRID = (0.004, 0.008, 0.015)
 
 
+def policy_signature(params: dict) -> str:
+    """Version the observed exit contract, excluding display/source metadata."""
+    return json.dumps({"version": 1, **{k: float(params[k]) for k in (
+        "take_profit_pct", "stop_loss_pct", "trail_arm_pct",
+        "trail_distance_pct", "max_hold_seconds")}}, sort_keys=True, allow_nan=False)
+
+
 def _connect(path):
     con = sqlite3.connect(Path(path), timeout=30)
     con.row_factory = sqlite3.Row
@@ -95,6 +103,22 @@ def load_excursions(db_path, mode: str) -> list[dict]:
     return excursions
 
 
+def policy_cohort(db_path, rows: list[dict], params: dict) -> list[dict]:
+    """Select by recorded policy, never by whether a replay wins or resolves.
+
+    Unlabelled history remains in the audit but cannot establish which policy
+    collected a truncated path. Mixed-policy observations are never promoted.
+    """
+    signature = policy_signature(params)
+    with _connect(db_path) as con:
+        exists = con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='mh_scalp_policy_evidence'").fetchone()
+        if not exists:
+            return []
+        keys = {(r[0], r[1]) for r in con.execute(
+            "SELECT mint,opened_ts FROM mh_scalp_policy_evidence WHERE policy_json=? AND mixed=0", (signature,))}
+    return [r for r in rows if (r["mint"], r["open_ts"]) in keys]
+
+
 def _simulate_trade(x: dict, params: dict, *, round_trip_cost_pct: float = 0.0) -> float | None:
     """Replay one observed price path using the exact production exit order.
 
@@ -107,10 +131,25 @@ def _simulate_trade(x: dict, params: dict, *, round_trip_cost_pct: float = 0.0) 
     hold = float(params["max_hold_seconds"])
     trail_arm = float(params.get("trail_arm_pct", 0.08))
     trail_distance = float(params.get("trail_distance_pct", 0.04))
-    entry = float(x["entry_usd"])
-    opened = float(x["open_ts"])
-    samples = x.get("samples") or []
-    if entry <= 0 or not samples or abs(float(samples[0]["sample_ts"]) - opened) > 1:
+    try:
+        entry = float(x["entry_usd"])
+        opened = float(x["open_ts"])
+        closed = float(x["close_ts"])
+        samples = x.get("samples") or []
+        if (not all(math.isfinite(v) for v in (entry, opened, closed))
+                or entry <= 0 or closed <= opened or not samples
+                or abs(float(samples[0]["sample_ts"]) - opened) > 1
+                or not math.isclose(float(samples[0]["price_usd"]), entry, rel_tol=1e-9)):
+            return None
+        previous = None
+        for sample in samples:
+            stamp, value = float(sample["sample_ts"]), float(sample["price_usd"])
+            if (not math.isfinite(stamp) or not math.isfinite(value) or value <= 0
+                    or stamp < opened or stamp > closed
+                    or (previous is not None and stamp <= previous)):
+                return None
+            previous = stamp
+    except (KeyError, TypeError, ValueError):
         return None
     peak = entry
     for sample in samples:
@@ -123,7 +162,8 @@ def _simulate_trade(x: dict, params: dict, *, round_trip_cost_pct: float = 0.0) 
         if change >= tp:
             return tp - round_trip_cost_pct
         if change <= sl:
-            return sl - round_trip_cost_pct
+            # A sampled gap cannot fill at an unobserved, better stop price.
+            return change - round_trip_cost_pct
         if (sample_ts - opened >= hold
                 and peak / entry - 1.0 >= tp):
             return change - round_trip_cost_pct
@@ -266,14 +306,21 @@ def maybe_tune(db_path, cfg, *, now=None) -> dict:
                 "path_ready": len(path_ready), "required": MIN_SAMPLE_CLOSED,
             }
             continue
-        excursions = path_ready
         incumbent = _risk_params_override(db_path, mode) or _default_params(mode)
+        cohort = policy_cohort(db_path, path_ready, incumbent)
+        cohort_stats = {"closed_total": len(excursions), "path_ready": len(path_ready),
+                        "policy_matched": len(cohort), "excluded_policy": len(path_ready) - len(cohort),
+                        "required": MIN_SAMPLE_CLOSED}
+        if len(cohort) < MIN_SAMPLE_CLOSED:
+            report["evaluation"][mode] = {"state": "INSUFFICIENT_POLICY_HISTORY", **cohort_stats}
+            continue
+        excursions = cohort
         inc_train, inc_hold = _walk_forward(
             excursions, incumbent, holdout=HOLDOUT_FRACTION,
             round_trip_cost_pct=round_trip_cost_pct)
         if inc_train is None or inc_hold is None:
             report["evaluation"][mode] = {
-                "state": "INCUMBENT_PATH_CENSORED", "closed": len(excursions),
+                "state": "INCUMBENT_PATH_CENSORED", "closed": len(excursions), **cohort_stats,
             }
             continue
         best = None
@@ -308,6 +355,7 @@ def maybe_tune(db_path, cfg, *, now=None) -> dict:
             }
         report["evaluation"][mode] = {
             "state": "TUNED" if adopted else "NOT_IMPROVED",
+            **cohort_stats,
             "closed": len(excursions),
             "incumbent_holdout_expectancy": round(inc_hold, 6),
             "candidate_holdout_expectancy": round(best_hold, 6),
