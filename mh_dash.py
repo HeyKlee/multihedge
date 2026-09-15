@@ -1669,6 +1669,7 @@ async function renderOverview(sum,runId){
   const lg=await load('livegate')||{};
   const actions=await load('actions')||{items:[]};
   const surv=await load('survival')||{};
+  const recentTrades=await load('trades?limit=20')||[];
   if(TAB!=='overview'||runId!==RUN_ID)return;
   const actionRows=(actions.items||[]).map(item=>{
     const due=item.due_ts?('Due '+fmtTime(item.due_ts)):item.state;
@@ -1685,6 +1686,12 @@ async function renderOverview(sum,runId){
   const gateSummary=Object.entries(lg).map(([name,v])=>gateRow(name,v)).join('')+xoraGateRow+gridGateRow;
   const xPaper=(surv.paper_trades||[]),xWins=xPaper.filter(t=>(t.realized_usd||0)>0).length,xNet=xPaper.reduce((a,t)=>a+(t.realized_usd||0),0);
   const heatCells=Array.from({length:104},(_,i)=>`<span class="heat-cell l${(i*7+xWins)%4}"></span>`).join('');
+  const recentRows=recentTrades.map(t=>{
+    const pl=t.realized_usd||0,cls=(pl>=0?'pos':'neg'),pct=t.realized_pct!=null?t.realized_pct:null;
+    const mode=t.setup==='dynamic_scalper'?'XORA PAPER':(t.setup||'paper');
+    const coin=t.symbol||t.coin||'-';
+    return `<tr><td>${coin}</td><td>${mode}</td><td>${(t.side||'').toUpperCase()}</td><td>${t.entry_px!=null?fmt(t.entry_px):'-'}</td><td>${t.exit_px!=null?fmt(t.exit_px):'-'}</td><td class="${cls}">${pct!=null?(pct>0?'+':'')+(pct*100).toFixed(2)+'%':'-'}</td><td class="${cls}">${fmtMoney(pl)}</td><td>${t.exit_reason||'-'}</td><td>${t.close_ts?fmtTime(t.close_ts):'-'}</td></tr>`;
+  }).join('')||'<tr><td colspan="9" style="color:var(--text-faint)">no recent trade history</td></tr>';
   const overviewCards=`
     <div class="overview-grid" style="margin-bottom:12px">
       <div class="card span-3"><h3>Xora wallet</h3><div class="metric-xl">${(surv.live_positions||[]).length} live</div><div class="mini-note">${(surv.paper_positions||[]).length} paper incubator positions · ${(surv.notional?.paper_usd||0).toFixed(2)} USDC paper notional</div></div>
@@ -1695,6 +1702,7 @@ async function renderOverview(sum,runId){
       <div class="card span-3"><h3>Live gate</h3>${gateSummary}</div>
       <div class="card span-4" id="councilReportCard"><h3>Council report</h3><div class="council-summary" id="councilSummary">Loading latest per-coin review + council...</div></div>
       <div class="card span-4"><h3>Dashboard snippets</h3><div class="todo-list"><div class="todo-item"><span class="todo-check ok"></span><div><div class="todo-title">Traders</div><div class="todo-detail">${Object.keys(lg).length} trader gates tracked</div></div></div><div class="todo-item"><span class="todo-check ok"></span><div><div class="todo-title">Market</div><div class="todo-detail">SOL, JUP, ETH market tabs active</div></div></div><div class="todo-item"><span class="todo-check ${(surv.live_positions||[]).length?'':'ok'})"></span><div><div class="todo-title">Live wallet</div><div class="todo-detail">${(surv.live_positions||[]).length} canonical live positions</div></div></div></div></div>
+      <div class="card span-12"><h3>Recent trade history</h3><div class="mini-note" style="margin-bottom:8px">Latest paper/Xora/trader closes from the shared ledger. Live on-chain fills stay separately labelled on Xora-Survival.</div><div class="scroll-wrap"><table><tr><th>Coin</th><th>Source</th><th>Side</th><th>Entry</th><th>Exit</th><th>P/L%</th><th>P/L$</th><th>Reason</th><th>Close</th></tr>${recentRows}</table></div></div>
     </div>`;
   setTimeout(()=>loadCouncilReport(), 0);
   const wlRows=TRADERS.map(t=>{

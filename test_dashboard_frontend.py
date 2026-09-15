@@ -79,7 +79,9 @@ class DashboardFrontendTests(unittest.TestCase):
             elif path == "/api/xora/summary": data = XORA_SUMMARY
             elif path == "/api/survival": data = SURVIVAL
             elif path == "/api/grid": data = {"enabled": False}
-            elif path in ("/api/market", "/api/strategies", "/api/trades", "/api/positions", "/api/exit_reason_series"): data = []
+            elif path == "/api/trades":
+                data = [{"coin": "EMBER", "symbol": "EMBER", "setup": "dynamic_scalper", "side": "LONG", "entry_px": 0.01, "exit_px": 0.012, "realized_pct": 0.2, "realized_usd": 0.2, "exit_reason": "take_profit", "close_ts": 1789447079}]
+            elif path in ("/api/market", "/api/strategies", "/api/positions", "/api/exit_reason_series"): data = []
             elif path == "/api/ui/prefs" and r.request.method == "POST":
                 try:
                     self._mock_prefs = json.loads(r.request.post_data)
@@ -232,6 +234,14 @@ class DashboardFrontendTests(unittest.TestCase):
         self.assertIn("What to do", body)
         self.assertIn("Xora wallet", body)
         self.assertIn("Xora profit", body)
+
+    def test_overview_shows_recent_trade_history(self):
+        self.page.wait_for_selector("text=Recent trade history")
+        body = self.page.locator("body").inner_text()
+        self.assertIn("Recent trade history", body)
+        self.assertIn("EMBER", body)
+        self.assertIn("XORA PAPER", body)
+        self.assertIn("TAKE_PROFIT", body.upper())
 
     def test_xora_summary_widget_renders_live_stats_and_open_report(self):
         # Regression: the Gate pill used a broken compound .toFixed(0) on a
