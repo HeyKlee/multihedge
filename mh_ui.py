@@ -156,6 +156,16 @@ def _coerce_layout(raw):
                 if value < 0 or value > 1e7:
                     raise PrefError("widget %s out of range" % key)
                 entry[key] = round(value, 2)
+            # Catalog-added dashboard widgets need stable metadata so they can
+            # be reconstructed after reload. These remain display-only layout
+            # hints and never influence trading state.
+            widget_type = spec.get("type")
+            if isinstance(widget_type, str) and widget_type in ("catalog",):
+                entry["type"] = widget_type
+            for key, limit in (("title", 120), ("hint", 240)):
+                value = spec.get(key)
+                if isinstance(value, str):
+                    entry[key] = " ".join(value.split())[:limit]
             tab_out[widget_id] = entry
         out[tab] = tab_out
     return out

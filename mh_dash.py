@@ -1104,8 +1104,8 @@ html.hide-scrollbars{overflow:hidden}html.hide-scrollbars body{overflow:hidden}h
 .widget-catalog-head button{width:28px;height:28px;border:0;background:var(--surface-2);border-radius:7px;cursor:pointer;color:var(--text-dim);font-size:15px;display:grid;place-items:center}
 .widget-catalog-search{margin-bottom:10px}.widget-catalog-search input{width:100%;height:34px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface-2);color:var(--text);padding:6px 10px;font-size:12px}
 .widget-catalog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-.widget-catalog .wc-item{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:8px 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--text);font-size:11px;cursor:pointer}
-.widget-catalog .wc-item:hover{border-color:var(--accent);color:var(--accent)}
+.widget-catalog .wc-item{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:8px 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--text);font-size:11px;cursor:grab;position:relative}.widget-catalog .wc-item:active{cursor:grabbing}.widget-free{min-height:120px}.widget-free .widget-free-note{font-size:12px;color:var(--text-dim);line-height:1.5}.drop-armed{outline:2px dashed var(--accent);outline-offset:4px}
+.widget-catalog .wc-section{grid-column:1/-1;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}.widget-catalog .wc-section:first-child{margin-top:0;padding-top:0;border-top:0}.widget-catalog .wc-section-title{font:800 10px 'IBM Plex Mono';letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}.widget-catalog .wc-type-title{font:700 9px 'IBM Plex Mono';letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);margin:6px 0 5px}.widget-catalog .wc-type-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.widget-catalog .wc-item:hover{border-color:var(--accent);color:var(--accent)}
 .widget-catalog .wc-item b{font-size:11px}.widget-catalog .wc-item small{font-size:9.5px;color:var(--text-faint)}
 .widget-catalog .wc-item .wc-add{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:5px;background:var(--accent);color:var(--surface);font-size:11px;display:grid;place-items:center}
 /* ---- Widget tile resize ---- */
@@ -1701,7 +1701,7 @@ async function renderOverview(sum,runId){
       <div class="card span-5"><h3>Last cycles heatmap</h3><div class="heatmap">${heatCells}</div><div class="mini-note" style="margin-top:10px">Brighter cells indicate stronger recent Xora paper/live activity.</div></div>
       <div class="card span-3"><h3>Live gate</h3>${gateSummary}</div>
       <div class="card span-4" id="councilReportCard"><h3>Council report</h3><div class="council-summary" id="councilSummary">Loading latest per-coin review + council...</div></div>
-      <div class="card span-4"><h3>Dashboard snippets</h3><div class="todo-list"><div class="todo-item"><span class="todo-check ok"></span><div><div class="todo-title">Traders</div><div class="todo-detail">${Object.keys(lg).length} trader gates tracked</div></div></div><div class="todo-item"><span class="todo-check ok"></span><div><div class="todo-title">Market</div><div class="todo-detail">SOL, JUP, ETH market tabs active</div></div></div><div class="todo-item"><span class="todo-check ${(surv.live_positions||[]).length?'':'ok'})"></span><div><div class="todo-title">Live wallet</div><div class="todo-detail">${(surv.live_positions||[]).length} canonical live positions</div></div></div></div></div>
+      <div class="card span-4"><h3>Dashboard snippets</h3><div class="todo-list"><div class="todo-item"><span class="todo-check ok"></span><div><div class="todo-title">Traders</div><div class="todo-detail">${Object.keys(lg).length} trader gates tracked</div></div></div><div class="todo-item"><span class="todo-check ok"></span><div><div class="todo-title">Market</div><div class="todo-detail">SOL, JUP, ETH market tabs active</div></div></div><div class="todo-item"><span class="todo-check ${(surv.live_positions||[]).length?'':'ok'}"></span><div><div class="todo-title">Live wallet</div><div class="todo-detail">${(surv.live_positions||[]).length} canonical live positions</div></div></div></div></div>
       <div class="card span-12"><h3>Recent trade history</h3><div class="mini-note" style="margin-bottom:8px">Latest paper/Xora/trader closes from the shared ledger. Live on-chain fills stay separately labelled on Xora-Survival.</div><div class="scroll-wrap"><table><tr><th>Coin</th><th>Source</th><th>Side</th><th>Entry</th><th>Exit</th><th>P/L%</th><th>P/L$</th><th>Reason</th><th>Close</th></tr>${recentRows}</table></div></div>
     </div>`;
   setTimeout(()=>loadCouncilReport(), 0);
@@ -2300,39 +2300,96 @@ async function run(){
     else if(TAB==='survival')await renderSurvival();
   }
   if(runId!==RUN_ID)return;
+  ensureCatalogWidgets();
   initTiles();petAttachWidgetTips();
   applySavedLayoutToView();
 }
 applyTheme(document.documentElement.dataset.theme);
-run();
 
 // ---- Free-position layout editor (edit mode) ----
 let EDITING=false;
 const EDIT_ROOTS=['kpis','tab-panels','coin-wrap'];
 const CATALOG_WIDGETS=[
-  ['Wallet Hub','wallet hub · collective and per-trader equity vs start'],
-  ['Cumulative Edge','cumulative edge chart per trader'],
-  ['Win/Loss Mix','win/loss breakdown across closed trades'],
-  ['Exit Reasons','why positions closed (TP / SL / max-hold / trail)'],
-  ['Performance Heatmap','trader × coin performance grid'],
-  ['What To Do','ranked next best action'],
-  ['Best Setup','highest-scoring strategy setup'],
-  ['Xora Wallet','live vs paper survival notional, split'],
-  ['Xora Profit','Xora survival P&L and edge'],
-  ['Live Gate','evidence-gated live activation status'],
-  ['Dashboard Snippets','quick reference snippets and metrics'],
-  ['Market Ticker','live market quote ticker'],
-  ['Strategy Tables','strategy families and rotation'],
-  ['Trader Detail','per-trader wallet and detail view'],
-  ['Agent Health','agent process health stats'],
-  ['System Audit','append-only audit trail info'],
-  ['Council Decisions','council decision log'],
-  ['Council Report','per-coin shadow review + council summary, opens the full report'],
-  ['Request Queue','pending improvement requests'],
-  ['Trade History','closed and open trade table'],
-  ['Position Monitor','live open-position monitor'],
-  ['Risk Params','enforced risk parameters'],
-  ['Future Widget','placeholder slot for upcoming widgets']
+  {group:'System / Overview',types:{
+    Summary:[
+      ['Collective Wallet','all trader wallets and equity vs start'],
+      ['Xora Wallet','live vs paper survival notional split'],
+      ['Xora Profit','Xora survival P&L and edge'],
+      ['Best Setup','highest-scoring strategy setup'],
+      ['What To Do','ranked next best action'],
+      ['Dashboard Snippets','quick reference snippets and metrics'],
+      ['Last Cycles Heatmap','recent Xora activity heatmap']
+    ],
+    Charts:[
+      ['Cumulative Edge Per Trader','cumulative edge chart across traders'],
+      ['Win Loss Mix Ratio Per Trader','win/loss breakdown across closed trades'],
+      ['Exit Reasons','why positions closed across the system']
+    ],
+    Trading:[
+      ['Recent Trade History','latest paper/Xora/trader closes from the shared ledger'],
+      ['Traders Coins Live Positions W L','trader × coin positions and win/loss matrix'],
+      ['Live Gate','evidence-gated live activation status']
+    ],
+    Admin:[
+      ['Council Report','per-coin shadow review + council summary'],
+      ['Council Decisions','council decision log'],
+      ['Request Queue','pending improvement requests'],
+      ['Agent Health','agent process health stats'],
+      ['System Audit','append-only audit trail info'],
+      ['Future Widget','placeholder slot for upcoming widgets']
+    ]
+  }},
+  {group:'Xora-Survival',types:{
+    Summary:[
+      ['Live Wallet Xora Survival Real On Chain Fills','canonical on-chain survival fills only'],
+      ['Paper Incubator Shadow Go Live Gate','paper incubator evidence and live gate'],
+      ['Active Exit Params Evidence Gated Policy','TP, SL, trail, max-hold policy source']
+    ],
+    Positions:[
+      ['Open Live Wallet Positions','canonical live survival wallet positions'],
+      ['Open Paper Incubator Positions','paper incubator open positions']
+    ],
+    History:[
+      ['Survival Live Trade History On Chain','real on-chain survival fill history'],
+      ['Paper Incubator Trade History','closed paper incubator trade history'],
+      ['Decision Log Autonomous Cycles','autonomous decision cycle log'],
+      ['Exit Reasons Paper Incubator','paper incubator exit reason counts']
+    ]
+  }},
+  {group:'Scalper',types:{
+    Summary:[['Scalper Fast Momentum Layer Own Wallet','fast momentum scalper overview'],['What It Does Scalper','scalper strategy explanation']],
+    Tables:[['Scalper Wallet Strategy Rotations','strategy rotation points and win rates']],
+    Charts:[['Exit Reasons Scalper','scalper exit reason chart'],['Cumulative Edge Scalper','scalper cumulative edge chart']],
+    History:[['Recent Trades Scalper','recent scalper trade history']]
+  }},
+  {group:'Reasoner',types:{
+    Summary:[['Reasoner Slow News Swing Own Wallet','reasoner overview'],['What It Does Reasoner','reasoner strategy explanation']],
+    Tables:[['Reasoner Wallet','reasoner wallet and bias table']],
+    Charts:[['Exit Reasons Reasoner','reasoner exit reason chart'],['Cumulative Edge Reasoner','reasoner cumulative edge chart']],
+    History:[['Recent Trades Reasoner','recent reasoner trade history']]
+  }},
+  {group:'Whale Copy',types:{
+    Summary:[['Whales Fomo Family Copy Trade Own Wallet','whale copy overview'],['Whale Trader Wallet','whale trader wallet state']],
+    Tables:[['Tracked Wallets Curated Activity','tracked whale wallet activity'],['Open Whale Positions','open whale copy positions']],
+    History:[['Recent Whale Buys On Chain','recent tracked on-chain whale buys'],['Whale Trader Recent Trades','whale trader recent trade history']]
+  }},
+  {group:'Memecoin',types:{
+    Summary:[['Memecoin Long Only Paper Sniper Own Wallet','memecoin sniper overview'],['Memecoin Wallet','memecoin trader wallet state']],
+    Positions:[['Open Memecoin Positions','open memecoin positions']],
+    Signals:[['Recent Memecoin Signals Pump Monitor','pump-monitor memecoin signals']],
+    History:[['Memecoin Trader Recent Trades','memecoin trader recent trade history']]
+  }},
+  {group:'Grid',types:{
+    Summary:[['Grid SOL Spot Long Only Geometric Grid','grid trader overview'],['Grid Wallet','grid wallet state'],['What It Does Grid','grid strategy explanation']],
+    Charts:[['Grid Ladder Live Price Vs Levels','grid ladder and live price chart'],['Closed Cycles Grid Exits','closed grid cycles'],['Cumulative Edge Grid','grid cumulative edge chart']],
+    History:[['Recent Trades Grid','recent grid trade history']]
+  }},
+  {group:'Market',types:{
+    Charts:[['Live Market','market price chart'],['Live Market Tick','overview live market mini-widget'],['Market Ticker','top ticker tape']]
+  }},
+  {group:'Live Gate',types:{
+    Summary:[['Live Gate Real Wallet Untouched Until A Trader Passes Its Evidence Bar','deterministic live gate table'],['Risk Params','enforced risk parameters']]
+  }}
 ];
 const isWidget=x=>x&&(x.classList.contains('card')||x.classList.contains('kpi')||x.classList.contains('widget-free'));
 function widgetIdOf(card){if(card.dataset.widgetId)return card.dataset.widgetId;return card.dataset.widgetId=widgetSlug(card.querySelector('h3')?.textContent||card.querySelector('.lbl')?.textContent||('widget-'+Math.floor(Math.random()*1e6)));}
@@ -2358,13 +2415,100 @@ function toggleCatalog(){
 function closeCatalog(){const el=document.getElementById('widgetCatalog');if(el)el.classList.remove('open');}
 function buildCatalog(){
   const grid=document.getElementById('widgetCatalogGrid');if(!grid)return;
-  grid.innerHTML=CATALOG_WIDGETS.map(([label,hint])=>{
-    return `<div class="wc-item" data-label="${label.toLowerCase()}" data-widget="${widgetSlug(label)}"><b>${label}</b><small>${hint}</small><span class="wc-add">&#43;</span></div>`;
+  grid.innerHTML=CATALOG_WIDGETS.map(section=>{
+    const types=Object.entries(section.types||{}).map(([type,items])=>`<div class="wc-type"><div class="wc-type-title">${escHtml(type)}</div><div class="wc-type-grid">${items.map(([label,hint])=>`<div class="wc-item" draggable="true" data-label="${label.toLowerCase()}" data-widget="${widgetSlug(label)}" data-hint="${escHtml(hint)}" data-group="${escHtml(section.group)}" data-type="${escHtml(type)}"><b>${label}</b><small>${hint}</small><span class="wc-add">&#43;</span></div>`).join('')}</div></div>`).join('');
+    return `<section class="wc-section"><div class="wc-section-title">${escHtml(section.group)}</div>${types}</section>`;
   }).join('');
-  grid.querySelectorAll('.wc-item').forEach(item=>item.addEventListener('click',()=>{
-    const label=item.querySelector('b').textContent;
-    showToast('“'+label+'” slot reserved — drag existing widgets now; auto-place on save.');
-  }));
+  grid.querySelectorAll('.wc-item').forEach(item=>{
+    item.addEventListener('click',()=>addCatalogWidget(item.dataset.widget,item.querySelector('b').textContent,item.dataset.hint));
+    item.addEventListener('dragstart',e=>{
+      e.dataTransfer.effectAllowed='copy';
+      e.dataTransfer.setData('application/x-mh-widget',JSON.stringify({id:item.dataset.widget,label:item.querySelector('b').textContent,hint:item.dataset.hint||''}));
+    });
+  });
+}
+function catalogWidgetId(base){
+  base=widgetSlug(base||'catalog-widget');
+  const used=new Set([...document.querySelectorAll('[data-widget-id]')].map(x=>x.dataset.widgetId));
+  const lay=layoutForTab();Object.keys(lay||{}).forEach(k=>used.add(k));
+  if(!used.has(base))return base;
+  for(let i=2;i<200;i++){const id=base+'-'+i;if(!used.has(id))return id;}
+  return base+'-'+Date.now();
+}
+function createCatalogWidget(id,title,hint){
+  const card=document.createElement('div');card.className='card widget-free';card.dataset.widgetId=id;card.dataset.widgetTitle=title;card.dataset.catalogWidget='1';
+  card.innerHTML='<h3>'+escHtml(title)+'</h3><div class="widget-free-note" data-catalog-body="1">Loading live widget data...</div>';
+  renderCatalogWidgetBody(card,title,hint);
+  return card;
+}
+function miniRows(rows,cols,empty){
+  if(!rows||!rows.length)return '<div class="widget-free-note">'+escHtml(empty||'No live rows available yet.')+'</div>';
+  return '<div class="scroll-wrap" style="max-height:150px"><table><tr>'+cols.map(c=>'<th>'+escHtml(c[0])+'</th>').join('')+'</tr>'+rows.slice(0,8).map(r=>'<tr>'+cols.map(c=>'<td>'+escHtml(c[1](r))+'</td>').join('')+'</tr>').join('')+'</table></div>';
+}
+async function renderCatalogWidgetBody(card,title,hint){
+  const body=card.querySelector('[data-catalog-body]');if(!body)return;
+  const slug=widgetSlug(title||card.dataset.widgetId||'');
+  try{
+    if(slug.includes('tracked-wallets')){const w=await load('whales')||{};body.innerHTML=miniRows(w.wallets||[],[['Name',r=>r.name||'-'],['Handle',r=>r.handle||'-'],['Status',r=>r.last_sig_ts?'ACTIVE':'QUIET'],['Tx7d',r=>r.tx_7d||0]],'No tracked wallet rows yet.');return;}
+    if(slug.includes('recent-whale-buys')){const w=await load('whales')||{};body.innerHTML=miniRows(w.events||[],[['Whale',r=>r.wallet||r.name||'-'],['Coin',r=>r.symbol||r.coin||'-'],['Dir',r=>r.side||'BUY'],['When',r=>r.ts?fmtTime(r.ts):'-']], 'No recent whale buys yet.');return;}
+    if(slug.includes('whale-trader-recent-trades')){const w=await load('whales')||{};body.innerHTML=miniRows(w.trades||[],[['Coin',r=>r.symbol||r.coin||'-'],['P/L',r=>fmtMoney(r.realized_usd||0)],['Reason',r=>r.exit_reason||'-'],['Close',r=>r.close_ts?fmtTime(r.close_ts):'-']], 'No whale trades yet.');return;}
+    if(slug.includes('whale-trader-wallet')){const w=await load('whales')||{};const a=w.account||{},fx=a.fx||1.67;body.innerHTML=`<div class="xora-sum-grid"><div class="xora-sum-col"><span class="xora-metric-label">Equity</span><span class="xora-metric-val">NZ${fmtMoney((a.equity||0)*fx)}</span></div><div class="xora-sum-col"><span class="xora-metric-label">Available</span><span class="xora-metric-val">NZ${fmtMoney((a.available||0)*fx)}</span></div><div class="xora-sum-col"><span class="xora-metric-label">Open</span><span class="xora-metric-val">${(w.positions||[]).length}</span></div></div>`;return;}
+    if(slug.includes('open-whale-positions')){const w=await load('whales')||{};body.innerHTML=miniRows(w.positions||[],[['Coin',r=>r.symbol||r.coin||'-'],['Side',r=>r.side||'-'],['Entry',r=>fmt(r.entry||r.entry_px)],['Qty',r=>fmt(r.qty)]], 'No open whale positions.');return;}
+    if(slug.includes('recent-memecoin-signals')){const m=await load('memecoin')||{};body.innerHTML=miniRows(m.signals||[],[['Token',r=>r.symbol||r.token||'-'],['Dir',r=>r.direction||r.side||'-'],['Conf',r=>r.confidence!=null?(r.confidence*100).toFixed(0)+'%':'-'],['When',r=>r.ts?fmtTime(r.ts):'-']], 'No memecoin signals yet.');return;}
+    if(slug.includes('memecoin-trader-recent-trades')){const m=await load('memecoin')||{};body.innerHTML=miniRows(m.trades||[],[['Coin',r=>r.symbol||r.coin||'-'],['P/L',r=>fmtMoney(r.realized_usd||0)],['Reason',r=>r.exit_reason||'-'],['Close',r=>r.close_ts?fmtTime(r.close_ts):'-']], 'No memecoin trades yet.');return;}
+    if(slug.includes('memecoin-wallet')){const m=await load('memecoin')||{};const a=m.account||{},fx=a.fx||1.67;body.innerHTML=`<div class="xora-sum-grid"><div class="xora-sum-col"><span class="xora-metric-label">Equity</span><span class="xora-metric-val">NZ${fmtMoney((a.equity||0)*fx)}</span></div><div class="xora-sum-col"><span class="xora-metric-label">Available</span><span class="xora-metric-val">NZ${fmtMoney((a.available||0)*fx)}</span></div><div class="xora-sum-col"><span class="xora-metric-label">Open</span><span class="xora-metric-val">${(m.positions||[]).length}</span></div></div>`;return;}
+    if(slug.includes('open-memecoin-positions')){const m=await load('memecoin')||{};body.innerHTML=miniRows(m.positions||[],[['Coin',r=>r.symbol||r.coin||'-'],['Side',r=>r.side||'-'],['Entry',r=>fmt(r.entry||r.entry_px)],['Qty',r=>fmt(r.qty)]], 'No open memecoin positions.');return;}
+    if(slug.includes('grid-wallet')||slug.includes('grid-sol')||slug.includes('grid-ladder')){const g=await load('grid')||{};const w=g.wallet||{},st=g.grid||{},fx=g.fx_nzd_per_usd||1.67;body.innerHTML=`<div class="xora-sum-grid"><div class="xora-sum-col"><span class="xora-metric-label">Equity</span><span class="xora-metric-val">NZ${fmtMoney((g.equity_usd||0)*fx)}</span></div><div class="xora-sum-col"><span class="xora-metric-label">SOL held</span><span class="xora-metric-val">${fmt(w.sol_qty||0)}</span></div><div class="xora-sum-col"><span class="xora-metric-label">Range</span><span class="xora-metric-val">${fmt(st.range_low)}-${fmt(st.range_high)}</span></div></div>`;return;}
+    if(slug.includes('recent-trades-grid')){const g=await load('grid')||{};body.innerHTML=miniRows(g.recent_trades||[],[['Side',r=>r.side||'-'],['Level',r=>fmt(r.level_px)],['Qty',r=>fmt(r.qty)],['Realized',r=>r.realized_usd!=null?fmtMoney(r.realized_usd):'-']], 'No grid trades yet.');return;}
+    if(slug.includes('reasoner-wallet')){const r=await load('reasoner')||{};body.innerHTML=miniRows(r.accounts||[],[['Trader',x=>'reasoner'],['Equity',x=>fmtMoney(x.equity||0)],['Avail',x=>fmtMoney(x.available||0)],['Committed',x=>fmtMoney(x.committed||0)]], 'No reasoner wallet row.');return;}
+    if(slug.includes('paper-incubator-trade-history')){const s=await load('survival')||{};body.innerHTML=miniRows(s.paper_trades||[],[['Coin',r=>r.symbol||r.coin||'-'],['P/L',r=>fmtMoney((r.realized_usd||0)*1.67)],['Reason',r=>r.exit_reason||'-'],['Close',r=>r.close_ts?fmtTime(r.close_ts):'-']], 'No paper incubator trades yet.');return;}
+    if(slug.includes('survival-live-trade-history')){const s=await load('survival')||{};body.innerHTML=miniRows(s.live_trades||[],[['Coin',r=>r.coin||r.symbol||'-'],['Side',r=>r.side||'-'],['When',r=>r.ts?fmtTime(r.ts):'-'],['Sig',r=>r.signature?sigShort(r.signature):'-']], 'No live survival fills yet.');return;}
+    if(slug.includes('live-gate')){const g=await load('livegate')||{};body.innerHTML=miniRows(Object.entries(g).map(([k,v])=>Object.assign({name:k},v)),[['Trader',r=>r.name],['Closed',r=>r.n||0],['Win%',r=>((r.win_rate||0)*100).toFixed(1)+'%'],['State',r=>r.eligible?'READY':'BLOCKED']], 'No live gate rows.');return;}
+    if(slug.includes('recent-trade-history')||slug.includes('recent-trades')){const t=await load('trades?limit=12')||[];body.innerHTML=miniRows(t, [['Coin',r=>r.symbol||r.coin||'-'],['Setup',r=>r.setup||'-'],['P/L',r=>fmtMoney(r.realized_usd||0)],['Reason',r=>r.exit_reason||'-']], 'No recent trades.');return;}
+    if(slug.includes('xora-wallet')||slug.includes('xora-profit')||slug.includes('collective-wallet')){const s=await load('survival')||{};const e=s.edge||{};body.innerHTML=`<div class="xora-sum-grid"><div class="xora-sum-col"><span class="xora-metric-label">Paper net</span><span class="xora-metric-val">${fmtMoney(e.paper_net_usd||0)}</span></div><div class="xora-sum-col"><span class="xora-metric-label">Closed</span><span class="xora-metric-val">${e.paper_n||0}</span></div><div class="xora-sum-col"><span class="xora-metric-label">Win rate</span><span class="xora-metric-val">${((e.paper_win_rate||0)*100).toFixed(1)}%</span></div></div>`;return;}
+    body.innerHTML='<div class="widget-free-note"><b>'+escHtml(hint||'Live widget slot')+'</b><br>Added widget. Drag, resize, and save it. This widget has no compact snapshot renderer yet.</div>';
+  }catch(e){body.innerHTML='<div class="load-error">Widget data could not be loaded.</div>';}
+}
+function ensureCatalogWidgets(){
+  const root=document.getElementById('tab-panels');if(!root)return;
+  const lay=layoutForTab()||{};
+  Object.entries(lay).forEach(([id,st])=>{
+    if(!st||st.type!=='catalog'||document.querySelector('[data-widget-id="'+CSS.escape(id)+'"]'))return;
+    const card=createCatalogWidget(id,st.title||id,st.hint||'Custom dashboard widget slot.');
+    root.appendChild(card);
+  });
+}
+function addCatalogWidget(base,label,hint,point){
+  if(!EDITING){showToast('Turn on Edit layout first');return null;}
+  const root=document.getElementById('tab-panels')||document.getElementById('coin-wrap')||document.getElementById('kpis');if(!root)return null;
+  const id=catalogWidgetId(base||label);const title=label||id;
+  const card=createCatalogWidget(id,title,hint);
+  root.appendChild(card);
+  const r=root.getBoundingClientRect();
+  const lay=layoutForTab();
+  const x=point?Math.max(0,Math.min(point.x-r.left,Math.max(0,r.width-220))):24+(Object.keys(lay).length%4)*36;
+  const y=point?Math.max(0,Math.min(point.y-r.top,Math.max(0,r.height-120))):24+(Object.keys(lay).length%6)*34;
+  lay[id]={type:'catalog',title:title,hint:hint||'',x:Math.round(x),y:Math.round(y),w:320,h:150,hidden:false,width:'normal',order:Object.keys(lay).length};
+  window._draftLayout=lay;
+  attachFreeHandles();
+  applyWidgetStyle(card,root,lay[id]);
+  closeCatalog();
+  showToast('Added “'+title+'” — drag it where you want, then Save Layout.');
+  return card;
+}
+function attachCatalogDropTargets(){
+  freeRoots().forEach(root=>{
+    if(!root||root.dataset.catalogDropBound==='1')return;root.dataset.catalogDropBound='1';
+    root.addEventListener('dragover',e=>{if(!EDITING||!e.dataTransfer.types.includes('application/x-mh-widget'))return;e.preventDefault();root.classList.add('drop-armed');});
+    root.addEventListener('dragleave',()=>root.classList.remove('drop-armed'));
+    root.addEventListener('drop',e=>{
+      root.classList.remove('drop-armed');
+      if(!EDITING)return;
+      const raw=e.dataTransfer.getData('application/x-mh-widget');if(!raw)return;
+      e.preventDefault();
+      try{const data=JSON.parse(raw);addCatalogWidget(data.id,data.label,data.hint,{x:e.clientX,y:e.clientY});}catch(err){showToast('Could not add widget');}
+    });
+  });
 }
 function freeWidgets(){
   const out=[];
@@ -2381,7 +2525,9 @@ function enterEdit(){
   const cb=document.getElementById('cancelEditBtn');if(cb)cb.style.display='inline-flex';
   const aw=document.getElementById('addWidgetBtn');if(aw)aw.style.display='inline-flex';
   toggleEditPrefs(true);
+  ensureCatalogWidgets();
   attachFreeHandles();
+  attachCatalogDropTargets();
   showToast('Edit mode: drag a widget by its top bar, resize from the bottom-right grip, hide with the eye. Save to keep.');
 }
 function captureFreePositions(){
@@ -2906,6 +3052,7 @@ async function openCouncilReport(name){
 // ---- Init ----
 (async function(){
   const p=await loadPrefs();
+  await run();
   const sec=p?.refreshSeconds||30;
   if(sec>0&&sec<3600)window._refreshInt=setInterval(()=>run(),sec*1000);
 })();

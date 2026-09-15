@@ -92,6 +92,19 @@ class PrefsTests(unittest.TestCase):
         with self.assertRaises(mh_ui.PrefError):
             mh_ui.validate_prefs({"layout": {"tab": {"w": {"order": "first"}}}})
 
+    def test_layout_preserves_catalog_widget_metadata(self):
+        prefs = {"layout": {"overview": {"trade-history": {
+            "type": "catalog", "title": "Trade History", "hint": "closed and open trade table",
+            "x": 12, "y": 34, "w": 320, "h": 150, "hidden": False, "order": 3,
+        }}}}
+        result = mh_ui.validate_prefs(prefs)
+        widget = result["layout"]["overview"]["trade-history"]
+        self.assertEqual(widget["type"], "catalog")
+        self.assertEqual(widget["title"], "Trade History")
+        self.assertEqual(widget["hint"], "closed and open trade table")
+        self.assertEqual(widget["x"], 12)
+        self.assertEqual(widget["w"], 320)
+
 
 class ChatFailClosedTests(unittest.TestCase):
     """The chat endpoint must fail closed when OpenRouter is unavailable."""

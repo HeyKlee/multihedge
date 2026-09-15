@@ -300,8 +300,68 @@ class DashboardFrontendTests(unittest.TestCase):
         self.page.locator("#addWidgetBtn").click()
         self.page.wait_for_selector(".widget-catalog")
         text = self.page.locator(".widget-catalog").inner_text()
-        for want in ("Wallet Hub", "Audit", "Council", "Risk"):
+        upper = text.upper()
+        for want in ("SYSTEM / OVERVIEW", "XORA-SURVIVAL", "SCALPER", "REASONER", "WHALE COPY", "MEMECOIN", "GRID", "MARKET", "LIVE GATE"):
+            self.assertIn(want, upper)
+        for want in ("SUMMARY", "CHARTS", "HISTORY", "TRADING", "POSITIONS", "SIGNALS"):
+            self.assertIn(want, upper)
+        for want in ("Tracked Wallets Curated Activity", "Grid Ladder Live Price Vs Levels", "Recent Memecoin Signals Pump Monitor", "Paper Incubator Trade History"):
             self.assertIn(want, text)
+
+    def test_widget_catalog_click_adds_and_persists_widget(self):
+        self.enter_edit_mode()
+        before = self.page.locator('[data-widget-id^="recent-trade-history"]').count()
+        self.page.locator("#addWidgetBtn").click()
+        self.page.locator('.wc-item[data-widget="recent-trade-history"]').click()
+        self.page.wait_for_selector('[data-widget-id^="recent-trade-history"]')
+        after = self.page.locator('[data-widget-id^="recent-trade-history"]').count()
+        self.assertGreater(after, before)
+        added_id = self.page.locator('[data-widget-id^="recent-trade-history"]').last.get_attribute("data-widget-id")
+        added_text = self.page.locator('[data-widget-id="%s"]' % added_id).inner_text()
+        self.assertIn("Recent Trade History", added_text)
+        self.assertNotIn("Custom dashboard widget slot", added_text)
+        self.assertTrue(any(word in added_text for word in ("EMBER", "XORA", "P/L", "No recent trades")))
+        self.page.locator("#settingsBtn").click()
+        self.page.locator("#editToggleBtn").click()
+        self.page.locator("#settingsClose").click()
+        self.page.wait_for_function("()=>!document.body.classList.contains('free-edit')", timeout=8000)
+        self.assertIn(added_id, self._mock_prefs.get("layout", {}).get("overview", {}))
+        self.assertEqual(self._mock_prefs["layout"]["overview"][added_id]["type"], "catalog")
+        self.page.reload(wait_until="commit"); self.page.wait_for_selector('#themeToggle')
+        self.page.wait_for_selector('[data-widget-id="%s"]' % added_id, timeout=8000)
+
+    def test_widget_catalog_drag_drop_adds_widget_at_drop_point(self):
+        self.enter_edit_mode()
+        self.page.locator("#addWidgetBtn").click()
+        self.page.evaluate("""()=>{
+          const item=document.querySelector('.wc-item[data-widget="risk-params"]');
+          const root=document.querySelector('#tab-panels');
+          const dt=new DataTransfer();
+          dt.setData('application/x-mh-widget', JSON.stringify({id:item.dataset.widget,label:item.querySelector('b').textContent,hint:item.dataset.hint||''}));
+          root.dispatchEvent(new DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer:dt,clientX:260,clientY:220}));
+          root.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt,clientX:260,clientY:220}));
+        }""")
+        self.page.wait_for_selector('[data-widget-id^="risk-params"]')
+        box = self.page.locator('[data-widget-id^="risk-params"]').last.bounding_box()
+        self.assertIsNotNone(box)
+        self.assertGreaterEqual(box["x"], 0)
+        txt = self.page.locator('[data-widget-id^="risk-params"]').last.inner_text()
+        self.assertIn("Risk Params", txt)
+        self.assertNotIn("Custom dashboard widget slot", txt)
+
+    def test_added_trader_widget_contains_live_snapshot_not_empty_shell(self):
+        self.enter_edit_mode()
+        self.page.locator("#addWidgetBtn").click()
+        self.page.locator('.wc-item[data-widget="tracked-wallets-curated-activity"]').click()
+        self.page.wait_for_selector('[data-widget-id^="tracked-wallets-curated-activity"]')
+        self.page.wait_for_function("""()=>{
+          const e=document.querySelector('[data-widget-id^="tracked-wallets-curated-activity"]');
+          return e && /Tracked Wallets|NAME|HANDLE|ACTIVE|QUIET|No tracked/.test(e.innerText);
+        }""", timeout=8000)
+        text = self.page.locator('[data-widget-id^="tracked-wallets-curated-activity"]').last.inner_text()
+        self.assertIn("Tracked Wallets Curated Activity", text)
+        self.assertNotIn("Custom dashboard widget slot", text)
+        self.assertRegex(text, r"Name|Handle|ACTIVE|QUIET|No tracked")
 
     def test_widgets_keep_positions_when_entering_edit_mode(self):
         # Force a rich render (overview) so multiple widgets exist.
