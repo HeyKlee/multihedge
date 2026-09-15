@@ -105,6 +105,51 @@ class DashboardFrontendTests(unittest.TestCase):
     def tearDown(self):
         self.ctx.close()
 
+
+    def open_mobile_view(self, width=360, height=780):
+        self.ctx.close()
+        self.ctx = self.browser.new_context(viewport={"width": width, "height": height}, is_mobile=True)
+        self.page = self.ctx.new_page(); self.page.set_default_timeout(5000)
+        self._mock_prefs = {}
+        def route(r):
+            path = urlparse(r.request.url).path
+            if path == "/api/summary": data = SUMMARY
+            elif path == "/api/xora/summary": data = XORA_SUMMARY
+            elif path == "/api/survival": data = SURVIVAL
+            elif path == "/api/grid": data = {"enabled": False}
+            elif path == "/api/trades": data = [{"coin": "EMBER", "symbol": "EMBER", "setup": "dynamic_scalper", "side": "LONG", "entry_px": 0.01, "exit_px": 0.012, "realized_pct": 0.2, "realized_usd": 0.2, "exit_reason": "take_profit", "close_ts": 1789447079}]
+            elif path in ("/api/market", "/api/strategies", "/api/positions", "/api/exit_reason_series"): data = []
+            elif path == "/api/ui/prefs" and r.request.method == "POST":
+                try: self._mock_prefs = json.loads(r.request.post_data)
+                except Exception: self._mock_prefs = {}
+                data = {"ok": True, "prefs": self._mock_prefs}
+            elif path == "/api/ui/prefs": data = self._mock_prefs
+            elif path == "/api/widget-issues": data = []
+            else: data = {}
+            r.fulfill(status=200, content_type="application/json", body=json.dumps(data))
+        self.page.route("**/api/**", route)
+        self.page.route("https://fonts.googleapis.com/**", lambda r: r.abort())
+        self.page.route("https://fonts.gstatic.com/**", lambda r: r.abort())
+        self.page.goto(self.url, wait_until="commit", timeout=5000)
+        self.page.wait_for_selector("#themeToggle")
+
+    def assert_no_mobile_overflow(self, width):
+        metrics = self.page.evaluate("""()=>({
+          body: document.body.scrollWidth,
+          doc: document.documentElement.scrollWidth,
+          shell: document.querySelector('.app-shell')?.getBoundingClientRect().width || 0,
+          cards: [...document.querySelectorAll('.card,.kpi,.modal-panel,.widget-catalog,.chat-panel')].map(e=>{
+            const r=e.getBoundingClientRect(); return {left:r.left,right:r.right,width:r.width,visible:getComputedStyle(e).display!=='none'};
+          })
+        })""")
+        self.assertLessEqual(metrics["body"], width + 1)
+        self.assertLessEqual(metrics["doc"], width + 1)
+        self.assertLessEqual(metrics["shell"], width + 1)
+        for box in metrics["cards"]:
+            if box["visible"]:
+                self.assertGreaterEqual(box["left"], -1)
+                self.assertLessEqual(box["right"], width + 1)
+
     def open_survival(self):
         self.page.click('[data-tab="survival"]')
         self.page.wait_for_selector("text=Open paper incubator positions")
@@ -140,6 +185,51 @@ class DashboardFrontendTests(unittest.TestCase):
         self.page.goto(self.url, wait_until="commit"); self.page.wait_for_selector("#themeToggle")
         self.assertTrue(self.page.locator("#themeToggle").is_visible())
         self.assertLessEqual(self.page.evaluate("document.body.scrollWidth"), 360)
+
+
+    def test_mobile_breakpoints_keep_core_dashboard_within_viewport(self):
+        for width, height in ((320, 680), (360, 780), (414, 896), (760, 900)):
+            with self.subTest(width=width):
+                self.open_mobile_view(width, height)
+                self.assertTrue(self.page.locator("#themeToggle").is_visible())
+                self.assertTrue(self.page.locator("#settingsBtn").is_visible())
+                self.assert_no_mobile_overflow(width)
+                nav = self.page.locator("#tabNav")
+                self.assertLessEqual(nav.bounding_box()["width"], width)
+                self.assertIn(self.page.evaluate("getComputedStyle(document.querySelector('#tabNav')).overflowX"), ("auto", "scroll"))
+
+    def test_mobile_modals_catalog_and_chat_stay_within_viewport(self):
+        width = 360
+        self.open_mobile_view(width, 780)
+        self.page.locator("#settingsBtn").click()
+        self.page.wait_for_selector("#settingsModal.open")
+        self.assert_no_mobile_overflow(width)
+        panel = self.page.locator("#settingsModal .modal-panel").bounding_box()
+        self.assertLessEqual(panel["width"], width)
+        self.page.locator("#settingsClose").click()
+        self.enter_edit_mode()
+        self.page.locator("#addWidgetBtn").click()
+        self.page.wait_for_selector("#widgetCatalog.open")
+        self.assert_no_mobile_overflow(width)
+        catalog = self.page.locator("#widgetCatalog").bounding_box()
+        self.assertLessEqual(catalog["width"], width)
+        self.page.locator("#widgetCatalogClose").click()
+        self.page.locator("#xoraPet").dblclick(timeout=3000, force=True)
+        self.assert_no_mobile_overflow(width)
+        chat = self.page.locator("#chatPanel").bounding_box()
+        self.assertLessEqual(chat["width"], width)
+
+    def test_mobile_survival_tables_scroll_instead_of_expanding_page(self):
+        width = 360
+        self.open_mobile_view(width, 780)
+        self.page.click('[data-tab="survival"]')
+        self.page.wait_for_selector("#tab-panels")
+        self.assert_no_mobile_overflow(width)
+        scrolls = self.page.locator(".scroll-wrap")
+        self.assertGreater(scrolls.count(), 0)
+        first = scrolls.first.evaluate("""el=>({overflowX:getComputedStyle(el).overflowX, clientWidth:el.clientWidth, scrollWidth:el.scrollWidth})""")
+        self.assertIn(first["overflowX"], ("auto", "scroll"))
+        self.assertLessEqual(self.page.evaluate("document.body.scrollWidth"), width + 1)
 
     def test_settings_button_is_icon_only(self):
         btn = self.page.locator("#settingsBtn")
@@ -362,6 +452,44 @@ class DashboardFrontendTests(unittest.TestCase):
         self.assertIn("Tracked Wallets Curated Activity", text)
         self.assertNotIn("Custom dashboard widget slot", text)
         self.assertRegex(text, r"Name|Handle|ACTIVE|QUIET|No tracked")
+
+    def test_added_widget_content_fills_resized_widget_without_font_scaling(self):
+        self.enter_edit_mode()
+        self.page.locator("#addWidgetBtn").click()
+        self.page.locator('.wc-item[data-widget="recent-trade-history"]').click()
+        # Wait for widget to be added
+        self.page.wait_for_selector('[data-widget-id^="recent-trade-history"]')
+        # Wait for loading to finish (to have some content)
+        self.page.wait_for_function("""() => {
+          const nodes = [...document.querySelectorAll('[data-widget-id^="recent-trade-history"]')];
+          const el = nodes[nodes.length - 1];
+          return el && !el.innerText.includes("Loading live widget data") && el.querySelector('[data-catalog-body]');
+        }""", timeout=15000)
+        # Now check that the content fills the widget without font scaling
+        result = self.page.evaluate("""()=>{
+          const nodes=[...document.querySelectorAll('[data-widget-id^="recent-trade-history"]')];
+          const el=nodes[nodes.length-1];
+          // Set a specific size
+          el.style.width='467px'; el.style.height='491px';
+          const body=el.querySelector('[data-catalog-body]');
+          const sw=el.querySelector('.scroll-wrap');
+          const td=el.querySelector('td');
+          if (!el || !body || !sw || !td) return null;
+          return {
+            widgetHeight: Math.round(el.getBoundingClientRect().height),
+            bodyHeight: Math.round(body.getBoundingClientRect().height),
+            scrollHeight: Math.round(sw.getBoundingClientRect().height),
+            tdFont: getComputedStyle(td).fontSize,
+            widgetFont: getComputedStyle(el).fontSize,
+          };
+        }""")
+        self.assertIsNotNone(result)
+        self.assertGreaterEqual(result["widgetHeight"], 480)
+        self.assertGreater(result["bodyHeight"], 360)
+        self.assertGreater(result["scrollHeight"], 330)
+        self.assertEqual(result["tdFont"], "12px")
+        self.assertEqual(result["widgetFont"], "14px")
+
 
     def test_widgets_keep_positions_when_entering_edit_mode(self):
         # Force a rich render (overview) so multiple widgets exist.
