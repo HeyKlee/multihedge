@@ -1,0 +1,3 @@
+[submodule "local-ai-voice-web"]
+	path = local-ai-voice-web
+	url = https://github.com/avnshsingh/local-ai-voice-web

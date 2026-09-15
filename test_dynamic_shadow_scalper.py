@@ -239,6 +239,13 @@ class DynamicShadowScalperTests(unittest.TestCase):
         self.assertGreater(eq, ds.INITIAL_EQUITY_USD)
         self.assertAlmostEqual(eq, ds.INITIAL_EQUITY_USD + realized, places=10)
 
+    def test_entry_signal_conditions(self):
+        self.assertTrue(ds._entry_signal(candidate(change5=5.0, change1h=2.0, buy=10000, sell=3000)))
+        self.assertFalse(ds._entry_signal(candidate(change5=-1.0, change1h=2.0, buy=10000, sell=3000)))
+        self.assertFalse(ds._entry_signal(candidate(change5=0.5, change1h=2.0, buy=10000, sell=3000)))
+        self.assertFalse(ds._entry_signal(candidate(change5=5.0, change1h=2.0, buy=1000, sell=3000)))
+        self.assertTrue(ds._entry_signal(candidate(change5=2.0, change1h=-1.0, buy=40000, sell=10000)))
+
 
 if __name__ == "__main__":
     unittest.main()

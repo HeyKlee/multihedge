@@ -45,15 +45,15 @@ BIG_HOLD_S = 14 * 3600              # "day trade" hold floor for SERIOUS (14h)
 
 # Candidate grids (proportion / seconds). Deliberately modest so the search
 # stays near the current defaults and cannot explore absurd values.
-MEME_TP_GRID = (0.15, 0.20, 0.25)
-MEME_SL_GRID = (-0.12, -0.10, -0.08)
+MEME_TP_GRID = (0.10, 0.15, 0.20, 0.25)
+MEME_SL_GRID = (-0.07, -0.12, -0.10, -0.08)
 MEME_HOLD_GRID = (600, 900, 1800)
 # Trailing is the dominant exit for the MEME class (14 of 40 closes observed) and
 # it is what gives a run back: the arm sits at +8% and the distance takes 4% off
 # the peak, so trades that poke above the arm leave near +2%. Leaving the arm and
 # distance frozen at the incumbent meant the search could never price that in.
-MEME_TRAIL_ARM_GRID = (0.04, 0.08, 0.12)
-MEME_TRAIL_DIST_GRID = (0.02, 0.04, 0.06)
+MEME_TRAIL_ARM_GRID = (0.05, 0.04, 0.08, 0.12)
+MEME_TRAIL_DIST_GRID = (0.02, 0.03, 0.04, 0.06)
 
 SERIOUS_TP_GRID = (0.04, 0.05, 0.06)
 SERIOUS_SL_GRID = (-0.03, -0.025, -0.02)

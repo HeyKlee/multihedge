@@ -11,7 +11,7 @@ import time
 
 SETUP = "dynamic_scalper"
 PAPER_NOTIONAL_USD = 1.0
-MIN_ENTRY_5M_PCT = 0.5
+MIN_ENTRY_5M_PCT = 1.0
 MAX_ENTRY_5M_PCT = 8.0
 MIN_BUY_SELL_RATIO = 1.05
 INITIAL_EQUITY_USD = 10.0  # wallet seeded with $10, compounds from there
@@ -88,13 +88,23 @@ def _entry_signal(row: dict) -> bool:
         sell = float(market["sell_volume_5m_usd"])
     except (KeyError, TypeError, ValueError):
         return False
-    return (
-        all(math.isfinite(v) for v in (change5, change1h, buy, sell))
-        and MIN_ENTRY_5M_PCT <= change5 <= MAX_ENTRY_5M_PCT
+    if not all(math.isfinite(v) for v in (change5, change1h, buy, sell)):
+        return False
+    if sell <= 0:
+        return False
+    # Bullish momentum condition (existing)
+    bullish_momentum = (
+        MIN_ENTRY_5M_PCT <= change5 <= MAX_ENTRY_5M_PCT
         and change1h > 0
-        and sell > 0
         and buy / sell >= MIN_BUY_SELL_RATIO
     )
+    # Reversal evidence condition: sharp 5m rebound from a downtrend
+    reversal_evidence = (
+        change5 >= 1.0  # at least 1% 5m return
+        and change1h < 0  # 1h negative indicates prior downtrend
+        and buy / sell >= 2.0  # very strong buying pressure
+    )
+    return bullish_momentum or reversal_evidence
 
 
 def _coin_has_proven_profit_history(con: sqlite3.Connection, mint: str) -> bool:

@@ -115,6 +115,18 @@ class AutotunerTests(unittest.TestCase):
         for c in candidates:
             self.assertLess(c["trail_distance_pct"], c["trail_arm_pct"])
 
+    def test_meme_candidate_grid_includes_defensive_bearish_profile(self):
+        candidates = list(pa._candidates("MEME"))
+        self.assertIn({
+            "take_profit_pct": 0.10,
+            "stop_loss_pct": -0.07,
+            "trail_arm_pct": 0.05,
+            "trail_distance_pct": 0.03,
+            "max_hold_seconds": 600,
+            "mode": "MEME",
+        }, candidates)
+        self.assertNotIn(0.10, {c["take_profit_pct"] for c in pa._candidates("SERIOUS")})
+
     def test_tighter_trail_can_be_adopted(self):
         # Incumbent trail (arm 8% / distance 4%) leaves at +2.0%; a 2% distance
         # leaves at +5.0% on the same path. That must be adoptable once the
