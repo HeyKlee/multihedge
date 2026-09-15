@@ -15,7 +15,9 @@ MIN_ENTRY_5M_PCT = 0.5
 MAX_ENTRY_5M_PCT = 8.0
 MIN_BUY_SELL_RATIO = 1.05
 INITIAL_EQUITY_USD = 10.0  # wallet seeded with $10, compounds from there
-POSITION_FRACTION = 0.15   # use 15% of available wallet per position
+POSITION_FRACTION = 0.15   # use 15% of available wallet per proven coin
+MIN_COMPOUND_COIN_TRADES = 5
+MIN_COMPOUND_COIN_WIN_RATE = 0.60
 
 def _connect(path: Path):
     con = sqlite3.connect(Path(path), timeout=30)
@@ -93,6 +95,44 @@ def _entry_signal(row: dict) -> bool:
         and sell > 0
         and buy / sell >= MIN_BUY_SELL_RATIO
     )
+
+
+def _coin_has_proven_profit_history(con: sqlite3.Connection, mint: str) -> bool:
+    """Allow compounding only after this exact mint has proven profitable.
+
+    The proof is deliberately conservative: at least five valid closed paper
+    trades for this mint, net positive realized P&L, and >=60% winners. Invalid
+    historical ledger rows fail closed to the original $1 entry size.
+    """
+    rows = con.execute(
+        "SELECT qty,entry_px,realized_pct,realized_usd FROM mh_trades "
+        "WHERE setup=? AND coin=? ORDER BY close_ts ASC",
+        (SETUP, str(mint)),
+    ).fetchall()
+    if len(rows) < MIN_COMPOUND_COIN_TRADES:
+        return False
+    valid = []
+    for row in rows:
+        try:
+            qty, entry, pct, usd = (float(row["qty"]), float(row["entry_px"]),
+                                    float(row["realized_pct"]), float(row["realized_usd"]))
+        except (KeyError, TypeError, ValueError):
+            return False
+        if (not all(math.isfinite(v) for v in (qty, entry, pct, usd))
+                or qty <= 0 or entry <= 0
+                or abs(qty * entry * pct - usd) > 1e-7):
+            return False
+        valid.append(usd)
+    wins = sum(1 for usd in valid if usd > 0)
+    return sum(valid) > 0 and wins / len(valid) >= MIN_COMPOUND_COIN_WIN_RATE
+
+
+def _target_notional(con: sqlite3.Connection, mint: str, wallet_free: float) -> float:
+    if wallet_free < PAPER_NOTIONAL_USD:
+        return 0.0
+    if _coin_has_proven_profit_history(con, mint):
+        return min(wallet_free, wallet_free * POSITION_FRACTION)
+    return PAPER_NOTIONAL_USD
 
 
 def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None = None) -> dict:
@@ -212,7 +252,10 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
                 continue
             if not math.isfinite(price) or price <= 0:
                 continue
-            raw_qty = wallet_free * POSITION_FRACTION / price
+            target_notional = _target_notional(con, mint, wallet_free)
+            if target_notional < 0.25:
+                continue
+            raw_qty = target_notional / price
             if raw_qty * price < 0.25:  # skip if position would be under $0.25
                 continue
             con.execute(

@@ -11,7 +11,7 @@ from test_dynamic_shadow_scalper import candidate
 
 
 class WalletRepairTests(unittest.TestCase):
-    def test_wallet_uses_explicit_database_and_bounds_batch_allocations(self):
+    def test_wallet_uses_explicit_database_and_unproven_coins_stay_at_one_dollar(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / 'paper.db'
             candidates = []
@@ -26,10 +26,11 @@ class WalletRepairTests(unittest.TestCase):
                 equity = con.execute('SELECT equity_usd FROM mh_accounts WHERE trader=?', (ds.SETUP,)).fetchone()[0]
                 notionals = [r[0] for r in con.execute('SELECT qty*entry_usd FROM mh_dynamic_scalp_positions ORDER BY rowid')]
             self.assertAlmostEqual(equity, 10.0)
+            self.assertEqual(len(notionals), 10)
+            self.assertTrue(all(abs(n - ds.PAPER_NOTIONAL_USD) < 1e-9 for n in notionals))
             self.assertLessEqual(sum(notionals), equity)
-            self.assertLess(notionals[1], notionals[0])
 
-    def test_missing_wallet_reconciles_history_before_new_entries(self):
+    def test_missing_wallet_reconciles_history_but_unproven_new_coin_stays_at_one_dollar(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / 'paper.db'
             with ds._connect(db) as con:
@@ -39,7 +40,34 @@ class WalletRepairTests(unittest.TestCase):
                 equity = con.execute('SELECT equity_usd FROM mh_accounts WHERE trader=?', (ds.SETUP,)).fetchone()[0]
                 notional = con.execute('SELECT qty*entry_usd FROM mh_dynamic_scalp_positions').fetchone()[0]
             self.assertAlmostEqual(equity, 8)
-            self.assertAlmostEqual(notional, 8 * ds.POSITION_FRACTION)
+            self.assertAlmostEqual(notional, ds.PAPER_NOTIONAL_USD)
+
+    def test_only_a_coin_with_proven_profit_history_compounds_position_size(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / 'paper.db'
+            with ds._connect(db) as con:
+                con.execute('CREATE TABLE IF NOT EXISTS mh_accounts (trader TEXT PRIMARY KEY, equity_usd REAL NOT NULL, started_usd REAL NOT NULL)')
+                con.execute('INSERT INTO mh_accounts VALUES(?,?,?)', (ds.SETUP, 20.0, ds.INITIAL_EQUITY_USD))
+                for i in range(ds.MIN_COMPOUND_COIN_TRADES):
+                    con.execute('INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,exit_px,qty,realized_pct,realized_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+                                (candidate()['mint'], 'PEPE', ds.SETUP, 'LONG', i, i + 1, 1.0, 1.1, 1.0, 0.1, 0.1, 'take_profit'))
+            ds.tick(db, [candidate(price=1.0)], now=1000)
+            with sqlite3.connect(db) as con:
+                notional = con.execute('SELECT qty*entry_usd FROM mh_dynamic_scalp_positions').fetchone()[0]
+            self.assertAlmostEqual(notional, 20.0 * ds.POSITION_FRACTION)
+
+    def test_positive_one_off_coin_history_is_not_enough_to_compound(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / 'paper.db'
+            with ds._connect(db) as con:
+                con.execute('CREATE TABLE IF NOT EXISTS mh_accounts (trader TEXT PRIMARY KEY, equity_usd REAL NOT NULL, started_usd REAL NOT NULL)')
+                con.execute('INSERT INTO mh_accounts VALUES(?,?,?)', (ds.SETUP, 20.0, ds.INITIAL_EQUITY_USD))
+                con.execute('INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,exit_px,qty,realized_pct,realized_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+                            (candidate()['mint'], 'PEPE', ds.SETUP, 'LONG', 1, 2, 1.0, 1.5, 1.0, 0.5, 0.5, 'take_profit'))
+            ds.tick(db, [candidate(price=1.0)], now=1000)
+            with sqlite3.connect(db) as con:
+                notional = con.execute('SELECT qty*entry_usd FROM mh_dynamic_scalp_positions').fetchone()[0]
+            self.assertAlmostEqual(notional, ds.PAPER_NOTIONAL_USD)
 
 
 class PolicyEvidenceTests(unittest.TestCase):
