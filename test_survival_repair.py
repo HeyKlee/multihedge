@@ -69,6 +69,58 @@ class WalletRepairTests(unittest.TestCase):
                 notional = con.execute('SELECT qty*entry_usd FROM mh_dynamic_scalp_positions').fetchone()[0]
             self.assertAlmostEqual(notional, ds.PAPER_NOTIONAL_USD)
 
+    def test_negative_established_coin_is_quarantined_but_profitable_coin_is_eligible(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / 'paper.db'
+            losing = candidate(price=1.0)
+            winning = candidate(price=1.0)
+            winning['mint'] = 'winning-mint'
+            with ds._connect(db) as con:
+                for mint, pct in ((losing['mint'], -0.1), (winning['mint'], 0.1)):
+                    for i in range(ds.MIN_COMPOUND_COIN_TRADES):
+                        con.execute(
+                            'INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,exit_px,qty,realized_pct,realized_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+                            (mint, mint, ds.SETUP, 'LONG', i, i + 1, 1.0, 1.0 + pct,
+                             1.0, pct, pct, 'take_profit' if pct > 0 else 'stop_loss'),
+                        )
+            result = ds.tick(db, [losing, winning], now=1000)
+            self.assertEqual(result['opened'], 1)
+            with sqlite3.connect(db) as con:
+                opened = {row[0] for row in con.execute('SELECT mint FROM mh_dynamic_scalp_positions')}
+            self.assertNotIn(losing['mint'], opened)
+            self.assertIn(winning['mint'], opened)
+
+    def test_malformed_established_coin_history_is_quarantined(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / 'paper.db'
+            row = candidate(price=1.0)
+            with ds._connect(db) as con:
+                con.execute('CREATE TABLE IF NOT EXISTS mh_accounts (trader TEXT PRIMARY KEY, equity_usd REAL NOT NULL, started_usd REAL NOT NULL)')
+                con.execute('INSERT INTO mh_accounts VALUES(?,?,?)', (ds.SETUP, 10.0, ds.INITIAL_EQUITY_USD))
+                for i in range(ds.MIN_COMPOUND_COIN_TRADES):
+                    realized = 0.1 if i < ds.MIN_COMPOUND_COIN_TRADES - 1 else 0.2
+                    con.execute(
+                        'INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,exit_px,qty,realized_pct,realized_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+                        (row['mint'], 'PEPE', ds.SETUP, 'LONG', i, i + 1, 1.0, 1.1,
+                         1.0, 0.1, realized, 'take_profit'),
+                    )
+            self.assertEqual(ds.tick(db, [row], now=1000)['opened'], 0)
+
+    def test_stop_loss_cooldown_blocks_only_immediate_same_mint_reentry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / 'paper.db'
+            row = candidate(price=1.0)
+            with ds._connect(db) as con:
+                con.execute(
+                    'INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,exit_px,qty,realized_pct,realized_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+                    (row['mint'], 'PEPE', ds.SETUP, 'LONG', 1, 1000, 1.0, 0.9,
+                     1.0, -0.1, -0.1, 'stop_loss'),
+                )
+            self.assertEqual(ds.tick(db, [row], now=1001)['opened'], 0)
+            self.assertEqual(
+                ds.tick(db, [row], now=1000 + ds.STOP_LOSS_REENTRY_COOLDOWN_SECONDS)['opened'], 1,
+            )
+
 
 class PolicyEvidenceTests(unittest.TestCase):
     def test_new_trade_records_policy_but_legacy_position_is_not_relabelled(self):

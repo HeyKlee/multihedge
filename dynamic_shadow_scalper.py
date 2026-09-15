@@ -18,6 +18,7 @@ INITIAL_EQUITY_USD = 10.0  # wallet seeded with $10, compounds from there
 POSITION_FRACTION = 0.15   # use 15% of available wallet per proven coin
 MIN_COMPOUND_COIN_TRADES = 5
 MIN_COMPOUND_COIN_WIN_RATE = 0.60
+STOP_LOSS_REENTRY_COOLDOWN_SECONDS = 30 * 60
 
 def _connect(path: Path):
     con = sqlite3.connect(Path(path), timeout=30)
@@ -145,6 +146,51 @@ def _target_notional(con: sqlite3.Connection, mint: str, wallet_free: float) -> 
     return PAPER_NOTIONAL_USD
 
 
+def _coin_is_quarantined(con: sqlite3.Connection, mint: str) -> bool:
+    """Fail closed on an established mint whose paper ledger is unprofitable.
+
+    A fresh coin remains eligible for its $1 probationary entry. Once a mint has
+    five closes, malformed accounting or a negative cumulative realised P&L
+    blocks further shadow entries. This never affects live inventory or exits.
+    """
+    rows = con.execute(
+        "SELECT qty,entry_px,realized_pct,realized_usd FROM mh_trades "
+        "WHERE setup=? AND coin=? ORDER BY close_ts ASC",
+        (SETUP, str(mint)),
+    ).fetchall()
+    if len(rows) < MIN_COMPOUND_COIN_TRADES:
+        return False
+    realized = []
+    for row in rows:
+        try:
+            qty, entry, pct, usd = (float(row["qty"]), float(row["entry_px"]),
+                                    float(row["realized_pct"]), float(row["realized_usd"]))
+        except (KeyError, TypeError, ValueError):
+            return True
+        if (not all(math.isfinite(value) for value in (qty, entry, pct, usd))
+                or qty <= 0 or entry <= 0
+                or not math.isclose(qty * entry * pct, usd, rel_tol=1e-9, abs_tol=1e-7)):
+            return True
+        realized.append(usd)
+    return sum(realized) < 0
+
+
+def _in_stop_loss_cooldown(con: sqlite3.Connection, mint: str, now: float) -> bool:
+    """Block immediate same-mint re-entry after a realised stop loss."""
+    row = con.execute(
+        "SELECT MAX(close_ts) FROM mh_trades "
+        "WHERE setup=? AND coin=? AND exit_reason='stop_loss'",
+        (SETUP, str(mint)),
+    ).fetchone()
+    if row is None or row[0] is None:
+        return False
+    try:
+        closed = float(row[0])
+    except (TypeError, ValueError):
+        return True
+    return not math.isfinite(closed) or now - closed < STOP_LOSS_REENTRY_COOLDOWN_SECONDS
+
+
 def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None = None) -> dict:
     """Advance paper positions once using one immutable candidate snapshot.
 
@@ -253,7 +299,9 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
         wallet_free = max(0.0, equity - committed)
         for row in candidates:
             mint = row.get("mint")
-            if not mint or mint in existing or mint in closed_mints or not _entry_signal(row):
+            if (not mint or mint in existing or mint in closed_mints
+                    or not _entry_signal(row) or _coin_is_quarantined(con, mint)
+                    or _in_stop_loss_cooldown(con, mint, now)):
                 continue
             try:
                 price = float(row["market"]["latest_usd"])
