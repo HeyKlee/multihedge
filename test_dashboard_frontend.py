@@ -88,6 +88,10 @@ class DashboardFrontendTests(unittest.TestCase):
                 data = {"ok": True, "prefs": self._mock_prefs}
             elif path == "/api/ui/prefs":
                 data = self._mock_prefs
+            elif path == "/api/widget-issues" and r.request.method == "POST":
+                data = {"ok": True, "id": 42, "status": "new"}
+            elif path == "/api/widget-issues":
+                data = []
             else: data = {}
             r.fulfill(status=200, content_type="application/json", body=json.dumps(data))
         self.page.route("**/api/**", route)
@@ -140,6 +144,31 @@ class DashboardFrontendTests(unittest.TestCase):
         self.assertTrue(btn.get_attribute("aria-label"))
         self.assertEqual(btn.inner_text().strip(), "\u2699")
         self.assertNotRegex(btn.inner_text().strip(), r"(?i)settings?|configure")
+
+    def test_widget_report_icon_opens_modal_and_posts_context(self):
+        self.page.wait_for_selector(".widget-report-btn")
+        captured = {}
+
+        def capture_issue(route):
+            captured["payload"] = json.loads(route.request.post_data)
+            route.fulfill(status=200, content_type="application/json", body=json.dumps({"ok": True, "id": 77, "status": "new"}))
+
+        self.page.route("**/api/widget-issues", capture_issue)
+        first = self.page.locator(".widget-report-btn").first
+        self.assertEqual(first.inner_text().strip(), "🐞")
+        self.assertTrue(first.get_attribute("aria-label"))
+        first.click()
+        self.page.wait_for_selector("#widgetIssueModal.open")
+        self.page.fill("#widgetIssueText", "this card is too cramped on my phone")
+        self.page.click("#widgetIssueSubmit")
+        self.page.wait_for_function("window.__issueDone === true || document.querySelector('#widgetIssueModal')?.classList.contains('open') === false", timeout=3000)
+        self.assertIn("payload", captured)
+        payload = captured["payload"]
+        self.assertEqual(payload["issue"], "this card is too cramped on my phone")
+        self.assertTrue(payload["widget_id"])
+        self.assertTrue(payload["widget_title"])
+        self.assertIn("visible_text", payload)
+        self.assertEqual(payload["context"]["route"], "/")
 
     def test_chat_pet_opens_chat_and_uses_bounded_speech_bubble(self):
         pet = self.page.locator("#xoraPet")

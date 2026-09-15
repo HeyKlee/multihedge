@@ -728,6 +728,17 @@ def api_ui_prefs_save(payload: dict = Body(...)):
         return JSONResponse(status_code=400, content={"ok": False, "error": str(exc)})
 
 
+@app.get("/api/widget-issues")
+def api_widget_issues(limit: int = 50, status: str | None = None):
+    return mh_ui.list_widget_issues(limit, status)
+
+
+@app.post("/api/widget-issues")
+def api_widget_issue_file(payload: dict = Body(...)):
+    result = mh_ui.file_widget_issue(payload)
+    return JSONResponse(status_code=200 if result.get("ok") else 400, content=result)
+
+
 def _group_profitability(rows, key_fn, min_trades=1):
     groups = {}
     for row in rows:
@@ -1038,7 +1049,7 @@ button,select{font:inherit}.app-shell{width:min(1600px,100%);min-height:100vh;ma
 .ticker{overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--surface);margin-bottom:16px;white-space:nowrap;padding:9px 0}.ticker-track{display:flex;gap:30px;animation:scroll 40s linear infinite;width:max-content}@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}.ticker-item{font:11px 'IBM Plex Mono';color:var(--text-dim);display:inline-flex;gap:6px;padding:0 8px;white-space:nowrap}.ticker-item b{color:var(--text)}.ticker-item .up{color:var(--green)}.ticker-item .down{color:var(--red)}
 .hero{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin-bottom:18px}.kpi{position:relative;background:var(--surface);border:1px solid var(--border);padding:18px;border-radius:12px;box-shadow:var(--shadow);overflow:hidden}.kpi .lbl{font-size:10px;font-weight:700;color:var(--text-dim);letter-spacing:.06em;text-transform:uppercase;padding-right:100px}.kpi .val{font-family:'Space Grotesk';font-size:25px;font-weight:700;letter-spacing:-.03em;color:var(--navy);margin-top:3px}.kpi .val.neg{color:var(--red)}.kpi-detail{color:var(--text-dim)}
 .card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:15px;box-shadow:var(--shadow);overflow-x:auto}.card h3{font-family:'Space Grotesk';font-size:15px;font-weight:700;color:var(--navy);letter-spacing:-.01em;margin-bottom:13px;padding-right:110px}.grid{display:grid;gap:15px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}canvas{display:block;max-width:100%;width:100%;height:130px;background:var(--chart-bg);border:1px solid var(--border);border-radius:8px}#mkcv,#gld-cv{height:min(56vh,520px);min-height:300px}.tfbar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 8px}.tfbar button{min-height:32px;font:600 11px 'IBM Plex Mono';background:var(--surface-2);color:var(--text-dim);border:1px solid var(--border);border-radius:7px;padding:5px 10px;cursor:pointer}.tfbar button:hover{border-color:var(--lav);color:var(--lav)}.tfbar button.on{background:var(--lav);color:var(--surface);border-color:var(--lav)}.tfbar button:disabled{opacity:.35;cursor:not-allowed}
-.toolbar-btn{min-height:38px;padding:7px 11px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);color:var(--text);font-weight:650;font-size:12px;cursor:pointer}.toolbar-btn:hover{border-color:var(--lav);color:var(--lav)}button:focus-visible,select:focus-visible{outline:2px solid var(--lav);outline-offset:2px}.update-state{font:11px 'IBM Plex Mono';color:var(--text-faint);white-space:nowrap}.widget-tools{position:absolute;right:12px;top:12px;display:flex;gap:4px;z-index:3}.widget-tools button{width:28px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--surface-2);color:var(--text-dim);cursor:pointer}.widget-tools button:hover{color:var(--lav);border-color:var(--lav)}.widget-drag{cursor:grab}.widget-dragging{opacity:.48}.widget-wide{grid-column:1/-1}.loading{padding:32px;text-align:center;color:var(--text-dim)}.load-error{padding:12px 14px;border:1px solid var(--red);border-radius:8px;color:var(--red);background:var(--red-dim);margin-bottom:14px}
+.toolbar-btn{min-height:38px;padding:7px 11px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);color:var(--text);font-weight:650;font-size:12px;cursor:pointer}.toolbar-btn:hover{border-color:var(--lav);color:var(--lav)}button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--lav);outline-offset:2px}.update-state{font:11px 'IBM Plex Mono';color:var(--text-faint);white-space:nowrap}.widget-tools{position:absolute;right:12px;top:12px;display:flex;gap:4px;z-index:3}.widget-tools button{width:28px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--surface-2);color:var(--text-dim);cursor:pointer}.widget-tools button:hover{color:var(--lav);border-color:var(--lav)}.widget-report-btn{position:absolute;right:10px;top:10px;width:28px;height:28px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text-dim);cursor:pointer;display:grid;place-items:center;font-size:13px;z-index:6;opacity:.72}.widget-report-btn:hover{opacity:1;color:var(--red);border-color:var(--red)}.free-edit .widget-report-btn{display:none}.issue-modal-field{margin:12px 0}.issue-modal-field label{display:block;font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}.issue-modal-field textarea{width:100%;min-height:110px;resize:vertical;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-2);color:var(--text);padding:10px;font:13px 'Inter'}.issue-modal-field select,.issue-modal-field input[type=file]{width:100%;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface-2);color:var(--text);padding:8px;font-size:12px}.issue-widget-context{max-height:130px;overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);padding:9px;font:11px 'IBM Plex Mono';color:var(--text-dim);white-space:pre-wrap}.widget-drag{cursor:grab}.widget-dragging{opacity:.48}.widget-wide{grid-column:1/-1}.loading{padding:32px;text-align:center;color:var(--text-dim)}.load-error{padding:12px 14px;border:1px solid var(--red);border-radius:8px;color:var(--red);background:var(--red-dim);margin-bottom:14px}
 table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}th,td{padding:10px 11px;text-align:left;border-bottom:1px solid var(--border)}th{color:var(--text-faint);font-weight:700;font-size:10px;letter-spacing:.05em;text-transform:uppercase;background:var(--surface-2)}tr:last-child td{border-bottom:0}.pos{color:var(--green)}.neg{color:var(--red)}.pilltag{display:inline-block;padding:3px 9px;border-radius:12px;font-size:10px;font-weight:700}.pilltag.ok{background:var(--green-dim);color:var(--green);border:1px solid var(--border)}.pilltag.no{background:var(--red-dim);color:var(--red);border:1px solid var(--border)}.ok-tag{display:inline-block;padding:3px 9px;border-radius:12px;font-size:10px;font-weight:700;background:var(--green-dim);color:var(--green)}.no-tag{display:inline-block;padding:3px 9px;border-radius:12px;font-size:10px;font-weight:700;background:var(--red-dim);color:var(--red)}.scroll-wrap{max-height:230px;overflow:auto;border-radius:8px;border:1px solid var(--border)}.scroll-wrap table thead th{position:sticky;top:0;background:var(--surface-2);z-index:2}.chart-flex{display:flex;gap:16px;align-items:flex-start}.chart-legend{min-width:170px;font:11px 'IBM Plex Mono';display:flex;flex-direction:column;gap:7px}.whats{font-size:13px;color:var(--text-dim);line-height:1.65}.whats b{color:var(--navy);font-family:'Space Grotesk';font-size:13px}
 @media (max-width:1300px){.ticker{display:none}}
 @media (max-width:1050px){.app-shell{grid-template-columns:190px minmax(0,1fr)}.sidebar{padding-left:10px;padding-right:10px}.workspace{padding:24px 20px 60px}.brand{padding-left:8px}.brand-sub{display:none}.hero{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -1175,6 +1186,20 @@ html{background:radial-gradient(circle at 50% 10%,#2bc65f 0,#174b2a 36%,#0d1512 
     </div>
   </div>
 </div>
+<!-- Widget issue modal -->
+<div class="modal-overlay" id="widgetIssueModal">
+  <div class="modal-panel" style="max-width:min(680px,94vw)">
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px">
+      <div><h2>Report widget issue</h2><div class="lbl" id="widgetIssueSubtitle" style="font-size:11px;color:var(--text-dim)">Dashboard widget</div></div>
+      <button style="width:32px;height:32px;border:0;background:var(--surface-2);border-radius:8px;cursor:pointer;color:var(--text-dim);font-size:16px;display:grid;place-items:center" id="widgetIssueClose">&times;</button>
+    </div>
+    <div class="issue-modal-field"><label for="widgetIssueText">What looks wrong?</label><textarea id="widgetIssueText" maxlength="4000" placeholder="Say it your way, e.g. this number is cramped, this card looks wrong on mobile, this says live when it should say paper..."></textarea></div>
+    <div class="issue-modal-field"><label for="widgetIssueSeverity">Severity</label><select id="widgetIssueSeverity"><option value="confusing">Confusing</option><option value="annoying">Annoying</option><option value="broken">Broken</option><option value="dangerous">Dangerous</option></select></div>
+    <div class="issue-modal-field"><label for="widgetIssueScreenshot">Upload screenshot optional</label><input id="widgetIssueScreenshot" type="file" accept="image/png,image/jpeg,image/webp"></div>
+    <div class="issue-modal-field"><label>Captured widget context</label><div class="issue-widget-context" id="widgetIssueContext"></div></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="toolbar-btn" id="widgetIssueCancel" type="button">Cancel</button><button class="toolbar-btn" id="widgetIssueSubmit" type="button">Submit report</button></div>
+  </div>
+</div>
 <!-- Widget catalog (edit-mode only) -->
 <div class="widget-catalog" id="widgetCatalog" role="dialog" aria-label="Add widget">
   <div class="widget-catalog-head"><span>Add widget</span><button type="button" id="widgetCatalogClose" aria-label="Close catalog">&times;</button></div>
@@ -1235,6 +1260,11 @@ function initTiles(){
       if(!card.dataset.widgetTitle)card.dataset.widgetTitle=(card.querySelector('h3')?.textContent||card.querySelector('.lbl')?.textContent||card.dataset.widgetId).trim();
       card.classList.remove('tile-s4','tile-s6','tile-s8','tile-s12');
       const old=card.querySelector('.tile-resize');if(old)old.remove();
+      if(!card.querySelector(':scope > .widget-report-btn')){
+        const bug=document.createElement('button');bug.type='button';bug.className='widget-report-btn';bug.title='Report widget issue';bug.setAttribute('aria-label','Report issue for '+card.dataset.widgetTitle);bug.textContent='🐞';
+        bug.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openWidgetIssue(card);});
+        card.appendChild(bug);
+      }
     });
   }));
 }
@@ -1482,6 +1512,63 @@ setInterval(()=>{
 },15000);
 function updateClocks(){const n=new Date();const el=document.getElementById('ts');if(el)el.textContent=n.toLocaleTimeString();}
 setInterval(updateClocks,1000);updateClocks();
+
+let ISSUE_WIDGET=null;
+function widgetIssueSnapshot(card){
+  const rect=card.getBoundingClientRect();
+  const text=(card.innerText||'').replace(/\s+/g,' ').trim().slice(0,5000);
+  const context={
+    widget_id:card.dataset.widgetId||'',
+    widget_title:card.dataset.widgetTitle||'',
+    tab:TAB,
+    route:location.pathname,
+    viewport:{width:window.innerWidth,height:window.innerHeight},
+    bounds:{x:Math.round(rect.x),y:Math.round(rect.y),w:Math.round(rect.width),h:Math.round(rect.height)},
+    visible_text:text,
+    headings:[...card.querySelectorAll('h3,.lbl,th')].map(x=>(x.textContent||'').trim()).filter(Boolean).slice(0,30),
+    classes:[...card.classList].slice(0,20)
+  };
+  return context;
+}
+function openWidgetIssue(card){
+  ISSUE_WIDGET=card;
+  const snap=widgetIssueSnapshot(card);
+  document.getElementById('widgetIssueSubtitle').textContent=(snap.widget_title||snap.widget_id)+' · '+TAB;
+  document.getElementById('widgetIssueText').value='';
+  document.getElementById('widgetIssueSeverity').value='confusing';
+  document.getElementById('widgetIssueScreenshot').value='';
+  document.getElementById('widgetIssueContext').textContent=JSON.stringify(snap,null,2);
+  document.getElementById('widgetIssueModal').classList.add('open');
+  setTimeout(()=>document.getElementById('widgetIssueText')?.focus(),50);
+}
+function closeWidgetIssue(){document.getElementById('widgetIssueModal').classList.remove('open');ISSUE_WIDGET=null;}
+function readIssueScreenshot(file){
+  return new Promise((resolve,reject)=>{
+    if(!file){resolve(null);return;}
+    if(!['image/png','image/jpeg','image/webp'].includes(file.type)){reject(new Error('Screenshot must be PNG, JPEG, or WebP'));return;}
+    if(file.size>2000000){reject(new Error('Screenshot must be under 2 MB'));return;}
+    const rd=new FileReader();rd.onload=()=>resolve({mime:file.type,data:String(rd.result||'')});rd.onerror=()=>reject(new Error('Could not read screenshot'));rd.readAsDataURL(file);
+  });
+}
+async function submitWidgetIssue(){
+  if(!ISSUE_WIDGET)return;
+  const issue=(document.getElementById('widgetIssueText').value||'').trim();
+  if(!issue){showToast('Tell me what looks wrong first');return;}
+  const snap=widgetIssueSnapshot(ISSUE_WIDGET);
+  let screenshot=null;
+  try{screenshot=await readIssueScreenshot(document.getElementById('widgetIssueScreenshot').files[0]);}catch(e){showToast(e.message);return;}
+  const payload={widget_id:snap.widget_id,widget_title:snap.widget_title,tab:TAB,route:location.pathname,severity:document.getElementById('widgetIssueSeverity').value,issue,visible_text:snap.visible_text,context:snap,screenshot};
+  try{
+    const r=await fetch('/api/widget-issues',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json();
+    if(d.ok){showToast('Widget issue reported #'+d.id);closeWidgetIssue();}
+    else showToast('Report failed: '+(d.error||'unknown'));
+  }catch(e){showToast('Report failed');}
+}
+document.getElementById('widgetIssueClose')?.addEventListener('click',closeWidgetIssue);
+document.getElementById('widgetIssueCancel')?.addEventListener('click',closeWidgetIssue);
+document.getElementById('widgetIssueSubmit')?.addEventListener('click',submitWidgetIssue);
+document.getElementById('widgetIssueModal')?.addEventListener('click',e=>{if(e.target===e.currentTarget)closeWidgetIssue();});
 document.getElementById('clockBtn')?.addEventListener('click',()=>run());
 document.getElementById('cancelEditBtn')?.addEventListener('click',()=>cancelEdit());
 document.getElementById('addWidgetBtn')?.addEventListener('click',()=>toggleCatalog());

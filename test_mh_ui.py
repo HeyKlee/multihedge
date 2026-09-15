@@ -181,6 +181,51 @@ class ChatFailClosedTests(unittest.TestCase):
         self.assertIn("RuntimeError", result.get("error", "") or result.get("detail", ""))
 
 
+class WidgetIssueQueueTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = Path(self.tmp.name) / "test.db"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_file_widget_issue_saves_sanitized_context(self):
+        result = mh_ui.file_widget_issue({
+            "widget_id": "survival-live-gate",
+            "widget_title": "Live Gate",
+            "tab": "survival",
+            "route": "/",
+            "severity": "dangerous",
+            "issue": "this says live when it should be paper",
+            "visible_text": "Status LIVE token abc",
+            "context": {"api_key": "do-not-store", "display": {"status": "LIVE"}},
+        }, self.db)
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["widget_id"], "survival-live-gate")
+
+        rows = mh_ui.list_widget_issues(10, path=self.db)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["status"], "new")
+        self.assertEqual(rows[0]["severity"], "dangerous")
+        self.assertEqual(rows[0]["context"]["api_key"], "[redacted]")
+        self.assertEqual(rows[0]["context"]["display"]["status"], "LIVE")
+
+    def test_file_widget_issue_requires_user_description(self):
+        result = mh_ui.file_widget_issue({"widget_id": "xora-wallet", "issue": "   "}, self.db)
+        self.assertFalse(result["ok"])
+        self.assertIn("issue_required", result.get("error", ""))
+
+    def test_file_widget_issue_accepts_small_base64_screenshot(self):
+        result = mh_ui.file_widget_issue({
+            "widget_id": "xora-wallet",
+            "issue": "mobile view looks cramped",
+            "screenshot": {"mime": "image/png", "data": "iVBORw0KGgo="},
+        }, self.db)
+        self.assertTrue(result["ok"])
+        rows = mh_ui.list_widget_issues(10, path=self.db)
+        self.assertTrue(rows[0]["has_screenshot"])
+
+
 class RequestQueueTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

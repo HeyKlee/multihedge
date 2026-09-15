@@ -13,8 +13,10 @@ The SQLite busy wait is bounded for the same reason documented in
 test_db_lock_discipline: an unbounded writer wait turns one contended write into
 a stack-wide stall.
 """
+import base64
 import json
 import os
+import re
 import sqlite3
 import threading
 import time
@@ -34,6 +36,10 @@ MAX_HISTORY_TURNS = 12
 MAX_TITLE_CHARS = 160
 MAX_DETAIL_CHARS = 4000
 MAX_NOTE_CHARS = 2000
+MAX_WIDGET_ISSUE_CHARS = 4000
+MAX_WIDGET_CONTEXT_CHARS = 12000
+MAX_SCREENSHOT_BYTES = 2_000_000
+ALLOWED_SCREENSHOT_MIME = {"image/png", "image/jpeg", "image/webp"}
 
 ALLOWED_THEMES = ("light", "dark", "system")
 ALLOWED_DENSITY = ("comfortable", "compact")
@@ -69,6 +75,15 @@ def _schema(con):
             "verdict TEXT, verdict_json TEXT, decision TEXT, decision_note TEXT)")
         con.execute(
             "CREATE INDEX IF NOT EXISTS ix_ui_requests_ts ON ui_requests(ts)")
+        con.execute(
+            "CREATE TABLE IF NOT EXISTS dashboard_widget_issues ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, updated_ts REAL,"
+            "widget_id TEXT, widget_title TEXT, tab TEXT, route TEXT,"
+            "severity TEXT, issue TEXT, visible_text TEXT, context_json TEXT,"
+            "screenshot_mime TEXT, screenshot_b64 TEXT, status TEXT)")
+        con.execute(
+            "CREATE INDEX IF NOT EXISTS ix_widget_issues_status_ts "
+            "ON dashboard_widget_issues(status, ts)")
 
 
 def default_prefs():
@@ -229,6 +244,156 @@ def save_prefs(raw, path=None):
     finally:
         con.close()
     return prefs
+
+
+# -------------------------------------------------------- widget issues ------
+
+_SAFE_ID_RE = re.compile(r"^[a-zA-Z0-9_.:-]{1,100}$")
+_ALLOWED_SEVERITIES = ("annoying", "confusing", "broken", "dangerous")
+
+
+def _clean_text(value, limit):
+    if not isinstance(value, str):
+        value = "" if value is None else str(value)
+    text = " ".join(value.replace("\x00", " ").split())
+    return text[:limit]
+
+
+def _clean_widget_id(value):
+    text = _clean_text(value, 100)
+    if not text or not _SAFE_ID_RE.match(text):
+        return "unknown-widget"
+    return text
+
+
+def _safe_context(raw):
+    if not isinstance(raw, dict):
+        raw = {}
+    blocked = ("secret", "token", "password", "private", "seed", "api_key", "apikey", "authorization")
+
+    def scrub(obj, depth=0):
+        if depth > 4:
+            return "[truncated]"
+        if isinstance(obj, dict):
+            out = {}
+            for k, v in list(obj.items())[:80]:
+                key = str(k)[:80]
+                if any(b in key.lower() for b in blocked):
+                    out[key] = "[redacted]"
+                else:
+                    out[key] = scrub(v, depth + 1)
+            return out
+        if isinstance(obj, list):
+            return [scrub(v, depth + 1) for v in obj[:80]]
+        if isinstance(obj, (int, float, bool)) or obj is None:
+            return obj
+        return _clean_text(obj, 1000)
+
+    cleaned = scrub(raw)
+    encoded = json.dumps(cleaned, sort_keys=True, allow_nan=False)
+    if len(encoded) > MAX_WIDGET_CONTEXT_CHARS:
+        cleaned = {"truncated": True, "preview": encoded[:MAX_WIDGET_CONTEXT_CHARS]}
+    return cleaned
+
+
+def _normalise_screenshot(payload):
+    if not payload:
+        return None, None
+    if not isinstance(payload, dict):
+        raise ValueError("screenshot_invalid")
+    mime = _clean_text(payload.get("mime"), 60).lower()
+    data = payload.get("data") or ""
+    if mime not in ALLOWED_SCREENSHOT_MIME:
+        raise ValueError("screenshot_mime_invalid")
+    if not isinstance(data, str) or not data:
+        raise ValueError("screenshot_missing")
+    if data.startswith("data:"):
+        try:
+            head, data = data.split(",", 1)
+            if ";base64" not in head:
+                raise ValueError
+        except ValueError:
+            raise ValueError("screenshot_data_invalid")
+    try:
+        raw = base64.b64decode(data, validate=True)
+    except Exception:
+        raise ValueError("screenshot_base64_invalid")
+    if len(raw) > MAX_SCREENSHOT_BYTES:
+        raise ValueError("screenshot_too_large")
+    return mime, base64.b64encode(raw).decode("ascii")
+
+
+def file_widget_issue(payload, path=None):
+    """Persist a dashboard widget issue report. Display-layer only, no code changes."""
+    if not isinstance(payload, dict):
+        return {"ok": False, "error": "payload_must_be_object"}
+    widget_id = _clean_widget_id(payload.get("widget_id"))
+    widget_title = _clean_text(payload.get("widget_title") or widget_id, 160)
+    tab = _clean_text(payload.get("tab"), 60) or "unknown"
+    route = _clean_text(payload.get("route"), 200) or "/"
+    issue = _clean_text(payload.get("issue"), MAX_WIDGET_ISSUE_CHARS)
+    if not issue:
+        return {"ok": False, "error": "issue_required"}
+    severity = _clean_text(payload.get("severity"), 20) or "confusing"
+    if severity not in _ALLOWED_SEVERITIES:
+        return {"ok": False, "error": "severity_invalid"}
+    visible_text = _clean_text(payload.get("visible_text"), 5000)
+    context = _safe_context(payload.get("context") or {})
+    try:
+        screenshot_mime, screenshot_b64 = _normalise_screenshot(payload.get("screenshot"))
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc)}
+    now = time.time()
+    con = _connect(path)
+    try:
+        _schema(con)
+        cur = con.execute(
+            "INSERT INTO dashboard_widget_issues("
+            "ts,updated_ts,widget_id,widget_title,tab,route,severity,issue,visible_text,"
+            "context_json,screenshot_mime,screenshot_b64,status) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (now, now, widget_id, widget_title, tab, route, severity, issue, visible_text,
+             json.dumps(context, sort_keys=True, allow_nan=False), screenshot_mime,
+             screenshot_b64, "new"))
+        issue_id = int(cur.lastrowid)
+        con.commit()
+    finally:
+        con.close()
+    return {"ok": True, "id": issue_id, "status": "new", "widget_id": widget_id,
+            "widget_title": widget_title, "has_screenshot": bool(screenshot_b64)}
+
+
+def list_widget_issues(limit=50, status=None, path=None):
+    try:
+        limit = max(1, min(int(limit), 200))
+    except (TypeError, ValueError):
+        limit = 50
+    con = _connect(path)
+    try:
+        _schema(con)
+        if status:
+            rows = con.execute(
+                "SELECT id,ts,updated_ts,widget_id,widget_title,tab,route,severity,issue,"
+                "visible_text,context_json,screenshot_mime,status FROM dashboard_widget_issues "
+                "WHERE status=? ORDER BY id DESC LIMIT ?", (status, limit)).fetchall()
+        else:
+            rows = con.execute(
+                "SELECT id,ts,updated_ts,widget_id,widget_title,tab,route,severity,issue,"
+                "visible_text,context_json,screenshot_mime,status FROM dashboard_widget_issues "
+                "ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+        con.commit()
+    finally:
+        con.close()
+    out = []
+    for row in rows:
+        item = dict(row)
+        try:
+            item["context"] = json.loads(item.pop("context_json") or "{}")
+        except ValueError:
+            item["context"] = {}
+        item["has_screenshot"] = bool(item.get("screenshot_mime"))
+        out.append(item)
+    return out
 
 
 # ---------------------------------------------------------------- chat ------
