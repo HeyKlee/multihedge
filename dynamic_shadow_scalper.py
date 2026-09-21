@@ -437,6 +437,7 @@ def run_cycle(cfg: dict, db_path: Path, *, now: float, api_key: str, get=None,
                 "opened": 0, "closed": 0, "candidates": 0}, 0
     all_tokens = {row["mint"]: row for row in resolved}
     all_tokens.update({row["mint"]: row for row in candidates})
+    resolved_by_mint = {row["mint"]: row for row in resolved}
     # Log observations for evidence gate
     with _connect(db_path) as con:
         for row in candidates:
@@ -453,6 +454,12 @@ def run_cycle(cfg: dict, db_path: Path, *, now: float, api_key: str, get=None,
             buy_vol = float(market.get("buy_volume_5m_usd", 0.0))
             sell_vol = float(market.get("sell_volume_5m_usd", 0.0))
             pricefeed._update_price_history(mint, now, price, buy_vol, sell_vol)
+            # Also update price history for resolved holdings (open positions)
+            resolved_mint = resolved_by_mint.get(mint)
+            if resolved_mint:
+                resolved_price = float(resolved_mint.get("market", {}).get("latest_usd", 0.0))
+                if resolved_price > 0:
+                    pricefeed._update_price_history(mint, now, resolved_price, 0, 0)
             # Compute RSI and 20-period volume average from pricefeed
             rsi_15m = pricefeed.compute_rsi_14(mint, now)
             vol_avg_20 = pricefeed.compute_volume_avg_20(mint)
@@ -477,6 +484,15 @@ def run_cycle(cfg: dict, db_path: Path, *, now: float, api_key: str, get=None,
                     vol_avg_20,
                 ),
             )
+    # Update price history for open positions that are not candidates
+    for row in resolved:
+        mint = row.get("mint")
+        if not mint or mint in {r["mint"] for r in candidates if r.get("mint")}:
+            continue
+        market = row.get("market") or {}
+        price = float(market.get("latest_usd", 0.0))
+        if price > 0:
+            pricefeed._update_price_history(mint, now, price, 0, 0)
     exit_decision = forced_exit(
         db_path, {mint: row["market"]["latest_usd"] for mint, row in all_tokens.items()}, now=now,
         cfg=cfg,

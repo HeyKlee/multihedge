@@ -5,13 +5,15 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-# Memecoin scalp (fast): tolerate ordinary volatility before protecting a
-# meaningful move. This is the default for dynamic, non-curated assets.
-MEME_TAKE_PROFIT_PCT = 0.010
-MEME_STOP_LOSS_PCT = -0.010
-MEME_TRAIL_ARM_PCT = 0.015
-MEME_TRAIL_DISTANCE_PCT = 0.008
-MEME_MAX_HOLD_SECONDS = 1800
+# Memecoin scalp (fast): tightest allowed thresholds to force frequent closes.
+# 0.5% TP, 0.5% SL means trades close quickly, accumulating evidence faster
+# toward the 30-trade evidence gate. Max hold at 600s with TP-flashed-only
+# fallback ensures stale positions don't linger.
+MEME_TAKE_PROFIT_PCT = 0.005
+MEME_STOP_LOSS_PCT = -0.005
+MEME_TRAIL_ARM_PCT = 0.008
+MEME_TRAIL_DISTANCE_PCT = 0.005
+MEME_MAX_HOLD_SECONDS = 600
 
 # Serious / backed coins (present in the config `coins` list, e.g. JUP, ETH):
 # day-traded, allowed to swing over hours instead of a 15-minute scalp.
