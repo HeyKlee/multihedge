@@ -1,0 +1,312 @@
+{
+  "state": "TP_HIT_DIAGNOSTIC_COMPLETE",
+  "source_snapshot": "backtest-results/xora-survival-snapshot-20260915-224941/source_snapshot.db",
+  "paths_with_valid_entry_sample": 157,
+  "chronological_train": 117,
+  "untouched_holdout": 40,
+  "candidates_examined": 624,
+  "policies_with_at_least_50_tp_hits": 117,
+  "top_by_tp_hits": [
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.08,
+        "trail_distance_pct": 0.03,
+        "max_hold_seconds": 600,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.08,
+        "trail_distance_pct": 0.04,
+        "max_hold_seconds": 600,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.08,
+        "trail_distance_pct": 0.06,
+        "max_hold_seconds": 600,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.12,
+        "trail_distance_pct": 0.02,
+        "max_hold_seconds": 600,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.12,
+        "trail_distance_pct": 0.03,
+        "max_hold_seconds": 600,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.12,
+        "trail_distance_pct": 0.04,
+        "max_hold_seconds": 600,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.12,
+        "trail_distance_pct": 0.06,
+        "max_hold_seconds": 600,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.08,
+        "trail_distance_pct": 0.03,
+        "max_hold_seconds": 900,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.08,
+        "trail_distance_pct": 0.04,
+        "max_hold_seconds": 900,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.08,
+        "trail_distance_pct": 0.06,
+        "max_hold_seconds": 900,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.12,
+        "trail_distance_pct": 0.02,
+        "max_hold_seconds": 900,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.12,
+        "trail_distance_pct": 0.03,
+        "max_hold_seconds": 900,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.12,
+        "trail_distance_pct": 0.04,
+        "max_hold_seconds": 900,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.12,
+        "trail_distance_pct": 0.06,
+        "max_hold_seconds": 900,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.08,
+        "trail_distance_pct": 0.03,
+        "max_hold_seconds": 1800,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.08,
+        "trail_distance_pct": 0.04,
+        "max_hold_seconds": 1800,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.08,
+        "trail_distance_pct": 0.06,
+        "max_hold_seconds": 1800,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.12,
+        "trail_distance_pct": 0.02,
+        "max_hold_seconds": 1800,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.12,
+        "trail_distance_pct": 0.03,
+        "max_hold_seconds": 1800,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    },
+    {
+      "params": {
+        "take_profit_pct": 0.1,
+        "stop_loss_pct": -0.12,
+        "trail_arm_pct": 0.12,
+        "trail_distance_pct": 0.04,
+        "max_hold_seconds": 1800,
+        "mode": "MEME"
+      },
+      "tp_hits_total": 62,
+      "tp_rate_total": 0.39490445859872614,
+      "tp_hits_train": 49,
+      "tp_hits_holdout": 13,
+      "tp_rate_holdout": 0.325
+    }
+  ],
+  "limitation": "TP counts are diagnostic, not profitability. A path can be censored for altered exits after the original close, so these candidates cannot be ranked by P&L on all historical paths without future samples."
+}

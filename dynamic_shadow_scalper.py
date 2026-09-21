@@ -9,6 +9,33 @@ import json
 import os
 import time
 
+import pricefeed  # for RSI/volume computation
+
+TRADE_RECORDS_DIR = Path(__file__).parent / "trade_records"
+
+def _persist_trade_record(mint: str, ticker: str, entry_usd: float, exit_usd: float,
+                          qty: float, realized_pct: float, realized_usd: float,
+                          exit_reason: str, hold_seconds: float):
+    """Save a closed trade record to disk for autotuner analysis."""
+    try:
+        TRADE_RECORDS_DIR.mkdir(parents=True, exist_ok=True)
+        data = {
+            "mint": mint,
+            "ticker": ticker,
+            "entry_usd": entry_usd,
+            "exit_usd": exit_usd,
+            "qty": qty,
+            "realized_pct": realized_pct,
+            "realized_usd": realized_usd,
+            "exit_reason": exit_reason,
+            "hold_seconds": hold_seconds,
+            "closed_ts": time.time()
+        }
+        path = TRADE_RECORDS_DIR / f"{mint}_{int(time.time())}.json"
+        path.write_text(json.dumps(data, indent=2))
+    except Exception as e:
+        print(f"[dynamic_shadow_scalper] persist trade record failed for {mint}: {e}", flush=True)
+
 SETUP = "dynamic_scalper"
 PAPER_NOTIONAL_USD = 1.0
 MIN_ENTRY_5M_PCT = 1.0
@@ -80,18 +107,37 @@ def _exit_reason(position, price: float, now: float, params: dict) -> str | None
     return None
 
 
-def _entry_signal(row: dict) -> bool:
+def _entry_signal(row: dict, now: float) -> bool:
+    mint = row.get("mint")
+    if not mint:
+        return False
     market = row.get("market") or {}
     try:
-        change5 = float(market["return_5m_pct"])
-        change1h = float(market["return_1h_pct"])
-        buy = float(market["buy_volume_5m_usd"])
-        sell = float(market["sell_volume_5m_usd"])
+        change5 = float(market.get("return_5m_pct", 0))
+        change1h = float(market.get("return_1h_pct", 0))
+        buy = float(market.get("buy_volume_5m_usd", 0))
+        sell = float(market.get("sell_volume_5m_usd", 0))
+        # Compute RSI(14) and 20-period volume average from pricefeed
+        rsi_15m = pricefeed.compute_rsi_14(mint, now)
+        vol_avg_20 = pricefeed.compute_volume_avg_20(mint)
+        # If not enough history, fall back to market-provided placeholders (or neutral)
+        if rsi_15m is None:
+            rsi_15m = float(market.get("rsi_15m", 50))
+        if vol_avg_20 is None:
+            vol_5m = float(market.get("volume_5m_usd", buy + sell))
+            vol_avg_20 = vol_5m  # fallback: use current volume as average
+        vol_5m = float(market.get("volume_5m_usd", buy + sell))
     except (KeyError, TypeError, ValueError):
         return False
-    if not all(math.isfinite(v) for v in (change5, change1h, buy, sell)):
+    if not all(math.isfinite(v) for v in (change5, change1h, buy, sell, rsi_15m, vol_5m, vol_avg_20)):
         return False
     if sell <= 0:
+        return False
+    # Reject overbought: RSI(15m) >= 80 means don't chase (start conservative as per user request)
+    if rsi_15m >= 80:
+        return False
+    # Volume surge: require at least 1.2× the 20-period average (loosened per user test run)
+    if vol_5m < 1.2 * vol_avg_20:
         return False
     # Bullish momentum condition (existing)
     bullish_momentum = (
@@ -288,6 +334,18 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
             closed += 1
             closed_mints.add(position["mint"])
             reasons[reason] = reasons.get(reason, 0) + 1
+            # Persist trade record to disk
+            _persist_trade_record(
+                mint=position["mint"],
+                ticker=position["ticker"],
+                entry_usd=entry,
+                exit_usd=price,
+                qty=position["qty"],
+                realized_pct=realized_pct,
+                realized_usd=realized_usd,
+                exit_reason=reason,
+                hold_seconds=now - position["opened_ts"]
+            )
 
         existing = {
             row[0] for row in con.execute("SELECT mint FROM mh_dynamic_scalp_positions").fetchall()
@@ -300,7 +358,7 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
         for row in candidates:
             mint = row.get("mint")
             if (not mint or mint in existing or mint in closed_mints
-                    or not _entry_signal(row) or _coin_is_quarantined(con, mint)
+                    or not _entry_signal(row, now) or _coin_is_quarantined(con, mint)
                     or _in_stop_loss_cooldown(con, mint, now)):
                 continue
             try:
@@ -332,6 +390,12 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
             wallet_free -= raw_qty * price
             existing.add(mint)
             opened += 1
+            # Mark this observation as having opened a position
+            con.execute(
+                "UPDATE mh_shadow_entry_observations SET entry_opened=1 "
+                "WHERE mint=? AND observed_ts=? AND entry_signal=1",
+                (mint, now)
+            )
     return {"state": "SHADOW_SCALP_COMPLETE", "opened": opened, "closed": closed,
             "reasons": reasons, "candidates": len(candidates)}
 
@@ -373,6 +437,46 @@ def run_cycle(cfg: dict, db_path: Path, *, now: float, api_key: str, get=None,
                 "opened": 0, "closed": 0, "candidates": 0}, 0
     all_tokens = {row["mint"]: row for row in resolved}
     all_tokens.update({row["mint"]: row for row in candidates})
+    # Log observations for evidence gate
+    with _connect(db_path) as con:
+        for row in candidates:
+            mint = row.get("mint")
+            if not mint:
+                continue
+            market = row.get("market") or {}
+            try:
+                entry_sig = _entry_signal(row, now)
+            except Exception:
+                entry_sig = False
+            # Update price history for RSI/volume calculations using market data
+            price = float(market.get("latest_usd", 0.0))
+            buy_vol = float(market.get("buy_volume_5m_usd", 0.0))
+            sell_vol = float(market.get("sell_volume_5m_usd", 0.0))
+            pricefeed._update_price_history(mint, now, price, buy_vol, sell_vol)
+            # Compute RSI and 20-period volume average from pricefeed
+            rsi_15m = pricefeed.compute_rsi_14(mint, now)
+            vol_avg_20 = pricefeed.compute_volume_avg_20(mint)
+            if rsi_15m is None:
+                rsi_15m = float(market.get("rsi_15m", 50.0))
+            if vol_avg_20 is None:
+                vol_5m = float(market.get("volume_5m_usd", buy_vol + sell_vol))
+                vol_avg_20 = vol_5m  # fallback: use current volume as average
+            con.execute(
+                "INSERT OR IGNORE INTO mh_shadow_entry_observations(observed_ts,mint,latest_usd,return_5m_pct,return_1h_pct,buy_volume_5m_usd,sell_volume_5m_usd,entry_signal,entry_opened,rsi_15m,volume_5m_avg_20) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    now,
+                    mint,
+                    float(market.get("latest_usd", 0)),
+                    float(market.get("return_5m_pct", 0)),
+                    float(market.get("return_1h_pct", 0)),
+                    float(market.get("buy_volume_5m_usd", 0)),
+                    float(market.get("sell_volume_5m_usd", 0)),
+                    1 if entry_sig else 0,
+                    0,  # entry_opened determined later by tick
+                    rsi_15m,
+                    vol_avg_20,
+                ),
+            )
     exit_decision = forced_exit(
         db_path, {mint: row["market"]["latest_usd"] for mint, row in all_tokens.items()}, now=now,
         cfg=cfg,

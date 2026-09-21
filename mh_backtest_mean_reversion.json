@@ -1,0 +1,10 @@
+{
+  "_runtime_minutes": 0.002520958582560221,
+  "_strategy": "mean_reversion",
+  "avg_pct": null,
+  "max_drawdown": 0.0,
+  "min_usd": null,
+  "trades": 0,
+  "win_cnt": null,
+  "win_rate": 0.0
+}

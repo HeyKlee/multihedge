@@ -1,0 +1,96 @@
+[
+  {
+    "role": "writer",
+    "completed": 372,
+    "first_errors": [
+      {
+        "type": "OperationalError",
+        "message": "database is locked",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/kelly/multihedge/reports/sqlite_contention_probe.py\", line 24, in worker\n    con.execute('BEGIN IMMEDIATE')\nsqlite3.OperationalError: database is locked\n"
+      },
+      {
+        "type": "OperationalError",
+        "message": "database is locked",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/kelly/multihedge/reports/sqlite_contention_probe.py\", line 24, in worker\n    con.execute('BEGIN IMMEDIATE')\nsqlite3.OperationalError: database is locked\n"
+      },
+      {
+        "type": "OperationalError",
+        "message": "database is locked",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/kelly/multihedge/reports/sqlite_contention_probe.py\", line 24, in worker\n    con.execute('BEGIN IMMEDIATE')\nsqlite3.OperationalError: database is locked\n"
+      }
+    ]
+  },
+  {
+    "role": "writer",
+    "completed": 348,
+    "first_errors": [
+      {
+        "type": "OperationalError",
+        "message": "database is locked",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/kelly/multihedge/reports/sqlite_contention_probe.py\", line 24, in worker\n    con.execute('BEGIN IMMEDIATE')\nsqlite3.OperationalError: database is locked\n"
+      },
+      {
+        "type": "OperationalError",
+        "message": "database is locked",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/kelly/multihedge/reports/sqlite_contention_probe.py\", line 24, in worker\n    con.execute('BEGIN IMMEDIATE')\nsqlite3.OperationalError: database is locked\n"
+      },
+      {
+        "type": "OperationalError",
+        "message": "database is locked",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/kelly/multihedge/reports/sqlite_contention_probe.py\", line 24, in worker\n    con.execute('BEGIN IMMEDIATE')\nsqlite3.OperationalError: database is locked\n"
+      }
+    ]
+  },
+  {
+    "role": "writer",
+    "completed": 396,
+    "first_errors": [
+      {
+        "type": "OperationalError",
+        "message": "database is locked",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/kelly/multihedge/reports/sqlite_contention_probe.py\", line 24, in worker\n    con.execute('BEGIN IMMEDIATE')\nsqlite3.OperationalError: database is locked\n"
+      },
+      {
+        "type": "OperationalError",
+        "message": "database is locked",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/kelly/multihedge/reports/sqlite_contention_probe.py\", line 24, in worker\n    con.execute('BEGIN IMMEDIATE')\nsqlite3.OperationalError: database is locked\n"
+      },
+      {
+        "type": "OperationalError",
+        "message": "database is locked",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/kelly/multihedge/reports/sqlite_contention_probe.py\", line 24, in worker\n    con.execute('BEGIN IMMEDIATE')\nsqlite3.OperationalError: database is locked\n"
+      }
+    ]
+  },
+  {
+    "role": "writer",
+    "completed": 389,
+    "first_errors": [
+      {
+        "type": "OperationalError",
+        "message": "database is locked",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/kelly/multihedge/reports/sqlite_contention_probe.py\", line 24, in worker\n    con.execute('BEGIN IMMEDIATE')\nsqlite3.OperationalError: database is locked\n"
+      },
+      {
+        "type": "OperationalError",
+        "message": "database is locked",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/kelly/multihedge/reports/sqlite_contention_probe.py\", line 24, in worker\n    con.execute('BEGIN IMMEDIATE')\nsqlite3.OperationalError: database is locked\n"
+      },
+      {
+        "type": "OperationalError",
+        "message": "database is locked",
+        "traceback": "Traceback (most recent call last):\n  File \"/home/kelly/multihedge/reports/sqlite_contention_probe.py\", line 24, in worker\n    con.execute('BEGIN IMMEDIATE')\nsqlite3.OperationalError: database is locked\n"
+      }
+    ]
+  },
+  {
+    "role": "reader",
+    "completed": 9344,
+    "first_errors": []
+  },
+  {
+    "role": "reader",
+    "completed": 9260,
+    "first_errors": []
+  }
+]

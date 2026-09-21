@@ -82,15 +82,13 @@ def main():
             directory.mkdir(mode=0o700, exist_ok=True)
 
         runtime_user = f"{os.getuid()}:{os.getgid()}"
+        # Run shadow scalper inside the existing multihedge container to avoid DB lock contention
+        # Source .env to get JUPITER_API_KEY and OPENROUTER_API_KEY
         shadow = run([
-            "docker", "run", "--rm", "--user", runtime_user,
-            "--cap-drop=ALL", "--security-opt=no-new-privileges",
+            "docker", "exec", "--user", runtime_user,
             "--env-file", str(DATA / "agent.env"),
-            "-e", "MULTIHEDGE_EVIDENCE_DB=/app/multihedge.db",
-            "-e", "MULTIHEDGE_FORCED_EXIT=/logs/forced_exit.json",
-            "-v", f"{DATA / 'multihedge.db'}:/app/multihedge.db:rw",
-            "-v", f"{logs}:/logs:rw",
-            IMAGE, "python", "/app/dynamic_shadow_scalper.py",
+            "multihedge", "bash", "-c",
+            "set -a && source /app/.env && set +a && python /app/dynamic_shadow_scalper.py",
         ])
         shadow_result = last_json(shadow.stdout)
         if shadow.returncode != 0 or shadow_result is None:

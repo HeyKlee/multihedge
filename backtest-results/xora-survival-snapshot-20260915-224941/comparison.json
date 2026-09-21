@@ -1,0 +1,158 @@
+{
+  "all_meme_excursions": 163,
+  "common_paths": 148,
+  "limitations": [
+    "Exit replay only, not counterfactual entry selection.",
+    "Paths are primarily legacy/unlabelled, so this cannot authorize policy adoption.",
+    "Samples are spot prices, not executable Jupiter quotes."
+  ],
+  "method": "atomic SQLite backup; strict common-path exit replay; chronological 75/25 split; 80 bps round-trip cost",
+  "mode": "MEME",
+  "results": {
+    "current_meme": {
+      "holdout": {
+        "best_return": 0.192,
+        "compounded_return_proxy": -0.8133809322252482,
+        "max_drawdown_proxy": 0.8133809322252482,
+        "mean_net_return": -0.03951142154141136,
+        "median_net_return": -0.11063811536777979,
+        "n": 37,
+        "payoff_ratio": 0.5558591183530174,
+        "win_rate": 0.43243243243243246,
+        "worst_return": -0.15363394939454378
+      },
+      "params": {
+        "max_hold_seconds": 900,
+        "mode": "MEME",
+        "stop_loss_pct": -0.1,
+        "take_profit_pct": 0.2,
+        "trail_arm_pct": 0.08,
+        "trail_distance_pct": 0.04
+      },
+      "total": {
+        "best_return": 0.192,
+        "compounded_return_proxy": -0.9660498996235115,
+        "max_drawdown_proxy": 0.9788768175813229,
+        "mean_net_return": -0.015982242207821296,
+        "median_net_return": -0.03660628992734976,
+        "n": 148,
+        "payoff_ratio": 0.8221163635965879,
+        "win_rate": 0.47297297297297297,
+        "worst_return": -0.1995852741312626
+      },
+      "train": {
+        "best_return": 0.192,
+        "compounded_return_proxy": -0.8180780732574118,
+        "max_drawdown_proxy": 0.8868112317216557,
+        "mean_net_return": -0.008139182429957943,
+        "median_net_return": -0.014610156478311646,
+        "n": 111,
+        "payoff_ratio": 0.9085073860127886,
+        "win_rate": 0.4864864864864865,
+        "worst_return": -0.1995852741312626
+      }
+    },
+    "defensive_bearish_choppy": {
+      "holdout": {
+        "best_return": 0.092,
+        "compounded_return_proxy": -0.5320726309318438,
+        "max_drawdown_proxy": 0.5837248970359149,
+        "mean_net_return": -0.01737714174076267,
+        "median_net_return": -0.07810636049470998,
+        "n": 37,
+        "payoff_ratio": 0.8067480040115261,
+        "win_rate": 0.43243243243243246,
+        "worst_return": -0.13027698178859715
+      },
+      "params": {
+        "max_hold_seconds": 600,
+        "mode": "MEME",
+        "stop_loss_pct": -0.07,
+        "take_profit_pct": 0.1,
+        "trail_arm_pct": 0.05,
+        "trail_distance_pct": 0.03
+      },
+      "total": {
+        "best_return": 0.092,
+        "compounded_return_proxy": -0.8497547903612257,
+        "max_drawdown_proxy": 0.8657813817513784,
+        "mean_net_return": -0.00923589595058821,
+        "median_net_return": -0.009984944116214749,
+        "n": 148,
+        "payoff_ratio": 0.8335373975689628,
+        "win_rate": 0.4864864864864865,
+        "worst_return": -0.1557888700601745
+      },
+      "train": {
+        "best_return": 0.092,
+        "compounded_return_proxy": -0.6789133964572818,
+        "max_drawdown_proxy": 0.7131635652859794,
+        "mean_net_return": -0.0065221473538633916,
+        "median_net_return": 0.007645134032373775,
+        "n": 111,
+        "payoff_ratio": 0.8349389686200016,
+        "win_rate": 0.5045045045045045,
+        "worst_return": -0.1557888700601745
+      },
+      "vs_current_holdout": {
+        "compounded_return_proxy": 0.28130830129340445,
+        "max_drawdown_proxy": -0.2296560351893333,
+        "mean_net_return": 0.02213427980064869,
+        "win_rate": 0.0
+      }
+    },
+    "tighter_trail_only": {
+      "holdout": {
+        "best_return": 0.12254156097920688,
+        "compounded_return_proxy": -0.7921964123506164,
+        "max_drawdown_proxy": 0.7921964123506164,
+        "mean_net_return": -0.0365420640746942,
+        "median_net_return": -0.11063811536777979,
+        "n": 37,
+        "payoff_ratio": 0.6127221003438614,
+        "win_rate": 0.43243243243243246,
+        "worst_return": -0.15363394939454378
+      },
+      "params": {
+        "max_hold_seconds": 900,
+        "mode": "MEME",
+        "stop_loss_pct": -0.1,
+        "take_profit_pct": 0.2,
+        "trail_arm_pct": 0.08,
+        "trail_distance_pct": 0.02
+      },
+      "total": {
+        "best_return": 0.192,
+        "compounded_return_proxy": -0.9623584151080534,
+        "max_drawdown_proxy": 0.9710146443970266,
+        "mean_net_return": -0.01549746149757925,
+        "median_net_return": -0.03660628992734976,
+        "n": 148,
+        "payoff_ratio": 0.8086614278105745,
+        "win_rate": 0.4797297297297297,
+        "worst_return": -0.1995852741312626
+      },
+      "train": {
+        "best_return": 0.192,
+        "compounded_return_proxy": -0.818859792952866,
+        "max_drawdown_proxy": 0.8605156151015115,
+        "mean_net_return": -0.008482593971874265,
+        "median_net_return": -0.014610156478311646,
+        "n": 111,
+        "payoff_ratio": 0.8702736735989016,
+        "win_rate": 0.4954954954954955,
+        "worst_return": -0.1995852741312626
+      },
+      "vs_current_holdout": {
+        "compounded_return_proxy": 0.02118451987463177,
+        "max_drawdown_proxy": -0.02118451987463177,
+        "mean_net_return": 0.002969357466717157,
+        "win_rate": 0.0
+      }
+    }
+  },
+  "source_snapshot": "backtest-results/xora-survival-snapshot-20260915-224941/source_snapshot.db",
+  "source_snapshot_sha256": "6e097e7cea13f4ceec063e408eda7be54383eeaf5a0478415b074abb269a77e9",
+  "sqlite_integrity": "ok",
+  "state": "READ_ONLY_SNAPSHOT_COMMON_PATH_REPLAY_COMPLETE"
+}

@@ -13,6 +13,7 @@ services:
       - ./data/agent_logs:/data/agent_logs:ro
       - ../multihedge.db:/data/legacy_multihedge.db:ro
       - /home/kelly/.hermes/cron/output/7d265dcb701f:/data/council_reports:ro
+      - ./price_history:/app/price_history
     environment:
       - TZ=Pacific/Auckland
       - PYTHONUNBUFFERED=1

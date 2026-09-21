@@ -218,34 +218,36 @@ def close_position(pos, exit_px, reason):
     if not math.isfinite(exit_px) or exit_px <= 0:
         raise ValueError("exit price must be finite and positive")
     con = _connect()
-    con.execute("BEGIN IMMEDIATE")
-    current = con.execute("SELECT * FROM mh_positions WHERE id=?", (pos["id"],)).fetchone()
-    if current is None:
+    try:
+        con.execute("BEGIN IMMEDIATE")
+        current = con.execute("SELECT * FROM mh_positions WHERE id=?", (pos["id"],)).fetchone()
+        if current is None:
+            return None
+        pos = dict(current)
+        side = pos["side"]
+        qty = pos["qty"]
+        entry = pos["entry_px"]
+        if entry <= 0:
+            return None
+        if side == "LONG":
+            pct = (exit_px - entry) / entry
+        else:
+            pct = (entry - exit_px) / entry
+        realized_usd = qty * entry * pct
+        con.execute(
+            "INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,exit_px,"
+            "qty,realized_pct,realized_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            (pos["coin"], pos.get("symbol"), pos["setup"], side, pos["open_ts"],
+             time.time(), entry, exit_px, qty, pct, realized_usd, reason))
+        # P&L flows back into THE SCALPER's own wallet (mh_positions are scalper-only)
+        con.execute("UPDATE mh_accounts SET equity_usd=equity_usd+? WHERE trader=?",
+                    (realized_usd, TRADER_SCALPER))
+        con.execute("DELETE FROM mh_positions WHERE id=?", (pos["id"],))
+        con.commit()
+    finally:
+        # close() rolls back failed commits and releases PENDING locks, even
+        # when an exception traceback keeps this frame alive.
         con.close()
-        return None
-    pos = dict(current)
-    side = pos["side"]
-    qty = pos["qty"]
-    entry = pos["entry_px"]
-    if entry <= 0:
-        con.close()
-        return None
-    if side == "LONG":
-        pct = (exit_px - entry) / entry
-    else:
-        pct = (entry - exit_px) / entry
-    realized_usd = qty * entry * pct
-    con.execute(
-        "INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,exit_px,"
-        "qty,realized_pct,realized_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-        (pos["coin"], pos.get("symbol"), pos["setup"], side, pos["open_ts"],
-         time.time(), entry, exit_px, qty, pct, realized_usd, reason))
-    # P&L flows back into THE SCALPER's own wallet (mh_positions are scalper-only)
-    con.execute("UPDATE mh_accounts SET equity_usd=equity_usd+? WHERE trader=?",
-                (realized_usd, TRADER_SCALPER))
-    con.execute("DELETE FROM mh_positions WHERE id=?", (pos["id"],))
-    con.commit()
-    con.close()
     # feed strategy rotation
     strat.record_trade(pos["coin"], pos["setup"], pct)
     return {"pct": pct, "usd": realized_usd, "reason": reason}

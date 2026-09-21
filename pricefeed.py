@@ -20,6 +20,7 @@ import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from collections import deque
 
 DB_PATH = Path(__file__).parent / "multihedge.db"
 CACHE_TTL = 30          # seconds: serve cached price within this window
@@ -150,6 +151,97 @@ def _set_cache(key, px):
     con.close()
 
 
+# ---- In-memory price history for RSI and volume calculations ----
+# Each mint gets a deque of (ts, price, buy_vol, sell_vol) tuples, max 100 entries
+_PRICE_HISTORY: dict[str, deque] = {}
+_MAX_HISTORY_LEN = 100
+_PRICE_HISTORY_DIR = Path(__file__).parent / "price_history"
+
+def _update_price_history(mint: str, ts: float, price: float, buy_vol: float = 0, sell_vol: float = 0):
+    """Append a price/volume sample to the mint's history."""
+    _ensure_price_history_loaded(mint)
+    if mint not in _PRICE_HISTORY:
+        _PRICE_HISTORY[mint] = deque(maxlen=_MAX_HISTORY_LEN)
+    _PRICE_HISTORY[mint].append((ts, price, buy_vol, sell_vol))
+    # Persist periodically (every 10 updates)
+    if True:  # persist on every update for reliable RSI/volume history
+        _persist_price_history(mint)
+
+def _persist_price_history(mint: str):
+    """Save mint's price history to disk."""
+    try:
+        _PRICE_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+        hist = _PRICE_HISTORY.get(mint)
+        if hist:
+            data = {
+                "mint": mint,
+                "updated": time.time(),
+                "history": list(hist)
+            }
+            import json
+            path = _PRICE_HISTORY_DIR / f"{mint}.json"
+            path.write_text(json.dumps(data))
+    except Exception as e:
+        print(f"[pricefeed] persist price history failed for {mint}: {e}", flush=True)
+
+def _load_price_history(mint: str) -> list | None:
+    """Load mint's price history from disk."""
+    try:
+        path = _PRICE_HISTORY_DIR / f"{mint}.json"
+        if path.exists():
+            import json
+            data = json.loads(path.read_text())
+            return data.get("history", [])
+    except Exception as e:
+        print(f"[pricefeed] load price history failed for {mint}: {e}", flush=True)
+    return None
+
+def _ensure_price_history_loaded(mint: str):
+    """Load history from disk if not in memory."""
+    if mint not in _PRICE_HISTORY:
+        hist_data = _load_price_history(mint)
+        if hist_data:
+            _PRICE_HISTORY[mint] = deque(hist_data, maxlen=_MAX_HISTORY_LEN)
+
+def compute_rsi_14(mint: str, current_ts: float) -> float | None:
+    """Compute RSI(14) on 15m intervals from price history."""
+    _ensure_price_history_loaded(mint)
+    hist = _PRICE_HISTORY.get(mint)
+    if not hist or len(hist) < 15:
+        return None
+    
+    # Filter to last ~15m window and compute price changes
+    recent = [p for p in hist if current_ts - p[0] <= 900]  # 15 minutes = 900 seconds
+    if len(recent) < 15:
+        return None
+    
+    prices = [p[1] for p in recent]
+    deltas = [prices[i] - prices[i-1] for i in range(1, len(prices))]
+    
+    gains = [d for d in deltas if d > 0]
+    losses = [-d for d in deltas if d < 0]
+    
+    avg_gain = sum(gains) / 14 if gains else 0.0
+    avg_loss = sum(losses) / 14 if losses else 0.0
+    
+    if avg_loss == 0:
+        return 100.0
+    
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
+def compute_volume_avg_20(mint: str) -> float | None:
+    """Compute 20-period average of 5m volume (buy + sell)."""
+    _ensure_price_history_loaded(mint)
+    hist = _PRICE_HISTORY.get(mint)
+    if not hist or len(hist) < 20:
+        return None
+    
+    volumes = [p[2] + p[3] for p in hist][-20:]  # Last 20 periods
+    return sum(volumes) / len(volumes)
+
+
 def _get(url, timeout=5, headers=None):
     for attempt in range(1):
         try:
@@ -232,6 +324,9 @@ def live_price(mint: str | None = None, symbol: str | None = None) -> float | No
         px = _coin_gecko(symbol)
     if px is not None and math.isfinite(px) and px > 0:
         _set_cache(key, px)
+        # Update price history for RSI/volume calculations
+        # Try to get buy/sell volume from market data if available
+        _update_price_history(mint, time.time(), px)
         return px
     # No stale cache fallback for executable prices. Display uses pxhist with
     # its original timestamp and explicitly labels stale data.
@@ -254,6 +349,8 @@ def quotes_batch(mints: list[str]) -> dict:
                 px = float(v.get("usdPrice", v.get("price")))
                 if k in mints and math.isfinite(px) and px > 0:
                     out[k] = px
+                    # Update price history for RSI/volume calculations
+                    _update_price_history(k, time.time(), px)
     return out
 
 

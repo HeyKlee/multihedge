@@ -1,0 +1,59 @@
+Fetching SOLUSDT 1h candles 2021-09-17 → 2026-09-17 …
+  SOLUSDT: 43821 closes, running back-test …
+Fetching JUPUSDT 1h candles 2021-09-17 → 2026-09-17 …
+  JUPUSDT: 23028 closes, running back-test …
+Fetching ETHUSDT 1h candles 2021-09-17 → 2026-09-17 …
+Traceback (most recent call last):
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 1348, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/http/client.py", line 1323, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/http/client.py", line 1369, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/http/client.py", line 1318, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/http/client.py", line 1078, in _send_output
+    self.send(msg)
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/http/client.py", line 1016, in send
+    self.connect()
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/http/client.py", line 1495, in connect
+    self.sock = self._context.wrap_socket(self.sock,
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/ssl.py", line 519, in wrap_socket
+    return self.sslsocket_class._create(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/ssl.py", line 1116, in _create
+    self.do_handshake()
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/ssl.py", line 1394, in do_handshake
+    self._sslobj.do_handshake()
+ConnectionResetError: [Errno 104] Connection reset by peer
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/kelly/multihedge/ops/5year_backtest.py", line 369, in <module>
+    main()
+  File "/home/kelly/multihedge/ops/5year_backtest.py", line 351, in main
+    candles = _klines(symbol, start_ms, end_ms)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kelly/multihedge/ops/5year_backtest.py", line 75, in _klines
+    with urllib.request.urlopen(url, timeout=30) as resp:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 216, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 519, in open
+    response = self._open(req, data)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 536, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 1391, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kelly/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/urllib/request.py", line 1351, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 104] Connection reset by peer>

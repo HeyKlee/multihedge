@@ -24,12 +24,17 @@ def no_retry_sleep():
         stu._sleep = original
 
 
-def candidate(price=.001, change5=2.0, change1h=5.0, buy=20_000, sell=10_000):
+def candidate(price=.001, change5=2.0, change1h=5.0, buy=200_000, sell=100_000):
     return {
         "mint": MINT, "symbol": MINT, "ticker": "PEPE", "decimals": 6,
-        "market": {"latest_usd": price, "return_5m_pct": change5,
-                   "return_1h_pct": change1h, "buy_volume_5m_usd": buy,
-                   "sell_volume_5m_usd": sell},
+        "market": {
+            "latest_usd": price, "return_5m_pct": change5,
+            "return_1h_pct": change1h, "buy_volume_5m_usd": buy,
+            "sell_volume_5m_usd": sell,
+            "rsi_15m": 50.0,  # neutral RSI by default (passes RSI < 70 filter)
+            "volume_5m_usd": (buy + sell) * 2.0,  # 2x average to pass 1.5x volume surge filter
+            "volume_5m_avg_20": buy + sell,  # 20-period average
+        },
     }
 
 

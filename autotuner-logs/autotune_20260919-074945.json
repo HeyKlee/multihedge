@@ -1,0 +1,22 @@
+{
+  "evaluation": {
+    "MEME": {
+      "closed_total": 191,
+      "excluded_policy": 185,
+      "path_ready": 185,
+      "policy_matched": 0,
+      "required": 30,
+      "state": "INSUFFICIENT_POLICY_HISTORY"
+    },
+    "SERIOUS": {
+      "closed": 7,
+      "path_ready": 6,
+      "required": 30,
+      "state": "INSUFFICIENT_HISTORY"
+    }
+  },
+  "evaluation_logged": true,
+  "round_trip_cost_pct": 0.008,
+  "state": "NO_CHANGE",
+  "tuned": {}
+}

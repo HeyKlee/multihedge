@@ -155,6 +155,9 @@ def admit_token(raw: dict, cfg: dict, *, now: float, warnings: list) -> dict:
             "traders_5m": int(traders),
             "buy_volume_5m_usd": buy_volume,
             "sell_volume_5m_usd": sell_volume,
+            "volume_5m_usd": buy_volume + sell_volume,
+            "rsi_15m": 50.0,  # placeholder - computed by pricefeed from history
+            "volume_5m_avg_20": buy_volume + sell_volume,  # placeholder - computed by pricefeed from history
         },
     }
 

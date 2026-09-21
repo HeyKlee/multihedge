@@ -1,0 +1,36 @@
+import unittest
+import tempfile
+from pathlib import Path
+import uuid
+import sys
+sys.path.insert(0, '.')
+class RunnerFullPathTests(unittest.TestCase):
+    def test_runner_exposes_run_and_has_no_hardcoded_output(self):
+        import run_sampled_replay_full as r
+        self.assertTrue(hasattr(r, 'run'))
+        source = inspect.getsource(r)
+        self.assertNotIn('backtest-results/sampled-price-replay-20260917-1200', source)
+        self.assertNotIn('backtest-results/sampled-price-replay-\d+', source)
+        self.assertIn('argparse', source)
+        self.assertIn('if __name__', source)
+        
+    def test_runner_fails_on_existing_output(self):
+        import run_sampled_replay_full as r
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / 'exists'
+            out.mkdir()
+            with self.assertRaises(FileExistsError):
+                r.run('deploy/data/multihedge.db', out)
+                
+    def test_runner_runs_with_temporary_output(self):
+        import run_sampled_replay_full as r
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / 'run'
+            result = r.run('deploy/data/multihedge.db', out)
+            self.assertIsInstance(result, dict)
+            self.assertIn('state', result)
+            self.assertEqual(result['state'], 'DIAGNOSTIC_SAMPLED_REPLAY_ONLY')
+            self.assertTrue((out / 'trades.csv').exists())
+            self.assertTrue((out / 'report.json').exists())
+if __name__ == '__main__':
+    unittest.main()

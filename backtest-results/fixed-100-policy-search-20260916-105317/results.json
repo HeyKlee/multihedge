@@ -1,0 +1,13 @@
+{
+  "state": "FIXED_100_EXIT_POLICY_SEARCH_COMPLETE",
+  "source_snapshot": "backtest-results/xora-survival-snapshot-20260915-224941/source_snapshot.db",
+  "price_paths": 157,
+  "cost_round_trip_pct": 0.008,
+  "fixed_candidates": 100,
+  "scored_candidates": 0,
+  "censored_candidates": 100,
+  "entry_filter_backtest_state": "BLOCKED_NO_HISTORICAL_REJECTED_CANDIDATE_OUTCOMES",
+  "selection_rule": "ranked only by later untouched chronological holdout mean return after costs; no policy is adopted",
+  "best_holdout": [],
+  "profitable_holdout_candidates": 0
+}

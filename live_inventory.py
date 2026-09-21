@@ -7,19 +7,19 @@ from pathlib import Path
 
 # Memecoin scalp (fast): tolerate ordinary volatility before protecting a
 # meaningful move. This is the default for dynamic, non-curated assets.
-MEME_TAKE_PROFIT_PCT = 0.20
-MEME_STOP_LOSS_PCT = -0.10
-MEME_TRAIL_ARM_PCT = 0.08
-MEME_TRAIL_DISTANCE_PCT = 0.04
-MEME_MAX_HOLD_SECONDS = 900
+MEME_TAKE_PROFIT_PCT = 0.010
+MEME_STOP_LOSS_PCT = -0.010
+MEME_TRAIL_ARM_PCT = 0.015
+MEME_TRAIL_DISTANCE_PCT = 0.008
+MEME_MAX_HOLD_SECONDS = 1800
 
 # Serious / backed coins (present in the config `coins` list, e.g. JUP, ETH):
 # day-traded, allowed to swing over hours instead of a 15-minute scalp.
-SERIOUS_TAKE_PROFIT_PCT = 0.05
-SERIOUS_STOP_LOSS_PCT = -0.025
-SERIOUS_TRAIL_ARM_PCT = 0.04
-SERIOUS_TRAIL_DISTANCE_PCT = 0.015
-SERIOUS_MAX_HOLD_SECONDS = 6 * 3600
+SERIOUS_TAKE_PROFIT_PCT = 0.010
+SERIOUS_STOP_LOSS_PCT = -0.010
+SERIOUS_TRAIL_ARM_PCT = 0.015
+SERIOUS_TRAIL_DISTANCE_PCT = 0.008
+SERIOUS_MAX_HOLD_SECONDS = 1800
 
 # Legacy names kept so existing imports/tests see the memecoin defaults.
 TAKE_PROFIT_PCT = MEME_TAKE_PROFIT_PCT
@@ -197,7 +197,7 @@ def risk_params(mint: str, cfg: dict | None, db_path=None, *, allow_tuned: bool 
     return _default_params(mode)
 
 
-BUSY_TIMEOUT_SECONDS = 10.0
+BUSY_TIMEOUT_SECONDS = 30.0
 
 
 def _connect(path: Path):

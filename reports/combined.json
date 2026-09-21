@@ -1,0 +1,42 @@
+{
+  "mean_reversion": {
+    "_runtime_minutes": 0.002520958582560221,
+    "_strategy": "mean_reversion",
+    "avg_pct": null,
+    "max_drawdown": 0.0,
+    "min_usd": null,
+    "trades": 0,
+    "win_cnt": null,
+    "win_rate": 0.0
+  },
+  "momentum_breakout": {
+    "_runtime_minutes": 0.0024731993675231934,
+    "_strategy": "momentum_breakout",
+    "avg_pct": null,
+    "max_drawdown": 0.0,
+    "min_usd": null,
+    "trades": 0,
+    "win_cnt": null,
+    "win_rate": 0.0
+  },
+  "rsi_oversold": {
+    "_runtime_minutes": 0.0025127887725830077,
+    "_strategy": "rsi_oversold",
+    "avg_pct": null,
+    "max_drawdown": 0.0,
+    "min_usd": null,
+    "trades": 0,
+    "win_cnt": null,
+    "win_rate": 0.0
+  },
+  "vwap_reversion": {
+    "_runtime_minutes": 0.0025194843610127768,
+    "_strategy": "vwap_reversion",
+    "avg_pct": null,
+    "max_drawdown": 0.0,
+    "min_usd": null,
+    "trades": 0,
+    "win_cnt": null,
+    "win_rate": 0.0
+  }
+}

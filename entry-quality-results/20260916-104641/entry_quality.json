@@ -1,0 +1,31 @@
+{
+  "blocking_reasons": [
+    "observations_below_100",
+    "outcomes_below_30",
+    "rejected_candidates_unlabelled"
+  ],
+  "cohort": {
+    "observation_key": [
+      "observed_ts",
+      "mint"
+    ],
+    "outcome_key": [
+      "observed_ts",
+      "mint"
+    ],
+    "policy": "immutable append-only observation/outcome linkage",
+    "snapshot_key": "ebd43fff557d3cbd27f81e054120b7274b4527ed0d5391f876bd2beb6f765c89"
+  },
+  "metrics": {
+    "mean_realized_pct": null,
+    "profit_factor": null,
+    "win_rate": null
+  },
+  "opened_candidates": 0,
+  "orphan_outcomes": 0,
+  "proposal_generation_allowed": false,
+  "rejected_candidates": 41,
+  "state": "ENTRY_QUALITY_EVIDENCE_REPORT",
+  "valid_observations": 41,
+  "valid_outcomes": 0
+}

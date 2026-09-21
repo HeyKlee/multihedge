@@ -1,0 +1,4745 @@
+{
+  "account_reconciliation": {
+    "memecoin_trader": {
+      "current_equity_usd": 24.0,
+      "expected_equity_usd": 24.0,
+      "ledger_pnl_usd": 0.0,
+      "reconciled": true,
+      "started_equity_usd": 24.0,
+      "unexplained_difference_usd": 0.0
+    },
+    "reasoner": {
+      "current_equity_usd": 23.286345854238018,
+      "expected_equity_usd": 23.524484335831314,
+      "ledger_pnl_usd": -0.4755156641686859,
+      "reconciled": false,
+      "started_equity_usd": 24.0,
+      "unexplained_difference_usd": -0.2381384815932961
+    },
+    "scalper": {
+      "current_equity_usd": 22.364201999524983,
+      "expected_equity_usd": 21.103367901904807,
+      "ledger_pnl_usd": -2.8966320980951914,
+      "reconciled": false,
+      "started_equity_usd": 24.0,
+      "unexplained_difference_usd": 1.260834097620176
+    },
+    "whale_trader": {
+      "current_equity_usd": 24.037681057744575,
+      "expected_equity_usd": 24.03768105774457,
+      "ledger_pnl_usd": 0.03768105774457083,
+      "reconciled": true,
+      "started_equity_usd": 24.0,
+      "unexplained_difference_usd": 3.552713678800501e-15
+    }
+  },
+  "baseline": {
+    "average_loss_usd": -0.08919644835533547,
+    "average_win_usd": 0.08695872972221252,
+    "drawdown_duration_trades": 366,
+    "ending_equity_usd": 12.316566093175457,
+    "expectancy": -0.03192195056509445,
+    "expectancy_return": -0.008401661660555837,
+    "expected_shortfall_95_usd": -0.20054633773639075,
+    "gross_profit_usd": -0.7987047089920946,
+    "longest_losing_streak": 15,
+    "max_drawdown": 0.48680974611768935,
+    "modeled_cost_usd": 10.8847291978325,
+    "n": 366,
+    "net_profit_usd": -11.683433906824554,
+    "net_return": -0.48680974611768935,
+    "payoff_ratio": 0.9749124693372493,
+    "profit_factor": 0.46969467146207566,
+    "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+    "sharpe_like_per_trade": -2.0100584635826975,
+    "sortino_like_per_trade": -2.8747532265541955,
+    "starting_equity_usd": 24.0,
+    "turnover_usd": 2721.182299458119,
+    "win_rate": 0.3251366120218579,
+    "win_rate_95pct_wilson": [
+      0.2791776739115284,
+      0.37472821444716337
+    ],
+    "wins": 119,
+    "worst_trade_usd": -0.23368330509026175
+  },
+  "by_coin": {
+    "4N4DnNo3qpPks9aQCkcWkzoir8tnvT6diS4TnnZibonk": {
+      "average_loss_usd": -0.06299622528720111,
+      "average_win_usd": 0.1996284975434932,
+      "drawdown_duration_trades": 1,
+      "ending_equity_usd": 24.07363604696909,
+      "expectancy": 0.024545348989696996,
+      "expectancy_return": 0.024545348989696996,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": 0.097636046969091,
+      "longest_losing_streak": 1,
+      "max_drawdown": 0.004605425248198736,
+      "modeled_cost_usd": 0.024,
+      "n": 3,
+      "net_profit_usd": 0.07363604696909098,
+      "net_return": 0.003068168623711953,
+      "payoff_ratio": 3.168896178038965,
+      "profit_factor": 1.5844480890194825,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": 0.26711413511657994,
+      "sortino_like_per_trade": 0.6554957375648671,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 6.0,
+      "win_rate": 0.3333333333333333,
+      "win_rate_95pct_wilson": [
+        0.0614903152761605,
+        0.7923450448735121
+      ],
+      "wins": 1,
+      "worst_trade_usd": -0.11138229409609057
+    },
+    "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6": {
+      "average_loss_usd": -0.15484766888574467,
+      "average_win_usd": 0.13894661657628135,
+      "drawdown_duration_trades": 20,
+      "ending_equity_usd": 23.185633842534564,
+      "expectancy": -0.01732693952054101,
+      "expectancy_return": -0.005724493845486303,
+      "expected_shortfall_95_usd": -0.2016101752366751,
+      "gross_profit_usd": -0.37036615746542734,
+      "longest_losing_streak": 9,
+      "max_drawdown": 0.08438883144674669,
+      "modeled_cost_usd": 0.4440000000000003,
+      "n": 47,
+      "net_profit_usd": -0.8143661574654276,
+      "net_return": -0.033931923227726535,
+      "payoff_ratio": 0.8973116455424588,
+      "profit_factor": 0.7896342480773639,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -0.2803325795564227,
+      "sortino_like_per_trade": -0.43013492471721904,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 111.0,
+      "win_rate": 0.46808510638297873,
+      "win_rate_95pct_wilson": [
+        0.33331462168462633,
+        0.6076785807322921
+      ],
+      "wins": 22,
+      "worst_trade_usd": -0.20490372954227543
+    },
+    "6AJcP7wuLwmRYLBNbi825wgguaPsWzPBEHcHndpRpump": {
+      "average_loss_usd": -0.11617438662358615,
+      "average_win_usd": 0.098559828792136,
+      "drawdown_duration_trades": 2,
+      "ending_equity_usd": 23.98238544216855,
+      "expectancy": -0.008807278915725074,
+      "expectancy_return": -0.025233917047747738,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": 0.002385442168549856,
+      "longest_losing_streak": 1,
+      "max_drawdown": 0.004840599442649474,
+      "modeled_cost_usd": 0.02,
+      "n": 2,
+      "net_profit_usd": -0.017614557831450148,
+      "net_return": -0.000733939909643766,
+      "payoff_ratio": 0.8483783014192048,
+      "profit_factor": 0.8483783014192048,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -0.27747731197609776,
+      "sortino_like_per_trade": -0.43441446572053016,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 5.0,
+      "win_rate": 0.5,
+      "win_rate_95pct_wilson": [
+        0.09452865480086614,
+        0.9054713451991339
+      ],
+      "wins": 1,
+      "worst_trade_usd": -0.11617438662358615
+    },
+    "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx": {
+      "average_loss_usd": -0.13187577835340678,
+      "average_win_usd": 0.06207622162889748,
+      "drawdown_duration_trades": 8,
+      "ending_equity_usd": 23.302004432754917,
+      "expectancy": -0.03489977836225465,
+      "expectancy_return": -0.023855210557696876,
+      "expected_shortfall_95_usd": -0.21860450449140661,
+      "gross_profit_usd": -0.509995567245093,
+      "longest_losing_streak": 5,
+      "max_drawdown": 0.0377534450442617,
+      "modeled_cost_usd": 0.18800000000000006,
+      "n": 20,
+      "net_profit_usd": -0.697995567245093,
+      "net_return": -0.029083148635211775,
+      "payoff_ratio": 0.4707173857396524,
+      "profit_factor": 0.47071738573965227,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -1.2061036877702176,
+      "sortino_like_per_trade": -1.3912759092635198,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 47.0,
+      "win_rate": 0.5,
+      "win_rate_95pct_wilson": [
+        0.2992949144298199,
+        0.7007050855701801
+      ],
+      "wins": 10,
+      "worst_trade_usd": -0.21860450449140661
+    },
+    "6NwarBvDkXhByqVp2Qkq5i9XbtA2B3Bwe8SWGu9vpump": {
+      "average_loss_usd": 0.0,
+      "average_win_usd": 0.0830178613453786,
+      "drawdown_duration_trades": 0,
+      "ending_equity_usd": 24.08301786134538,
+      "expectancy": 0.0830178613453786,
+      "expectancy_return": 0.055345240896919064,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": 0.0950178613453786,
+      "longest_losing_streak": 0,
+      "max_drawdown": 0.0,
+      "modeled_cost_usd": 0.012,
+      "n": 1,
+      "net_profit_usd": 0.0830178613453786,
+      "net_return": 0.003459077556057455,
+      "payoff_ratio": null,
+      "profit_factor": null,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": null,
+      "sortino_like_per_trade": null,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 3.0,
+      "win_rate": 1.0,
+      "win_rate_95pct_wilson": [
+        0.20654329147389294,
+        1.0
+      ],
+      "wins": 1,
+      "worst_trade_usd": 0.0830178613453786
+    },
+    "8XtRWb4uAAJFMP4QQhoYYCWR6XXb7ybcCdiqPwz9s5WS": {
+      "average_loss_usd": -0.18628368360215497,
+      "average_win_usd": 0.10507588436432767,
+      "drawdown_duration_trades": 3,
+      "ending_equity_usd": 24.257887938981657,
+      "expectancy": 0.032235992372707016,
+      "expectancy_return": 0.02969474439995435,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": 0.34588793898165615,
+      "longest_losing_streak": 1,
+      "max_drawdown": 0.01109899047267393,
+      "modeled_cost_usd": 0.088,
+      "n": 8,
+      "net_profit_usd": 0.2578879389816561,
+      "net_return": 0.010745330790902452,
+      "payoff_ratio": 0.5640638102730331,
+      "profit_factor": 1.6921914308190993,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": 0.8492153326583822,
+      "sortino_like_per_trade": 1.3484586882778382,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 22.0,
+      "win_rate": 0.75,
+      "win_rate_95pct_wilson": [
+        0.40926987910258916,
+        0.9285223111419724
+      ],
+      "wins": 6,
+      "worst_trade_usd": -0.20090347272118647
+    },
+    "8iYPW781jBDu8zkC6PFY8WpvtbHxSVMgBX8aPnNmRY3z": {
+      "average_loss_usd": -0.16837912317718964,
+      "average_win_usd": 0.0,
+      "drawdown_duration_trades": 1,
+      "ending_equity_usd": 23.83162087682281,
+      "expectancy": -0.16837912317718964,
+      "expectancy_return": -0.11225274878479308,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": -0.15637912317718963,
+      "longest_losing_streak": 1,
+      "max_drawdown": 0.007015796799049512,
+      "modeled_cost_usd": 0.012000000000000002,
+      "n": 1,
+      "net_profit_usd": -0.16837912317718964,
+      "net_return": -0.007015796799049512,
+      "payoff_ratio": null,
+      "profit_factor": 0.0,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": null,
+      "sortino_like_per_trade": -1.0,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 3.0000000000000004,
+      "win_rate": 0.0,
+      "win_rate_95pct_wilson": [
+        0.0,
+        0.7934567085261071
+      ],
+      "wins": 0,
+      "worst_trade_usd": -0.16837912317718964
+    },
+    "8wXtPeU6557ETkp9WHFY1n1EcU6NxDvbAggHGsMYiHsB": {
+      "average_loss_usd": 0.0,
+      "average_win_usd": 0.00014010541736265286,
+      "drawdown_duration_trades": 0,
+      "ending_equity_usd": 24.000140105417362,
+      "expectancy": 0.00014010541736265286,
+      "expectancy_return": 0.00014010541736265286,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": 0.008140105417362653,
+      "longest_losing_streak": 0,
+      "max_drawdown": 0.0,
+      "modeled_cost_usd": 0.008,
+      "n": 1,
+      "net_profit_usd": 0.00014010541736265286,
+      "net_return": 5.8377257234898394e-06,
+      "payoff_ratio": null,
+      "profit_factor": null,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": null,
+      "sortino_like_per_trade": null,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 2.0,
+      "win_rate": 1.0,
+      "win_rate_95pct_wilson": [
+        0.20654329147389294,
+        1.0
+      ],
+      "wins": 1,
+      "worst_trade_usd": 0.00014010541736265286
+    },
+    "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump": {
+      "average_loss_usd": 0.0,
+      "average_win_usd": 0.052018341581826284,
+      "drawdown_duration_trades": 0,
+      "ending_equity_usd": 24.052018341581828,
+      "expectancy": 0.052018341581826284,
+      "expectancy_return": 0.05201834158182629,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": 0.060018341581826284,
+      "longest_losing_streak": 0,
+      "max_drawdown": 0.0,
+      "modeled_cost_usd": 0.007999999999999998,
+      "n": 1,
+      "net_profit_usd": 0.052018341581826284,
+      "net_return": 0.0021674308992427616,
+      "payoff_ratio": null,
+      "profit_factor": null,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": null,
+      "sortino_like_per_trade": null,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 1.9999999999999998,
+      "win_rate": 1.0,
+      "win_rate_95pct_wilson": [
+        0.20654329147389294,
+        1.0
+      ],
+      "wins": 1,
+      "worst_trade_usd": 0.052018341581826284
+    },
+    "9Pfync3ejPC9eHqVzq3nYQJAhyhjqpnB9UsaSfLxpump": {
+      "average_loss_usd": 0.0,
+      "average_win_usd": 0.06279592430016012,
+      "drawdown_duration_trades": 0,
+      "ending_equity_usd": 24.06279592430016,
+      "expectancy": 0.06279592430016012,
+      "expectancy_return": 0.06279592430016012,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": 0.07079592430016013,
+      "longest_losing_streak": 0,
+      "max_drawdown": 0.0,
+      "modeled_cost_usd": 0.008,
+      "n": 1,
+      "net_profit_usd": 0.06279592430016012,
+      "net_return": 0.0026164968458399773,
+      "payoff_ratio": null,
+      "profit_factor": null,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": null,
+      "sortino_like_per_trade": null,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 2.0,
+      "win_rate": 1.0,
+      "win_rate_95pct_wilson": [
+        0.20654329147389294,
+        1.0
+      ],
+      "wins": 1,
+      "worst_trade_usd": 0.06279592430016012
+    },
+    "9oXA1VWKNiYDYa6VKHBFFBBvZdvuhw1b2eD5Aka7YrVt": {
+      "average_loss_usd": -0.19675470142015467,
+      "average_win_usd": 0.0,
+      "drawdown_duration_trades": 2,
+      "ending_equity_usd": 23.60649059715969,
+      "expectancy": -0.19675470142015467,
+      "expectancy_return": -0.13116980094676978,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": -0.3695094028403093,
+      "longest_losing_streak": 2,
+      "max_drawdown": 0.016396225118346153,
+      "modeled_cost_usd": 0.024,
+      "n": 2,
+      "net_profit_usd": -0.39350940284030933,
+      "net_return": -0.016396225118346153,
+      "payoff_ratio": null,
+      "profit_factor": 0.0,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -12.629863767470923,
+      "sortino_like_per_trade": -1.409801399364083,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 6.0,
+      "win_rate": 0.0,
+      "win_rate_95pct_wilson": [
+        0.0,
+        0.6576280471103807
+      ],
+      "wins": 0,
+      "worst_trade_usd": -0.212333230614342
+    },
+    "ApZuxdpzMrbEYTGEzeY9afh5pj9d6qPRJCTgQYiipbKg": {
+      "average_loss_usd": -0.1107709541213765,
+      "average_win_usd": 0.0,
+      "drawdown_duration_trades": 1,
+      "ending_equity_usd": 23.889229045878622,
+      "expectancy": -0.1107709541213765,
+      "expectancy_return": -0.1107709541213765,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": -0.10277095412137649,
+      "longest_losing_streak": 1,
+      "max_drawdown": 0.004615456421724118,
+      "modeled_cost_usd": 0.008,
+      "n": 1,
+      "net_profit_usd": -0.1107709541213765,
+      "net_return": -0.004615456421724118,
+      "payoff_ratio": null,
+      "profit_factor": 0.0,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": null,
+      "sortino_like_per_trade": -1.0,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 2.0,
+      "win_rate": 0.0,
+      "win_rate_95pct_wilson": [
+        0.0,
+        0.7934567085261071
+      ],
+      "wins": 0,
+      "worst_trade_usd": -0.1107709541213765
+    },
+    "B5WTLaRwaUQpKk7ir1wniNB6m5o8GgMrimhKMYan2R6B": {
+      "average_loss_usd": -0.1396713433654052,
+      "average_win_usd": 0.08606904832884044,
+      "drawdown_duration_trades": 4,
+      "ending_equity_usd": 23.667055018232627,
+      "expectancy": -0.0832362454418438,
+      "expectancy_return": -0.06957417294750198,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": -0.29694498176737516,
+      "longest_losing_streak": 2,
+      "max_drawdown": 0.013872707573640564,
+      "modeled_cost_usd": 0.036000000000000004,
+      "n": 4,
+      "net_profit_usd": -0.3329449817673752,
+      "net_return": -0.013872707573640564,
+      "payoff_ratio": 0.6162255352815532,
+      "profit_factor": 0.20540851176051772,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -1.3361999408130054,
+      "sortino_like_per_trade": -1.3194284444250186,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 9.0,
+      "win_rate": 0.25,
+      "win_rate_95pct_wilson": [
+        0.045586062644636216,
+        0.6993639475573634
+      ],
+      "wins": 1,
+      "worst_trade_usd": -0.16394486993210178
+    },
+    "Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump": {
+      "average_loss_usd": -0.12834161985319018,
+      "average_win_usd": 0.10503267213566259,
+      "drawdown_duration_trades": 3,
+      "ending_equity_usd": 23.825040484711753,
+      "expectancy": -0.034991903057649064,
+      "expectancy_return": -0.023973749836579517,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": -0.1309595152882453,
+      "longest_losing_streak": 3,
+      "max_drawdown": 0.015903503525680374,
+      "modeled_cost_usd": 0.044,
+      "n": 5,
+      "net_profit_usd": -0.17495951528824533,
+      "net_return": -0.00728997980367696,
+      "payoff_ratio": 0.8183835629923429,
+      "profit_factor": 0.5455890419948953,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -0.4546554052755829,
+      "sortino_like_per_trade": -0.6292402013900502,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 11.0,
+      "win_rate": 0.4,
+      "win_rate_95pct_wilson": [
+        0.1176182311592533,
+        0.769280067791163
+      ],
+      "wins": 2,
+      "worst_trade_usd": -0.16527229831604323
+    },
+    "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk": {
+      "average_loss_usd": -0.07281502296115383,
+      "average_win_usd": 0.03772077531209462,
+      "drawdown_duration_trades": 5,
+      "ending_equity_usd": 23.71399296348146,
+      "expectancy": -0.028600703651854447,
+      "expectancy_return": -0.02427229261507799,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": -0.1980070365185445,
+      "longest_losing_streak": 2,
+      "max_drawdown": 0.014249062707785587,
+      "modeled_cost_usd": 0.088,
+      "n": 10,
+      "net_profit_usd": -0.28600703651854453,
+      "net_return": -0.011916959854939235,
+      "payoff_ratio": 0.5180356165268027,
+      "profit_factor": 0.3453570776845352,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -1.1261307684857873,
+      "sortino_like_per_trade": -1.1995440020315289,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 22.0,
+      "win_rate": 0.4,
+      "win_rate_95pct_wilson": [
+        0.16817758120350967,
+        0.6873304525498135
+      ],
+      "wins": 4,
+      "worst_trade_usd": -0.16878691021727582
+    },
+    "ETH": {
+      "average_loss_usd": -0.04107334877153054,
+      "average_win_usd": 0.03384544053905873,
+      "drawdown_duration_trades": 20,
+      "ending_equity_usd": 23.32837060319057,
+      "expectancy": -0.03358146984047161,
+      "expectancy_return": -0.007668742975310064,
+      "expected_shortfall_95_usd": -0.08167433137864924,
+      "gross_profit_usd": 0.01903894453080069,
+      "longest_losing_streak": 7,
+      "max_drawdown": 0.027984558200392917,
+      "modeled_cost_usd": 0.6906683413402329,
+      "n": 20,
+      "net_profit_usd": -0.6716293968094321,
+      "net_return": -0.027984558200392917,
+      "payoff_ratio": 0.8240243747185829,
+      "profit_factor": 0.09155826385762035,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -4.198490193669195,
+      "sortino_like_per_trade": -3.3108062480311826,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 172.6670853350582,
+      "win_rate": 0.1,
+      "win_rate_95pct_wilson": [
+        0.027865893984153206,
+        0.30103820641179335
+      ],
+      "wins": 2,
+      "worst_trade_usd": -0.08167433137864924
+    },
+    "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump": {
+      "average_loss_usd": -0.12135128111042888,
+      "average_win_usd": 0.11005209036976141,
+      "drawdown_duration_trades": 4,
+      "ending_equity_usd": 24.064855327407095,
+      "expectancy": 0.007206147489676835,
+      "expectancy_return": 0.019720506750138346,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": 0.14485532740709156,
+      "longest_losing_streak": 2,
+      "max_drawdown": 0.013846299969332287,
+      "modeled_cost_usd": 0.08,
+      "n": 9,
+      "net_profit_usd": 0.06485532740709149,
+      "net_return": 0.002702305308629027,
+      "payoff_ratio": 0.9068885747453685,
+      "profit_factor": 1.1336107184317106,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": 0.4269677507010032,
+      "sortino_like_per_trade": 0.9015428613591341,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 20.0,
+      "win_rate": 0.5555555555555556,
+      "win_rate_95pct_wilson": [
+        0.2666473457440297,
+        0.811224570528086
+      ],
+      "wins": 5,
+      "worst_trade_usd": -0.1700904483147525
+    },
+    "H74CYmXgMkYHYuSRsZt6RJb4NYp2u72Vw8BS5huApump": {
+      "average_loss_usd": -0.1744706908709222,
+      "average_win_usd": 0.052858437613228955,
+      "drawdown_duration_trades": 7,
+      "ending_equity_usd": 23.460692549355993,
+      "expectancy": -0.0770439215205717,
+      "expectancy_return": -0.05741162561663521,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": -0.4593074506440019,
+      "longest_losing_streak": 2,
+      "max_drawdown": 0.02721292428698663,
+      "modeled_cost_usd": 0.07999999999999999,
+      "n": 7,
+      "net_profit_usd": -0.539307450644002,
+      "net_return": -0.02247114377683357,
+      "payoff_ratio": 0.3029645687156415,
+      "profit_factor": 0.22722342653673117,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -1.6857742740301465,
+      "sortino_like_per_trade": -1.5704046669863814,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 20.0,
+      "win_rate": 0.42857142857142855,
+      "win_rate_95pct_wilson": [
+        0.15821692226262685,
+        0.7495457695909742
+      ],
+      "wins": 3,
+      "worst_trade_usd": -0.23045092409181567
+    },
+    "H8xQ6poBjB9DTPMDTKWzWPrnxu4bDEhybxiouF8Ppump": {
+      "average_loss_usd": -0.14184292534370624,
+      "average_win_usd": 0.0,
+      "drawdown_duration_trades": 1,
+      "ending_equity_usd": 23.858157074656294,
+      "expectancy": -0.14184292534370624,
+      "expectancy_return": -0.14184292534370627,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": -0.13384292534370623,
+      "longest_losing_streak": 1,
+      "max_drawdown": 0.005910121889321052,
+      "modeled_cost_usd": 0.007999999999999998,
+      "n": 1,
+      "net_profit_usd": -0.14184292534370624,
+      "net_return": -0.005910121889321052,
+      "payoff_ratio": null,
+      "profit_factor": 0.0,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": null,
+      "sortino_like_per_trade": -1.0,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 1.9999999999999998,
+      "win_rate": 0.0,
+      "win_rate_95pct_wilson": [
+        0.0,
+        0.7934567085261071
+      ],
+      "wins": 0,
+      "worst_trade_usd": -0.14184292534370624
+    },
+    "JUP": {
+      "average_loss_usd": -0.07341030605367811,
+      "average_win_usd": 0.037396645743503376,
+      "drawdown_duration_trades": 151,
+      "ending_equity_usd": 16.35005929160723,
+      "expectancy": -0.050661858995978595,
+      "expectancy_return": -0.007782731960460751,
+      "expected_shortfall_95_usd": -0.17100840144139243,
+      "gross_profit_usd": 0.11972080568378014,
+      "longest_losing_streak": 18,
+      "max_drawdown": 0.3187475295163654,
+      "modeled_cost_usd": 7.7696615140765495,
+      "n": 151,
+      "net_profit_usd": -7.649940708392771,
+      "net_return": -0.3187475295163654,
+      "payoff_ratio": 0.5094195591033048,
+      "profit_factor": 0.13160005276835376,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -9.723801017118223,
+      "sortino_like_per_trade": -7.9884484714251265,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 1942.4153785191374,
+      "win_rate": 0.2052980132450331,
+      "win_rate_95pct_wilson": [
+        0.14856886486213688,
+        0.27665019771536165
+      ],
+      "wins": 31,
+      "worst_trade_usd": -0.18793906182607378
+    },
+    "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN": {
+      "average_loss_usd": -0.033450408244469605,
+      "average_win_usd": 0.05577206492026472,
+      "drawdown_duration_trades": 6,
+      "ending_equity_usd": 23.977742496862653,
+      "expectancy": -0.0037095838562248296,
+      "expectancy_return": -0.004612269164420177,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": 0.03374249686265102,
+      "longest_losing_streak": 2,
+      "max_drawdown": 0.0037892425381649275,
+      "modeled_cost_usd": 0.055999999999999994,
+      "n": 6,
+      "net_profit_usd": -0.022257503137348977,
+      "net_return": -0.0009273959640561102,
+      "payoff_ratio": 1.6673059567063904,
+      "profit_factor": 0.8336529783531953,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -0.2884310293730628,
+      "sortino_like_per_trade": -0.4451199849406944,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 14.0,
+      "win_rate": 0.3333333333333333,
+      "win_rate_95pct_wilson": [
+        0.09676933255921683,
+        0.7000116786584712
+      ],
+      "wins": 2,
+      "worst_trade_usd": -0.052435982231097064
+    },
+    "KENJSUYLASHUMfHyy5o4Hp2FdNqZg1AsUPhfH2kYvEP": {
+      "average_loss_usd": -0.11895077275904002,
+      "average_win_usd": 0.03343447532834965,
+      "drawdown_duration_trades": 2,
+      "ending_equity_usd": 23.82896740513862,
+      "expectancy": -0.04275814871534518,
+      "expectancy_return": -0.04275814871534519,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": -0.13903259486138075,
+      "longest_losing_streak": 2,
+      "max_drawdown": 0.009885022684331779,
+      "modeled_cost_usd": 0.032,
+      "n": 4,
+      "net_profit_usd": -0.17103259486138073,
+      "net_return": -0.00712635811922413,
+      "payoff_ratio": 0.28107825239671425,
+      "profit_factor": 0.28107825239671425,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -0.9662406609161373,
+      "sortino_like_per_trade": -1.0132800229879528,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 8.0,
+      "win_rate": 0.5,
+      "win_rate_95pct_wilson": [
+        0.15003570882017148,
+        0.8499642911798285
+      ],
+      "wins": 2,
+      "worst_trade_usd": -0.1287447630922629
+    },
+    "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL": {
+      "average_loss_usd": -0.04562755654883385,
+      "average_win_usd": 0.015599891924163266,
+      "drawdown_duration_trades": 7,
+      "ending_equity_usd": 23.818661893028317,
+      "expectancy": -0.022667263371459932,
+      "expectancy_return": -0.022667263371459932,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": -0.11733810697167946,
+      "longest_losing_streak": 2,
+      "max_drawdown": 0.00836186883609491,
+      "modeled_cost_usd": 0.064,
+      "n": 8,
+      "net_profit_usd": -0.18133810697167949,
+      "net_return": -0.007555754457153507,
+      "payoff_ratio": 0.34189628163557595,
+      "profit_factor": 0.20513776898134556,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -1.1412961081919375,
+      "sortino_like_per_trade": -1.1446203207736874,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 16.0,
+      "win_rate": 0.375,
+      "win_rate_95pct_wilson": [
+        0.13684175946152105,
+        0.6942621454161981
+      ],
+      "wins": 3,
+      "worst_trade_usd": -0.1133413097147633
+    },
+    "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL": {
+      "average_loss_usd": -0.14356914268516177,
+      "average_win_usd": 0.14980139754080865,
+      "drawdown_duration_trades": 9,
+      "ending_equity_usd": 24.979827698368258,
+      "expectancy": 0.030619615574008167,
+      "expectancy_return": 0.025200449616851077,
+      "expected_shortfall_95_usd": -0.23344918616404023,
+      "gross_profit_usd": 1.3318276983682622,
+      "longest_losing_streak": 3,
+      "max_drawdown": 0.019195184159844003,
+      "modeled_cost_usd": 0.35200000000000015,
+      "n": 32,
+      "net_profit_usd": 0.9798276983682612,
+      "net_return": 0.0408261540986774,
+      "payoff_ratio": 1.0434094314355127,
+      "profit_factor": 1.52498301517498,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": 1.0845852949999732,
+      "sortino_like_per_trade": 1.9916675464657245,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 88.0,
+      "win_rate": 0.59375,
+      "win_rate_95pct_wilson": [
+        0.4225972657298823,
+        0.744805975196862
+      ],
+      "wins": 19,
+      "worst_trade_usd": -0.23368330509026175
+    },
+    "SOL": {
+      "average_loss_usd": -0.04151339828186446,
+      "average_win_usd": 0.08960572360095961,
+      "drawdown_duration_trades": 19,
+      "ending_equity_usd": 23.3423645545274,
+      "expectancy": -0.03461239186697899,
+      "expectancy_return": -0.007321477493960602,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": 0.06676389694309054,
+      "longest_losing_streak": 14,
+      "max_drawdown": 0.027401476894691634,
+      "modeled_cost_usd": 0.7243993424156914,
+      "n": 19,
+      "net_profit_usd": -0.6576354454726007,
+      "net_return": -0.027401476894691634,
+      "payoff_ratio": 2.1584771979533355,
+      "profit_factor": 0.11991539988629642,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -3.9517732408537447,
+      "sortino_like_per_trade": -3.25149200806192,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 181.09983560392286,
+      "win_rate": 0.05263157894736842,
+      "win_rate_95pct_wilson": [
+        0.009351752490529969,
+        0.2463921533654521
+      ],
+      "wins": 1,
+      "worst_trade_usd": -0.09884881876899917
+    },
+    "SV151D5pjygAKA8aJJcKzm4wFnRX5G92Fye94jQJk7g": {
+      "average_loss_usd": -0.11044864030174273,
+      "average_win_usd": 0.0,
+      "drawdown_duration_trades": 1,
+      "ending_equity_usd": 23.889551359698256,
+      "expectancy": -0.11044864030174273,
+      "expectancy_return": -0.11044864030174273,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": -0.10244864030174272,
+      "longest_losing_streak": 1,
+      "max_drawdown": 0.004602026679239368,
+      "modeled_cost_usd": 0.008,
+      "n": 1,
+      "net_profit_usd": -0.11044864030174273,
+      "net_return": -0.004602026679239368,
+      "payoff_ratio": null,
+      "profit_factor": 0.0,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": null,
+      "sortino_like_per_trade": -1.0,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 2.0,
+      "win_rate": 0.0,
+      "win_rate_95pct_wilson": [
+        0.0,
+        0.7934567085261071
+      ],
+      "wins": 0,
+      "worst_trade_usd": -0.11044864030174273
+    },
+    "WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk": {
+      "average_loss_usd": -0.11563308300572339,
+      "average_win_usd": 0.0,
+      "drawdown_duration_trades": 1,
+      "ending_equity_usd": 23.884366916994278,
+      "expectancy": -0.11563308300572339,
+      "expectancy_return": -0.11563308300572339,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": -0.10763308300572338,
+      "longest_losing_streak": 1,
+      "max_drawdown": 0.004818045125238424,
+      "modeled_cost_usd": 0.008,
+      "n": 1,
+      "net_profit_usd": -0.11563308300572339,
+      "net_return": -0.004818045125238424,
+      "payoff_ratio": null,
+      "profit_factor": 0.0,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": null,
+      "sortino_like_per_trade": -1.0,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 2.0,
+      "win_rate": 0.0,
+      "win_rate_95pct_wilson": [
+        0.0,
+        0.7934567085261071
+      ],
+      "wins": 0,
+      "worst_trade_usd": -0.11563308300572339
+    }
+  },
+  "by_exit_reason": {
+    "max_hold": {
+      "average_loss_usd": -0.05363102490899992,
+      "average_win_usd": 0.023963080249616745,
+      "drawdown_duration_trades": 157,
+      "ending_equity_usd": 17.286999402776587,
+      "expectancy": -0.042757965587410324,
+      "expectancy_return": -0.0074726607155064205,
+      "expected_shortfall_95_usd": -0.11927204897877408,
+      "gross_profit_usd": 0.25153499893157893,
+      "longest_losing_streak": 19,
+      "max_drawdown": 0.2797083582176422,
+      "modeled_cost_usd": 6.964535596155,
+      "n": 157,
+      "net_profit_usd": -6.713000597223422,
+      "net_return": -0.2797083582176422,
+      "payoff_ratio": 0.44681376666354655,
+      "profit_factor": 0.07281409530813351,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -9.565279583257137,
+      "sortino_like_per_trade": -8.04519381484351,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 1741.1338990387496,
+      "win_rate": 0.14012738853503184,
+      "win_rate_95pct_wilson": [
+        0.09439272759454097,
+        0.20305270940683184
+      ],
+      "wins": 22,
+      "worst_trade_usd": -0.14580287237094536
+    },
+    "stop_loss": {
+      "average_loss_usd": -0.15116317264329263,
+      "average_win_usd": 0.0,
+      "drawdown_duration_trades": 96,
+      "ending_equity_usd": 9.488335426243907,
+      "expectancy": -0.15116317264329263,
+      "expectancy_return": -0.09883673400589664,
+      "expected_shortfall_95_usd": -0.2269722872343265,
+      "gross_profit_usd": -12.716521937227428,
+      "longest_losing_streak": 96,
+      "max_drawdown": 0.6046526905731706,
+      "modeled_cost_usd": 1.795142636528663,
+      "n": 96,
+      "net_profit_usd": -14.51166457375609,
+      "net_return": -0.6046526905731706,
+      "payoff_ratio": null,
+      "profit_factor": 0.0,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -22.28071820206625,
+      "sortino_like_per_trade": -8.976622856893215,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 448.7856591321655,
+      "win_rate": 0.0,
+      "win_rate_95pct_wilson": [
+        0.0,
+        0.03847694748481595
+      ],
+      "wins": 0,
+      "worst_trade_usd": -0.23368330509026175
+    },
+    "take_profit": {
+      "average_loss_usd": 0.0,
+      "average_win_usd": 0.19697696494657943,
+      "drawdown_duration_trades": 0,
+      "ending_equity_usd": 29.515355018504216,
+      "expectancy": 0.19697696494657943,
+      "expectancy_return": 0.1578849675665032,
+      "expected_shortfall_95_usd": 0.031184848124546923,
+      "gross_profit_usd": 5.987436401864401,
+      "longest_losing_streak": 0,
+      "max_drawdown": 0.0,
+      "modeled_cost_usd": 0.472081383360178,
+      "n": 28,
+      "net_profit_usd": 5.5153550185042235,
+      "net_return": 0.22980645910434228,
+      "payoff_ratio": null,
+      "profit_factor": null,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": 8.53685777826186,
+      "sortino_like_per_trade": null,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 118.02034584004447,
+      "win_rate": 1.0,
+      "win_rate_95pct_wilson": [
+        0.8793527963418923,
+        1.0
+      ],
+      "wins": 28,
+      "worst_trade_usd": 0.019509884187177702
+    },
+    "trail_stop": {
+      "average_loss_usd": -0.017479362956048614,
+      "average_win_usd": 0.062399218158659384,
+      "drawdown_duration_trades": 8,
+      "ending_equity_usd": 28.025876245650743,
+      "expectancy": 0.047363249948832,
+      "expectancy_return": 0.037244081615000695,
+      "expected_shortfall_95_usd": -0.03535947522822391,
+      "gross_profit_usd": 5.678845827439353,
+      "longest_losing_streak": 5,
+      "max_drawdown": 0.00367536010102143,
+      "modeled_cost_usd": 1.6529695817886334,
+      "n": 85,
+      "net_profit_usd": 4.025876245650721,
+      "net_return": 0.16774484356878094,
+      "payoff_ratio": 3.5698794238417344,
+      "profit_factor": 15.395105015317487,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": 8.284033302717111,
+      "sortino_like_per_trade": 42.11953023936122,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 413.24239544715823,
+      "win_rate": 0.8117647058823529,
+      "win_rate_95pct_wilson": [
+        0.7158877949459186,
+        0.8806795788969659
+      ],
+      "wins": 69,
+      "worst_trade_usd": -0.05284294744477751
+    }
+  },
+  "by_setup": {
+    "dynamic_scalper": {
+      "average_loss_usd": -0.12896400626775137,
+      "average_win_usd": 0.1062528966378307,
+      "drawdown_duration_trades": 66,
+      "ending_equity_usd": 21.295771643850237,
+      "expectancy": -0.015364933841760041,
+      "expectancy_return": -0.009132572215013696,
+      "expected_shortfall_95_usd": -0.21703815456510261,
+      "gross_profit_usd": -1.0042283561497645,
+      "longest_losing_streak": 7,
+      "max_drawdown": 0.16962479965440302,
+      "modeled_cost_usd": 1.7000000000000013,
+      "n": 176,
+      "net_profit_usd": -2.704228356149768,
+      "net_return": -0.11267618150624015,
+      "payoff_ratio": 0.8238957497740221,
+      "profit_factor": 0.7695729530856255,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -1.0529923820907912,
+      "sortino_like_per_trade": -1.5197680156748172,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 425.0,
+      "win_rate": 0.48295454545454547,
+      "win_rate_95pct_wilson": [
+        0.41028317494954947,
+        0.5563541325477147
+      ],
+      "wins": 85,
+      "worst_trade_usd": -0.23368330509026175
+    },
+    "mean_reversion": {
+      "average_loss_usd": -0.0583775352770567,
+      "average_win_usd": 0.032385267854089766,
+      "drawdown_duration_trades": 12,
+      "ending_equity_usd": 23.455002915514655,
+      "expectancy": -0.038928363177525314,
+      "expectancy_return": -0.007101686048040211,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": 0.07669517914096306,
+      "longest_losing_streak": 7,
+      "max_drawdown": 0.023343195572996356,
+      "modeled_cost_usd": 0.6216922636263176,
+      "n": 14,
+      "net_profit_usd": -0.5449970844853544,
+      "net_return": -0.022708211853556093,
+      "payoff_ratio": 0.554755655585509,
+      "profit_factor": 0.15129699697786606,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -3.00121214833812,
+      "sortino_like_per_trade": -2.4612082253994054,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 155.42306590657938,
+      "win_rate": 0.21428571428571427,
+      "win_rate_95pct_wilson": [
+        0.0757124833691637,
+        0.4758972377320828
+      ],
+      "wins": 3,
+      "worst_trade_usd": -0.15595851945169645
+    },
+    "momentum_breakout": {
+      "average_loss_usd": -0.06292813673895416,
+      "average_win_usd": 0.04510187980348271,
+      "drawdown_duration_trades": 102,
+      "ending_equity_usd": 19.20178030076323,
+      "expectancy": -0.04704136960036049,
+      "expectancy_return": -0.007507536731241086,
+      "expected_shortfall_95_usd": -0.16296124740113097,
+      "gross_profit_usd": 0.284936234847384,
+      "longest_losing_streak": 21,
+      "max_drawdown": 0.2002744790882126,
+      "modeled_cost_usd": 5.0831559340841554,
+      "n": 102,
+      "net_profit_usd": -4.79821969923677,
+      "net_return": -0.1999258208015321,
+      "payoff_ratio": 0.7167204074479369,
+      "profit_factor": 0.12357248404274772,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -8.574613067375743,
+      "sortino_like_per_trade": -6.909963147271127,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 1270.7889835210387,
+      "win_rate": 0.14705882352941177,
+      "win_rate_95pct_wilson": [
+        0.09119034130498939,
+        0.2285478334769489
+      ],
+      "wins": 15,
+      "worst_trade_usd": -0.1782930217920343
+    },
+    "rsi_oversold": {
+      "average_loss_usd": -0.07885815413876829,
+      "average_win_usd": 0.031792497626342286,
+      "drawdown_duration_trades": 59,
+      "ending_equity_usd": 20.67517672699399,
+      "expectancy": -0.056352936830610205,
+      "expectancy_return": -0.009180878230827649,
+      "expected_shortfall_95_usd": -0.18053629506531607,
+      "gross_profit_usd": -0.42298008428992384,
+      "longest_losing_streak": 12,
+      "max_drawdown": 0.13853430304191716,
+      "modeled_cost_usd": 2.9018431887160787,
+      "n": 59,
+      "net_profit_usd": -3.3248232730060017,
+      "net_return": -0.13853430304191716,
+      "payoff_ratio": 0.4031605605476941,
+      "profit_factor": 0.10293461120366659,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -6.948145716843274,
+      "sortino_like_per_trade": -5.312958352206871,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 725.4607971790199,
+      "win_rate": 0.2033898305084746,
+      "win_rate_95pct_wilson": [
+        0.12036154854418066,
+        0.32268254963282317
+      ],
+      "wins": 12,
+      "worst_trade_usd": -0.18793906182607378
+    },
+    "vwap_reversion": {
+      "average_loss_usd": -0.042960376776703495,
+      "average_win_usd": 0.040349662649266094,
+      "drawdown_duration_trades": 14,
+      "ending_equity_usd": 23.688834506053333,
+      "expectancy": -0.020744366263111602,
+      "expectancy_return": -0.004054086069536069,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": 0.26687231745924783,
+      "longest_losing_streak": 6,
+      "max_drawdown": 0.013520843758274448,
+      "modeled_cost_usd": 0.5780378114059219,
+      "n": 15,
+      "net_profit_usd": -0.31116549394667403,
+      "net_return": -0.012965228914444515,
+      "payoff_ratio": 0.9392297199578301,
+      "profit_factor": 0.34153807998466557,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -1.413890185582132,
+      "sortino_like_per_trade": -1.6797240712045396,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 144.50945285148046,
+      "win_rate": 0.26666666666666666,
+      "win_rate_95pct_wilson": [
+        0.1089727610318281,
+        0.5195088965768675
+      ],
+      "wins": 4,
+      "worst_trade_usd": -0.08167433137864924
+    }
+  },
+  "challenger": {
+    "accepted_observed_trades": 21,
+    "bounds": {
+      "costs_included": true,
+      "minimum_prior_samples_per_coin_setup": 20,
+      "z_penalty": 1.0
+    },
+    "decisions": [
+      {
+        "coin": "JUP",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 552
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 554
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 555
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 557
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 558
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 559
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 561
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 563
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 564
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 566
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 567
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 568
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 569
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 570
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 571
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 572
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 573
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 574
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 575
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 577
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 578
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 579
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 582
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 583
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 584
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 586
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 587
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 588
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 591
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 6,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 592
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 593
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 594
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "mean_reversion",
+        "take": false,
+        "trade_id": 595
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 596
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "mean_reversion",
+        "take": false,
+        "trade_id": 602
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 606
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "mean_reversion",
+        "take": false,
+        "trade_id": 607
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 612
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 614
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 617
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "mean_reversion",
+        "take": false,
+        "trade_id": 620
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 6,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 624
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 7,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 626
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 7,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 627
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 8,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 629
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 8,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 632
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 9,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 634
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 10,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 635
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "mean_reversion",
+        "take": false,
+        "trade_id": 637
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 638
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 11,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 639
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 9,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 640
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 12,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 644
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 10,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 646
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 11,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 648
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 12,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 650
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 13,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 651
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 653
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 13,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 654
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 14,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 655
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 15,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 659
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 16,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 660
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 17,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 664
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 14,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 668
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 15,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 670
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 16,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 673
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 18,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 674
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 19,
+        "prior_score": null,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 675
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 20,
+        "prior_score": -0.008043978268670338,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 677
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 21,
+        "prior_score": -0.008155054018394376,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 680
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 685
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 686
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 687
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 22,
+        "prior_score": -0.00827749054980104,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 689
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 17,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 690
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 23,
+        "prior_score": -0.00815071510083812,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 693
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 18,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 697
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 24,
+        "prior_score": -0.007691455269471314,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 698
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 25,
+        "prior_score": -0.007563079948927144,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 702
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 26,
+        "prior_score": -0.0071234723542112155,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 704
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 27,
+        "prior_score": -0.007869350114701266,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 706
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 28,
+        "prior_score": -0.008100940659571225,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 707
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 19,
+        "prior_score": null,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 709
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 29,
+        "prior_score": -0.00831494941102489,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 711
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 30,
+        "prior_score": -0.008096420491234163,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 714
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 31,
+        "prior_score": -0.007968219161972497,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 715
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 32,
+        "prior_score": -0.007786425241834563,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 718
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 33,
+        "prior_score": -0.007628459433443676,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 719
+      },
+      {
+        "coin": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 720
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 34,
+        "prior_score": -0.00737479316029899,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 722
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 724
+      },
+      {
+        "coin": "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 725
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 35,
+        "prior_score": -0.007918890670937618,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 727
+      },
+      {
+        "coin": "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 728
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 729
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 731
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 732
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 36,
+        "prior_score": -0.008035303408738188,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 733
+      },
+      {
+        "coin": "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 735
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 20,
+        "prior_score": -0.012680521371593225,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 736
+      },
+      {
+        "coin": "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 737
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 37,
+        "prior_score": -0.008082531742229877,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 738
+      },
+      {
+        "coin": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 739
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 740
+      },
+      {
+        "coin": "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 742
+      },
+      {
+        "coin": "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 743
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 744
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 745
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 38,
+        "prior_score": -0.008549855213962915,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 746
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 39,
+        "prior_score": -0.008558528357938675,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 748
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 21,
+        "prior_score": -0.012790581389542427,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 749
+      },
+      {
+        "coin": "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 750
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 40,
+        "prior_score": -0.008993092853654492,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 753
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 756
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 41,
+        "prior_score": -0.008594441479561711,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 757
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 758
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 42,
+        "prior_score": -0.008093820801558363,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 759
+      },
+      {
+        "coin": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 760
+      },
+      {
+        "coin": "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 762
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 43,
+        "prior_score": -0.007610069396436875,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 764
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 44,
+        "prior_score": -0.007211490244932325,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 766
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 767
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "mean_reversion",
+        "take": false,
+        "trade_id": 768
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 45,
+        "prior_score": -0.007047076084504883,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 769
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "mean_reversion",
+        "take": false,
+        "trade_id": 770
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 772
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 46,
+        "prior_score": -0.006845599972536285,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 774
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 775
+      },
+      {
+        "coin": "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 776
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 777
+      },
+      {
+        "coin": "8wXtPeU6557ETkp9WHFY1n1EcU6NxDvbAggHGsMYiHsB",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 778
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "mean_reversion",
+        "take": false,
+        "trade_id": 779
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 22,
+        "prior_score": -0.012221382490381934,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 780
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "mean_reversion",
+        "take": false,
+        "trade_id": 781
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 47,
+        "prior_score": -0.007268432531430164,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 782
+      },
+      {
+        "coin": "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 784
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 23,
+        "prior_score": -0.01198464238871122,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 785
+      },
+      {
+        "coin": "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 786
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 788
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 789
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 790
+      },
+      {
+        "coin": "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 791
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 48,
+        "prior_score": -0.007709040750448454,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 792
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 49,
+        "prior_score": -0.007840495569547051,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 793
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 50,
+        "prior_score": -0.0077221714325117355,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 797
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 798
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 51,
+        "prior_score": -0.0075937711797316254,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 799
+      },
+      {
+        "coin": "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 801
+      },
+      {
+        "coin": "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 803
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 52,
+        "prior_score": -0.007997706538626113,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 804
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 6,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 807
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 6,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 808
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 53,
+        "prior_score": -0.007905575011949887,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 809
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 7,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 810
+      },
+      {
+        "coin": "4N4DnNo3qpPks9aQCkcWkzoir8tnvT6diS4TnnZibonk",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 813
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 54,
+        "prior_score": -0.007753562220377881,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 814
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 55,
+        "prior_score": -0.007684662905887816,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 816
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 8,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 817
+      },
+      {
+        "coin": "H74CYmXgMkYHYuSRsZt6RJb4NYp2u72Vw8BS5huApump",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 818
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 9,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 820
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 56,
+        "prior_score": -0.007789493989832501,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 821
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 10,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 823
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 57,
+        "prior_score": -0.007750074561054693,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 824
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 7,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 825
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 11,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 827
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 24,
+        "prior_score": -0.012211277705065025,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 828
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 12,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 829
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 13,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 831
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 58,
+        "prior_score": -0.007905298195048722,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 832
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 14,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 834
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 59,
+        "prior_score": -0.007799148767178314,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 835
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 15,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 837
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 16,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 838
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 60,
+        "prior_score": -0.007690895314564517,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 839
+      },
+      {
+        "coin": "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL",
+        "prior_n": 6,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 840
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 17,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 843
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 61,
+        "prior_score": -0.007836841411752546,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 844
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 62,
+        "prior_score": -0.00790065932389519,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 846
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 25,
+        "prior_score": -0.011856526839543998,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 848
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 18,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 849
+      },
+      {
+        "coin": "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk",
+        "prior_n": 6,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 850
+      },
+      {
+        "coin": "B5WTLaRwaUQpKk7ir1wniNB6m5o8GgMrimhKMYan2R6B",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 853
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 8,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 854
+      },
+      {
+        "coin": "KENJSUYLASHUMfHyy5o4Hp2FdNqZg1AsUPhfH2kYvEP",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 856
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 63,
+        "prior_score": -0.00788923154796313,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 857
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 19,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 858
+      },
+      {
+        "coin": "4N4DnNo3qpPks9aQCkcWkzoir8tnvT6diS4TnnZibonk",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 860
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 64,
+        "prior_score": -0.007733345109745642,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 861
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 20,
+        "prior_score": -0.02548620879788064,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 862
+      },
+      {
+        "coin": "KENJSUYLASHUMfHyy5o4Hp2FdNqZg1AsUPhfH2kYvEP",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 864
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 9,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 866
+      },
+      {
+        "coin": "WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 867
+      },
+      {
+        "coin": "4N4DnNo3qpPks9aQCkcWkzoir8tnvT6diS4TnnZibonk",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 868
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 65,
+        "prior_score": -0.007706156987641814,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 869
+      },
+      {
+        "coin": "SV151D5pjygAKA8aJJcKzm4wFnRX5G92Fye94jQJk7g",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 870
+      },
+      {
+        "coin": "8XtRWb4uAAJFMP4QQhoYYCWR6XXb7ybcCdiqPwz9s5WS",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 871
+      },
+      {
+        "coin": "Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 872
+      },
+      {
+        "coin": "Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 873
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 66,
+        "prior_score": -0.007716940226150487,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 876
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 26,
+        "prior_score": -0.011768585128671799,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 878
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 27,
+        "prior_score": -0.011734123234164083,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 879
+      },
+      {
+        "coin": "Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 880
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 21,
+        "prior_score": -0.019391441018664676,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 882
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 67,
+        "prior_score": -0.007778170056712345,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 885
+      },
+      {
+        "coin": "6AJcP7wuLwmRYLBNbi825wgguaPsWzPBEHcHndpRpump",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 886
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 68,
+        "prior_score": -0.0078063828274315475,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 887
+      },
+      {
+        "coin": "B5WTLaRwaUQpKk7ir1wniNB6m5o8GgMrimhKMYan2R6B",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 888
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 889
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 890
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 893
+      },
+      {
+        "coin": "B5WTLaRwaUQpKk7ir1wniNB6m5o8GgMrimhKMYan2R6B",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 894
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 10,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 895
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 69,
+        "prior_score": -0.00779715278410444,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 896
+      },
+      {
+        "coin": "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 897
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 22,
+        "prior_score": -0.010690339952158685,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 899
+      },
+      {
+        "coin": "KENJSUYLASHUMfHyy5o4Hp2FdNqZg1AsUPhfH2kYvEP",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 900
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 23,
+        "prior_score": -0.002450455459492726,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 901
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 902
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 70,
+        "prior_score": -0.007886670294708017,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 904
+      },
+      {
+        "coin": "8XtRWb4uAAJFMP4QQhoYYCWR6XXb7ybcCdiqPwz9s5WS",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 905
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 907
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 71,
+        "prior_score": -0.007979992477720943,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 908
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 24,
+        "prior_score": 0.005020558956697629,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 909
+      },
+      {
+        "coin": "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 910
+      },
+      {
+        "coin": "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 911
+      },
+      {
+        "coin": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 912
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 25,
+        "prior_score": 0.008418863218218713,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 913
+      },
+      {
+        "coin": "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 914
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 72,
+        "prior_score": -0.008102761990451282,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 915
+      },
+      {
+        "coin": "H8xQ6poBjB9DTPMDTKWzWPrnxu4bDEhybxiouF8Ppump",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 916
+      },
+      {
+        "coin": "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 917
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 11,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 918
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 919
+      },
+      {
+        "coin": "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump",
+        "prior_n": 6,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 920
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 26,
+        "prior_score": 0.0025529895416893968,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 921
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 73,
+        "prior_score": -0.0081973283071232,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 922
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 27,
+        "prior_score": 0.009748595200919793,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 924
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 6,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 927
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 74,
+        "prior_score": -0.008235282281268288,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 928
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 7,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 929
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 8,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 930
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 75,
+        "prior_score": -0.008313785186399343,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 931
+      },
+      {
+        "coin": "Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 932
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 9,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 933
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 10,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 934
+      },
+      {
+        "coin": "ApZuxdpzMrbEYTGEzeY9afh5pj9d6qPRJCTgQYiipbKg",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 935
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 28,
+        "prior_score": 0.010711660367370854,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 936
+      },
+      {
+        "coin": "8XtRWb4uAAJFMP4QQhoYYCWR6XXb7ybcCdiqPwz9s5WS",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 939
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 28,
+        "prior_score": -0.011732771523696674,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 940
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 12,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 941
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "mean_reversion",
+        "take": false,
+        "trade_id": 942
+      },
+      {
+        "coin": "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump",
+        "prior_n": 7,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 943
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 76,
+        "prior_score": -0.008402632538950454,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 944
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 29,
+        "prior_score": 0.006116283486244649,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 945
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 11,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 948
+      },
+      {
+        "coin": "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk",
+        "prior_n": 7,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 949
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 77,
+        "prior_score": -0.008425591127251157,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 950
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 30,
+        "prior_score": 0.0070865516374623745,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 951
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 12,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 952
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 78,
+        "prior_score": -0.00837134226950302,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 953
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 13,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 954
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 14,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 956
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 15,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 959
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 29,
+        "prior_score": -0.011844710104430762,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 960
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 31,
+        "prior_score": 0.013059001965024738,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 961
+      },
+      {
+        "coin": "8XtRWb4uAAJFMP4QQhoYYCWR6XXb7ybcCdiqPwz9s5WS",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 962
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 16,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 963
+      },
+      {
+        "coin": "8XtRWb4uAAJFMP4QQhoYYCWR6XXb7ybcCdiqPwz9s5WS",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 964
+      },
+      {
+        "coin": "KENJSUYLASHUMfHyy5o4Hp2FdNqZg1AsUPhfH2kYvEP",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 965
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 32,
+        "prior_score": 0.00847282602271154,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 966
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 79,
+        "prior_score": -0.008334375478171308,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 967
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 13,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 968
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 17,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 972
+      },
+      {
+        "coin": "9oXA1VWKNiYDYa6VKHBFFBBvZdvuhw1b2eD5Aka7YrVt",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 973
+      },
+      {
+        "coin": "8iYPW781jBDu8zkC6PFY8WpvtbHxSVMgBX8aPnNmRY3z",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 974
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 30,
+        "prior_score": -0.011340785468928699,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 975
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 18,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 976
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 19,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 977
+      },
+      {
+        "coin": "B5WTLaRwaUQpKk7ir1wniNB6m5o8GgMrimhKMYan2R6B",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 978
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 33,
+        "prior_score": 0.0044880271330161765,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 979
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 80,
+        "prior_score": -0.008407454683261673,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 980
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 14,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 981
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 81,
+        "prior_score": -0.008439897701578577,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 984
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 34,
+        "prior_score": 0.00038738423223673435,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 985
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 20,
+        "prior_score": 0.0005835603713876189,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 987
+      },
+      {
+        "coin": "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump",
+        "prior_n": 8,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 988
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 31,
+        "prior_score": -0.010967017057305295,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 989
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 21,
+        "prior_score": -0.0012547871486197973,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 990
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 22,
+        "prior_score": 0.007499791356445407,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 992
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 23,
+        "prior_score": 0.011680639230437585,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 993
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 35,
+        "prior_score": -0.00302392609715018,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 995
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 32,
+        "prior_score": -0.010769899773158474,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 996
+      },
+      {
+        "coin": "8XtRWb4uAAJFMP4QQhoYYCWR6XXb7ybcCdiqPwz9s5WS",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 998
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "mean_reversion",
+        "take": false,
+        "trade_id": 999
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 24,
+        "prior_score": 0.00578036281131053,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 1000
+      },
+      {
+        "coin": "9Pfync3ejPC9eHqVzq3nYQJAhyhjqpnB9UsaSfLxpump",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1001
+      },
+      {
+        "coin": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1002
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 15,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1003
+      },
+      {
+        "coin": "SOL",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 1004
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 82,
+        "prior_score": -0.008549768795096646,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 1005
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 36,
+        "prior_score": -0.006410009872249756,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1006
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 37,
+        "prior_score": -0.009582036124071052,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1007
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 83,
+        "prior_score": -0.008522264185813361,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 1008
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 38,
+        "prior_score": -0.013063491297091034,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1009
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 84,
+        "prior_score": -0.008455762110910564,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 1010
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 85,
+        "prior_score": -0.00849182253571655,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 1011
+      },
+      {
+        "coin": "H74CYmXgMkYHYuSRsZt6RJb4NYp2u72Vw8BS5huApump",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1012
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 86,
+        "prior_score": -0.0082231108753302,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 1013
+      },
+      {
+        "coin": "8XtRWb4uAAJFMP4QQhoYYCWR6XXb7ybcCdiqPwz9s5WS",
+        "prior_n": 6,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1014
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 25,
+        "prior_score": -0.0011982933541749043,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1015
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 39,
+        "prior_score": -0.01653555355360867,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1016
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 87,
+        "prior_score": -0.008275230638191836,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 1017
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 26,
+        "prior_score": 0.0027562032771248877,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 1018
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 27,
+        "prior_score": 0.00596487802354782,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 1019
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 88,
+        "prior_score": -0.008321367431122504,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 1020
+      },
+      {
+        "coin": "H74CYmXgMkYHYuSRsZt6RJb4NYp2u72Vw8BS5huApump",
+        "prior_n": 2,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1021
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 89,
+        "prior_score": -0.008270942108966759,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 1022
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 40,
+        "prior_score": -0.019284275303610012,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1023
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 90,
+        "prior_score": -0.008296619369794724,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 1024
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 28,
+        "prior_score": 0.007318094741763006,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 1025
+      },
+      {
+        "coin": "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk",
+        "prior_n": 8,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1026
+      },
+      {
+        "coin": "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL",
+        "prior_n": 7,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1027
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 33,
+        "prior_score": -0.010763683562132535,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 1028
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 41,
+        "prior_score": -0.017999186206211604,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1029
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 16,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1030
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 29,
+        "prior_score": 0.002806860393313664,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 1031
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 34,
+        "prior_score": -0.010506268919021233,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 1032
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 42,
+        "prior_score": -0.0209935222682296,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1033
+      },
+      {
+        "coin": "H74CYmXgMkYHYuSRsZt6RJb4NYp2u72Vw8BS5huApump",
+        "prior_n": 3,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1034
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 6,
+        "prior_score": null,
+        "setup": "mean_reversion",
+        "take": false,
+        "trade_id": 1035
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 1036
+      },
+      {
+        "coin": "H74CYmXgMkYHYuSRsZt6RJb4NYp2u72Vw8BS5huApump",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1037
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 17,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1038
+      },
+      {
+        "coin": "9oXA1VWKNiYDYa6VKHBFFBBvZdvuhw1b2eD5Aka7YrVt",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1039
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 35,
+        "prior_score": -0.010351805964467425,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 1040
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 30,
+        "prior_score": 0.006046871654290752,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 1041
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 43,
+        "prior_score": -0.02344982183778407,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1042
+      },
+      {
+        "coin": "6AJcP7wuLwmRYLBNbi825wgguaPsWzPBEHcHndpRpump",
+        "prior_n": 1,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1043
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 91,
+        "prior_score": -0.008355962219796923,
+        "setup": "momentum_breakout",
+        "take": false,
+        "trade_id": 1044
+      },
+      {
+        "coin": "H74CYmXgMkYHYuSRsZt6RJb4NYp2u72Vw8BS5huApump",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1045
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 44,
+        "prior_score": -0.018940687323381656,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1046
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 18,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1047
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 7,
+        "prior_score": null,
+        "setup": "mean_reversion",
+        "take": false,
+        "trade_id": 1048
+      },
+      {
+        "coin": "8XtRWb4uAAJFMP4QQhoYYCWR6XXb7ybcCdiqPwz9s5WS",
+        "prior_n": 7,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1049
+      },
+      {
+        "coin": "PerPsCe2SJ7Q25CN4R5TTX4fmBdmknE2hQmqCt96fHL",
+        "prior_n": 31,
+        "prior_score": 0.0060691657116926576,
+        "setup": "dynamic_scalper",
+        "take": true,
+        "trade_id": 1050
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 36,
+        "prior_score": -0.010118956136640706,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 1051
+      },
+      {
+        "coin": "6NwarBvDkXhByqVp2Qkq5i9XbtA2B3Bwe8SWGu9vpump",
+        "prior_n": 0,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1052
+      },
+      {
+        "coin": "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk",
+        "prior_n": 9,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1053
+      },
+      {
+        "coin": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1054
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 37,
+        "prior_score": -0.010017200954860885,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 1055
+      },
+      {
+        "coin": "H74CYmXgMkYHYuSRsZt6RJb4NYp2u72Vw8BS5huApump",
+        "prior_n": 6,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1056
+      },
+      {
+        "coin": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "prior_n": 19,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1057
+      },
+      {
+        "coin": "ETH",
+        "prior_n": 5,
+        "prior_score": null,
+        "setup": "vwap_reversion",
+        "take": false,
+        "trade_id": 1058
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 45,
+        "prior_score": -0.02132507355929389,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1059
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 38,
+        "prior_score": -0.010478814215361659,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 1060
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 39,
+        "prior_score": -0.010578734578330851,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 1061
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 40,
+        "prior_score": -0.010753875113807699,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 1062
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 41,
+        "prior_score": -0.010453762986946976,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 1063
+      },
+      {
+        "coin": "Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump",
+        "prior_n": 4,
+        "prior_score": null,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1064
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 8,
+        "prior_score": null,
+        "setup": "mean_reversion",
+        "take": false,
+        "trade_id": 1065
+      },
+      {
+        "coin": "5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6",
+        "prior_n": 46,
+        "prior_score": -0.023700336238507147,
+        "setup": "dynamic_scalper",
+        "take": false,
+        "trade_id": 1066
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 42,
+        "prior_score": -0.010919491663518967,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 1067
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 43,
+        "prior_score": -0.010861057895374228,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 1068
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 44,
+        "prior_score": -0.011191036205819023,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 1069
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 45,
+        "prior_score": -0.011378474215365414,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 1070
+      },
+      {
+        "coin": "JUP",
+        "prior_n": 46,
+        "prior_score": -0.011295925470094814,
+        "setup": "rsi_oversold",
+        "take": false,
+        "trade_id": 1071
+      }
+    ],
+    "folds_total": 4,
+    "folds_won": 0,
+    "name": "positive_lower_confidence_expectancy_abstention",
+    "promotion_gate": {
+      "accepted": false,
+      "reasons": [
+        "test_sample_below_20",
+        "total_sample_below_50",
+        "negative_stress_expectancy",
+        "walk_forward_majority_not_won"
+      ]
+    }
+  },
+  "data_quality": {
+    "duplicate_price_groups": 0,
+    "exact_duplicate_trade_groups": 0,
+    "invalid_price_rows": 0,
+    "invalid_trade_rows": 1,
+    "open_positions": {
+      "memecoin": 0,
+      "reasoner": 0,
+      "scalper": 0,
+      "whale": 0
+    },
+    "pnl_formula_mismatch_rows": 51,
+    "pnl_rows_excluded_from_reconstruction": 51
+  },
+  "deployment_state": "rejected",
+  "periods": {
+    "test": {
+      "challenger": {
+        "average_loss_usd": -0.16638680974737918,
+        "average_win_usd": 0.0919420741929059,
+        "drawdown_duration_trades": 2,
+        "ending_equity_usd": 24.034994677276863,
+        "expectancy": 0.005832446212810875,
+        "expectancy_return": 0.0038882974752072496,
+        "expected_shortfall_95_usd": null,
+        "gross_profit_usd": 0.10699467727686529,
+        "longest_losing_streak": 1,
+        "max_drawdown": 0.006942313309835413,
+        "modeled_cost_usd": 0.072,
+        "n": 6,
+        "net_profit_usd": 0.03499467727686523,
+        "net_return": 0.0014581115532026345,
+        "payoff_ratio": 0.5525803056894906,
+        "profit_factor": 1.1051606113789811,
+        "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+        "sharpe_like_per_trade": 0.09979842823753608,
+        "sortino_like_per_trade": 0.14871235560935292,
+        "starting_equity_usd": 24.0,
+        "stress_expectancy": -0.00016755378718912953,
+        "total_n": 21,
+        "turnover_usd": 18.0,
+        "win_rate": 0.6666666666666666,
+        "win_rate_95pct_wilson": [
+          0.29998832134152864,
+          0.9032306674407831
+        ],
+        "wins": 4,
+        "worst_trade_usd": -0.16802494526376993
+      },
+      "champion": {
+        "average_loss_usd": -0.11874622762292027,
+        "average_win_usd": 0.0861709095758555,
+        "drawdown_duration_trades": 52,
+        "ending_equity_usd": 20.952548813118568,
+        "expectancy": -0.05540820339784411,
+        "expectancy_return": -0.02407513192751642,
+        "expected_shortfall_95_usd": -0.20624383598479223,
+        "gross_profit_usd": -1.412231239699717,
+        "longest_losing_streak": 9,
+        "max_drawdown": 0.13130749967633215,
+        "modeled_cost_usd": 1.6352199471817086,
+        "n": 55,
+        "net_profit_usd": -3.047451186881425,
+        "net_return": -0.1269771327867263,
+        "payoff_ratio": 0.7256728175777678,
+        "profit_factor": 0.3246431026005805,
+        "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+        "sharpe_like_per_trade": -2.3534704096303254,
+        "sortino_like_per_trade": -2.6489622511252016,
+        "starting_equity_usd": 24.0,
+        "turnover_usd": 408.8049867954271,
+        "win_rate": 0.3090909090909091,
+        "win_rate_95pct_wilson": [
+          0.20282124520577244,
+          0.4402883915138273
+        ],
+        "wins": 17,
+        "worst_trade_usd": -0.23045092409181567
+      }
+    },
+    "train": {
+      "challenger": {
+        "average_loss_usd": -0.11765431914015129,
+        "average_win_usd": 0.10002496219441881,
+        "drawdown_duration_trades": 2,
+        "ending_equity_usd": 24.164791210497373,
+        "expectancy": 0.027465201749562115,
+        "expectancy_return": 0.024568023641370507,
+        "expected_shortfall_95_usd": null,
+        "gross_profit_usd": 0.2167912104973727,
+        "longest_losing_streak": 1,
+        "max_drawdown": 0.005243422074674209,
+        "modeled_cost_usd": 0.052000000000000005,
+        "n": 6,
+        "net_profit_usd": 0.16479121049737266,
+        "net_return": 0.00686630043739056,
+        "payoff_ratio": 0.8501597130086472,
+        "profit_factor": 1.7003194260172945,
+        "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+        "sharpe_like_per_trade": 0.4654106563420585,
+        "sortino_like_per_trade": 0.8835337741662381,
+        "starting_equity_usd": 24.0,
+        "turnover_usd": 13.0,
+        "win_rate": 0.6666666666666666,
+        "win_rate_95pct_wilson": [
+          0.29998832134152864,
+          0.9032306674407831
+        ],
+        "wins": 4,
+        "worst_trade_usd": -0.12632233220632794
+      },
+      "champion": {
+        "average_loss_usd": -0.073207931585374,
+        "average_win_usd": 0.07585149701354839,
+        "drawdown_duration_trades": 256,
+        "ending_equity_usd": 17.779761516453746,
+        "expectancy": -0.024297806576352596,
+        "expectancy_return": -0.001922322333007709,
+        "expected_shortfall_95_usd": -0.17741895679956848,
+        "gross_profit_usd": 1.730665495314619,
+        "longest_losing_streak": 15,
+        "max_drawdown": 0.25917660348109395,
+        "modeled_cost_usd": 7.950903978860882,
+        "n": 256,
+        "net_profit_usd": -6.220238483546258,
+        "net_return": -0.25917660348109395,
+        "payoff_ratio": 1.0361103690669295,
+        "profit_factor": 0.5060073895443146,
+        "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+        "sharpe_like_per_trade": -0.4136098358164245,
+        "sortino_like_per_trade": -0.6549937005344348,
+        "starting_equity_usd": 24.0,
+        "turnover_usd": 1987.725994715222,
+        "win_rate": 0.328125,
+        "win_rate_95pct_wilson": [
+          0.2735188101162166,
+          0.3878133245381268
+        ],
+        "wins": 84,
+        "worst_trade_usd": -0.23368330509026175
+      }
+    },
+    "validation": {
+      "challenger": {
+        "average_loss_usd": -0.16153343727018293,
+        "average_win_usd": 0.23914843697700813,
+        "drawdown_duration_trades": 8,
+        "ending_equity_usd": 23.347562813062734,
+        "expectancy": -0.07249302077080715,
+        "expectancy_return": -0.04832868051387144,
+        "expected_shortfall_95_usd": null,
+        "gross_profit_usd": -0.5444371869372642,
+        "longest_losing_streak": 5,
+        "max_drawdown": 0.039926391081200885,
+        "modeled_cost_usd": 0.10799999999999998,
+        "n": 9,
+        "net_profit_usd": -0.6524371869372643,
+        "net_return": -0.027184882789052733,
+        "payoff_ratio": 1.480488752164701,
+        "profit_factor": 0.42299678633277177,
+        "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+        "sharpe_like_per_trade": -1.1661620755939974,
+        "sortino_like_per_trade": -1.4642200787836162,
+        "starting_equity_usd": 24.0,
+        "turnover_usd": 27.0,
+        "win_rate": 0.2222222222222222,
+        "win_rate_95pct_wilson": [
+          0.06322376231222723,
+          0.5474166563271946
+        ],
+        "wins": 2,
+        "worst_trade_usd": -0.2189076352603297
+      },
+      "champion": {
+        "average_loss_usd": -0.13317302328142053,
+        "average_win_usd": 0.13953653472309346,
+        "drawdown_duration_trades": 49,
+        "ending_equity_usd": 21.584255763603124,
+        "expectancy": -0.04392262247994323,
+        "expectancy_return": -0.022886570809092,
+        "expected_shortfall_95_usd": -0.2166151234553594,
+        "gross_profit_usd": -1.1171389646069978,
+        "longest_losing_streak": 10,
+        "max_drawdown": 0.14426174180035722,
+        "modeled_cost_usd": 1.2986052717898797,
+        "n": 55,
+        "net_profit_usd": -2.4157442363968773,
+        "net_return": -0.10065600984986978,
+        "payoff_ratio": 1.0477837874734255,
+        "profit_factor": 0.5097326533654502,
+        "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+        "sharpe_like_per_trade": -1.6416686029913525,
+        "sortino_like_per_trade": -2.1918483779780225,
+        "starting_equity_usd": 24.0,
+        "turnover_usd": 324.65131794746986,
+        "win_rate": 0.32727272727272727,
+        "win_rate_95pct_wilson": [
+          0.21812895688825168,
+          0.45897023823900523
+        ],
+        "wins": 18,
+        "worst_trade_usd": -0.2189076352603297
+      }
+    }
+  },
+  "run": {
+    "cost_assumptions": {
+      "fixed_cost_usd_per_trade": 0.0,
+      "per_side_quote_impact_bps": 40.0,
+      "round_trip_bps": 80.0
+    },
+    "generated_at_utc": "2026-09-15T11:00:49.657843+00:00",
+    "integrity": "ok",
+    "limitations": [
+      "Recorded scalper fills are spot-price marks, not persisted Jupiter executable quotes.",
+      "Counterfactual setup returns are unavailable when a different setup was selected, so the challenger replay is selection-biased and cannot prove a deployable edge.",
+      "Exposure overlap, failed-quote rate, spread, and latency are not persisted at trade level."
+    ],
+    "source_db": "/home/kelly/multihedge/backtest-results/all-traders-20260915-230049/20260915-230049/authoritative-prechange.db",
+    "source_period_utc": [
+      "2026-09-08T07:02:08.983763+00:00",
+      "2026-09-15T10:38:23.703717+00:00"
+    ],
+    "source_sha256": "fcc35c1e237d737087763888a952e09e04cb7fa8d0d924db12a3063ab6f95d07"
+  },
+  "trader_scorecards": {
+    "grid": {
+      "average_loss_usd": -0.009317416183122052,
+      "average_win_usd": 0.008300260943096677,
+      "drawdown_duration_trades": 15,
+      "ending_equity_usd": 23.920537913357798,
+      "expectancy": -0.00227034533263456,
+      "expectancy_return": -0.0031421112727602757,
+      "expected_shortfall_95_usd": -0.013314424126673923,
+      "gross_profit_usd": 0.6205379133577904,
+      "longest_losing_streak": 15,
+      "max_drawdown": 0.006389456920742664,
+      "modeled_cost_usd": 0.7000000000000003,
+      "n": 35,
+      "net_profit_usd": -0.07946208664220965,
+      "net_return": -0.003310920276758389,
+      "payoff_ratio": 0.8908329068880821,
+      "profit_factor": 0.5938886045920547,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -2.9024636183851626,
+      "sortino_like_per_trade": -2.865578287439974,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 114.46851155877827,
+      "win_rate": 0.4,
+      "win_rate_95pct_wilson": [
+        0.25550504933307244,
+        0.5642758041848053
+      ],
+      "wins": 14,
+      "worst_trade_usd": -0.013916372953393968
+    },
+    "memecoin_trader": {
+      "average_loss_usd": 0.0,
+      "average_win_usd": 0.0,
+      "drawdown_duration_trades": 0,
+      "ending_equity_usd": 24.0,
+      "expectancy": 0.0,
+      "expectancy_return": 0.0,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": 0,
+      "longest_losing_streak": 0,
+      "max_drawdown": 0.0,
+      "modeled_cost_usd": 0,
+      "n": 0,
+      "net_profit_usd": 0,
+      "net_return": 0.0,
+      "payoff_ratio": null,
+      "profit_factor": null,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": null,
+      "sortino_like_per_trade": null,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 0,
+      "win_rate": 0.0,
+      "win_rate_95pct_wilson": [
+        0.0,
+        0.0
+      ],
+      "wins": 0,
+      "worst_trade_usd": 0.0
+    },
+    "reasoner": {
+      "average_loss_usd": -0.08130432799388136,
+      "average_win_usd": 0.047486468135383215,
+      "drawdown_duration_trades": 546,
+      "ending_equity_usd": -8.224673172096084,
+      "expectancy": -0.058590314858356515,
+      "expectancy_return": -0.008292890302262573,
+      "expected_shortfall_95_usd": -0.23504265642147584,
+      "gross_profit_usd": -0.4755156641686849,
+      "longest_losing_streak": 55,
+      "max_drawdown": 1.3389806604278551,
+      "modeled_cost_usd": 31.749157507927382,
+      "n": 550,
+      "net_profit_usd": -32.22467317209609,
+      "net_return": -1.3426947155040034,
+      "payoff_ratio": 0.5840583066987142,
+      "profit_factor": 0.1250632577257732,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -19.347028498341814,
+      "sortino_like_per_trade": -15.512846722988622,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 7937.2893769818465,
+      "win_rate": 0.17636363636363636,
+      "win_rate_95pct_wilson": [
+        0.1467870959212436,
+        0.21042984119579491
+      ],
+      "wins": 97,
+      "worst_trade_usd": -0.2996262708591987
+    },
+    "scalper": {
+      "average_loss_usd": -0.08919644835533547,
+      "average_win_usd": 0.08695872972221252,
+      "drawdown_duration_trades": 366,
+      "ending_equity_usd": 12.316566093175457,
+      "expectancy": -0.03192195056509445,
+      "expectancy_return": -0.008401661660555837,
+      "expected_shortfall_95_usd": -0.20054633773639075,
+      "gross_profit_usd": -0.7987047089920946,
+      "longest_losing_streak": 15,
+      "max_drawdown": 0.48680974611768935,
+      "modeled_cost_usd": 10.8847291978325,
+      "n": 366,
+      "net_profit_usd": -11.683433906824554,
+      "net_return": -0.48680974611768935,
+      "payoff_ratio": 0.9749124693372493,
+      "profit_factor": 0.46969467146207566,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": -2.0100584635826975,
+      "sortino_like_per_trade": -2.8747532265541955,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 2721.182299458119,
+      "win_rate": 0.3251366120218579,
+      "win_rate_95pct_wilson": [
+        0.2791776739115284,
+        0.37472821444716337
+      ],
+      "wins": 119,
+      "worst_trade_usd": -0.23368330509026175
+    },
+    "whale_trader": {
+      "average_loss_usd": -0.03963115963083836,
+      "average_win_usd": 0.0,
+      "drawdown_duration_trades": 1,
+      "ending_equity_usd": 23.96036884036916,
+      "expectancy": -0.03963115963083836,
+      "expectancy_return": -0.00412815797115486,
+      "expected_shortfall_95_usd": null,
+      "gross_profit_usd": 0.03717047423638784,
+      "longest_losing_streak": 1,
+      "max_drawdown": 0.0016512983179516327,
+      "modeled_cost_usd": 0.0768016338672262,
+      "n": 1,
+      "net_profit_usd": -0.03963115963083836,
+      "net_return": -0.0016512983179516327,
+      "payoff_ratio": null,
+      "profit_factor": 0.0,
+      "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+      "sharpe_like_per_trade": null,
+      "sortino_like_per_trade": -1.0,
+      "starting_equity_usd": 24.0,
+      "turnover_usd": 19.20040846680655,
+      "win_rate": 0.0,
+      "win_rate_95pct_wilson": [
+        0.0,
+        0.7934567085261071
+      ],
+      "wins": 0,
+      "worst_trade_usd": -0.03963115963083836
+    }
+  },
+  "walk_forward": [
+    {
+      "challenger": {
+        "average_loss_usd": 0.0,
+        "average_win_usd": 0.0,
+        "drawdown_duration_trades": 0,
+        "ending_equity_usd": 24.0,
+        "expectancy": 0.0,
+        "expectancy_return": 0.0,
+        "expected_shortfall_95_usd": null,
+        "gross_profit_usd": 0,
+        "longest_losing_streak": 0,
+        "max_drawdown": 0.0,
+        "modeled_cost_usd": 0,
+        "n": 0,
+        "net_profit_usd": 0,
+        "net_return": 0.0,
+        "payoff_ratio": null,
+        "profit_factor": null,
+        "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+        "sharpe_like_per_trade": null,
+        "sortino_like_per_trade": null,
+        "starting_equity_usd": 24.0,
+        "turnover_usd": 0,
+        "win_rate": 0.0,
+        "win_rate_95pct_wilson": [
+          0.0,
+          0.0
+        ],
+        "wins": 0,
+        "worst_trade_usd": 0.0
+      },
+      "champion": {
+        "average_loss_usd": -0.05768151240126834,
+        "average_win_usd": 0.030639854527592863,
+        "drawdown_duration_trades": 91,
+        "ending_equity_usd": 20.340766976204083,
+        "expectancy": -0.04021135190984525,
+        "expectancy_return": -0.007007863444859813,
+        "expected_shortfall_95_usd": -0.1622066533967917,
+        "gross_profit_usd": 0.401962521779783,
+        "longest_losing_streak": 15,
+        "max_drawdown": 0.15311320961269936,
+        "modeled_cost_usd": 4.0611955455757,
+        "n": 91,
+        "net_profit_usd": -3.6592330237959168,
+        "net_return": -0.15246804265816316,
+        "payoff_ratio": 0.53119020726161,
+        "profit_factor": 0.13097840726998605,
+        "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+        "sharpe_like_per_trade": -7.293151192807686,
+        "sortino_like_per_trade": -6.060780337991718,
+        "starting_equity_usd": 24.0,
+        "turnover_usd": 1015.298886393925,
+        "win_rate": 0.1978021978021978,
+        "win_rate_95pct_wilson": [
+          0.12894356976415927,
+          0.2911421310253677
+        ],
+        "wins": 18,
+        "worst_trade_usd": -0.17928813396983792
+      },
+      "end": "2026-09-11T05:39:15.267245+00:00",
+      "fold": 1,
+      "start": "2026-09-08T08:02:25.049468+00:00",
+      "won": false
+    },
+    {
+      "challenger": {
+        "average_loss_usd": 0.0,
+        "average_win_usd": 0.0,
+        "drawdown_duration_trades": 0,
+        "ending_equity_usd": 24.0,
+        "expectancy": 0.0,
+        "expectancy_return": 0.0,
+        "expected_shortfall_95_usd": null,
+        "gross_profit_usd": 0,
+        "longest_losing_streak": 0,
+        "max_drawdown": 0.0,
+        "modeled_cost_usd": 0,
+        "n": 0,
+        "net_profit_usd": 0,
+        "net_return": 0.0,
+        "payoff_ratio": null,
+        "profit_factor": null,
+        "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+        "sharpe_like_per_trade": null,
+        "sortino_like_per_trade": null,
+        "starting_equity_usd": 24.0,
+        "turnover_usd": 0,
+        "win_rate": 0.0,
+        "win_rate_95pct_wilson": [
+          0.0,
+          0.0
+        ],
+        "wins": 0,
+        "worst_trade_usd": 0.0
+      },
+      "champion": {
+        "average_loss_usd": -0.07361664242148327,
+        "average_win_usd": 0.059787034703943344,
+        "drawdown_duration_trades": 86,
+        "ending_equity_usd": 21.703206884784116,
+        "expectancy": -0.0252394847825923,
+        "expectancy_return": -0.008830705025374419,
+        "expected_shortfall_95_usd": -0.1715292165894442,
+        "gross_profit_usd": 0.16153641030088467,
+        "longest_losing_streak": 15,
+        "max_drawdown": 0.10249894865763531,
+        "modeled_cost_usd": 2.458329525516783,
+        "n": 91,
+        "net_profit_usd": -2.296793115215899,
+        "net_return": -0.09569971313399517,
+        "payoff_ratio": 0.812140200060196,
+        "profit_factor": 0.46207976899976694,
+        "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+        "sharpe_like_per_trade": -1.1910355943557338,
+        "sortino_like_per_trade": -1.63165582860335,
+        "starting_equity_usd": 24.0,
+        "turnover_usd": 614.582381379196,
+        "win_rate": 0.3626373626373626,
+        "win_rate_95pct_wilson": [
+          0.27128360429893433,
+          0.4651189869690325
+        ],
+        "wins": 33,
+        "worst_trade_usd": -0.1995852741312626
+      },
+      "end": "2026-09-12T14:45:22.917778+00:00",
+      "fold": 2,
+      "start": "2026-09-11T05:55:14.590600+00:00",
+      "won": false
+    },
+    {
+      "challenger": {
+        "average_loss_usd": -0.14481484177080878,
+        "average_win_usd": 0.14372262675408176,
+        "drawdown_duration_trades": 2,
+        "ending_equity_usd": 24.139353766687172,
+        "expectancy": 0.015483751854130407,
+        "expectancy_return": 0.01449442733052855,
+        "expected_shortfall_95_usd": null,
+        "gross_profit_usd": 0.2273537666871738,
+        "longest_losing_streak": 2,
+        "max_drawdown": 0.014048378513051185,
+        "modeled_cost_usd": 0.088,
+        "n": 9,
+        "net_profit_usd": 0.1393537666871736,
+        "net_return": 0.00580640694529877,
+        "payoff_ratio": 0.9924578516720295,
+        "profit_factor": 1.2405723145900367,
+        "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+        "sharpe_like_per_trade": 0.31065604503080174,
+        "sortino_like_per_trade": 0.5605525819788111,
+        "starting_equity_usd": 24.0,
+        "turnover_usd": 22.0,
+        "win_rate": 0.5555555555555556,
+        "win_rate_95pct_wilson": [
+          0.2666473457440297,
+          0.811224570528086
+        ],
+        "wins": 5,
+        "worst_trade_usd": -0.17800114610333942
+      },
+      "champion": {
+        "average_loss_usd": -0.1046333745384156,
+        "average_win_usd": 0.12831686475431175,
+        "drawdown_duration_trades": 35,
+        "ending_equity_usd": 24.26227296729872,
+        "expectancy": 0.002882120519766256,
+        "expectancy_return": 0.014609457718946168,
+        "expected_shortfall_95_usd": -0.2096842356533941,
+        "gross_profit_usd": 2.0621234452984236,
+        "longest_losing_streak": 6,
+        "max_drawdown": 0.056977845293408214,
+        "modeled_cost_usd": 1.7998504779996938,
+        "n": 91,
+        "net_profit_usd": 0.262272967298729,
+        "net_return": 0.010928040304113429,
+        "payoff_ratio": 1.2263473802730207,
+        "profit_factor": 1.0511548973768752,
+        "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+        "sharpe_like_per_trade": 1.2097193243927045,
+        "sortino_like_per_trade": 2.140462343099041,
+        "starting_equity_usd": 24.0,
+        "turnover_usd": 449.9626194999232,
+        "win_rate": 0.46153846153846156,
+        "win_rate_95pct_wilson": [
+          0.3627526243994019,
+          0.5634401011556289
+        ],
+        "wins": 42,
+        "worst_trade_usd": -0.23368330509026175
+      },
+      "end": "2026-09-13T16:32:32.352339+00:00",
+      "fold": 3,
+      "start": "2026-09-12T14:49:23.927758+00:00",
+      "won": false
+    },
+    {
+      "challenger": {
+        "average_loss_usd": -0.1599367073690152,
+        "average_win_usd": 0.10551037714658126,
+        "drawdown_duration_trades": 12,
+        "ending_equity_usd": 23.407994934149798,
+        "expectancy": -0.04933375548751667,
+        "expectancy_return": -0.03288917032501112,
+        "expected_shortfall_95_usd": null,
+        "gross_profit_usd": -0.44800506585019995,
+        "longest_losing_streak": 3,
+        "max_drawdown": 0.026124989296961054,
+        "modeled_cost_usd": 0.144,
+        "n": 12,
+        "net_profit_usd": -0.5920050658502001,
+        "net_return": -0.02466687774375842,
+        "payoff_ratio": 0.6597008209200008,
+        "profit_factor": 0.4712148720857149,
+        "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+        "sharpe_like_per_trade": -1.1610548750058245,
+        "sortino_like_per_trade": -1.3416652257432962,
+        "starting_equity_usd": 24.0,
+        "turnover_usd": 36.0,
+        "win_rate": 0.4166666666666667,
+        "win_rate_95pct_wilson": [
+          0.19325746190524656,
+          0.6804926643446272
+        ],
+        "wins": 5,
+        "worst_trade_usd": -0.2189076352603297
+      },
+      "champion": {
+        "average_loss_usd": -0.1257309212783116,
+        "average_win_usd": 0.09362657655905365,
+        "drawdown_duration_trades": 93,
+        "ending_equity_usd": 18.010319264888516,
+        "expectancy": -0.0644051691947471,
+        "expectancy_return": -0.0318619256924325,
+        "expected_shortfall_95_usd": -0.21349979844598987,
+        "gross_profit_usd": -3.424327086371184,
+        "longest_losing_streak": 10,
+        "max_drawdown": 0.24957003062964522,
+        "modeled_cost_usd": 2.565353648740296,
+        "n": 93,
+        "net_profit_usd": -5.98968073511148,
+        "net_return": -0.24957003062964522,
+        "payoff_ratio": 0.7446583195855744,
+        "profit_factor": 0.2889718852123125,
+        "sampling_note": "Sharpe-like and Sortino-like ratios use per-trade returns, zero risk-free rate, and sqrt(number of trades); they are not annualised time-series ratios.",
+        "sharpe_like_per_trade": -3.8628987904546492,
+        "sortino_like_per_trade": -4.170709308521834,
+        "starting_equity_usd": 24.0,
+        "turnover_usd": 641.3384121850739,
+        "win_rate": 0.27956989247311825,
+        "win_rate_95pct_wilson": [
+          0.19850210044898137,
+          0.3781261254374145
+        ],
+        "wins": 26,
+        "worst_trade_usd": -0.23045092409181567
+      },
+      "end": "2026-09-15T10:38:23.703717+00:00",
+      "fold": 4,
+      "start": "2026-09-13T16:52:32.979084+00:00",
+      "won": false
+    }
+  ]
+}

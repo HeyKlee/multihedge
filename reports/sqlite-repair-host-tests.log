@@ -1,0 +1,126 @@
+Sample JSON generated
+{
+  "timestamp": "2025-08-24T12:34:56Z",
+  "top_models": [
+    {
+      "id": "openai/gpt-4o",
+      "name": "GPT-4o",
+      "avg_price": 0.005,
+      "context_length": 8192
+    },
+    {
+      "id": "anthropic/claude-3-opus",
+      "name": "Claude 3 Opus",
+      "avg_price": 0.015,
+      "context_length": 8192
+    },
+    {
+      "id": "meta-llama/llama-3-70b",
+      "name": "Llama 3 70B",
+      "avg_price": 0.02,
+      "context_length": 8192
+    }
+  ],
+  "free_models": [
+    {
+      "id": "qwen/qwen-2.5-72b",
+      "name": "Qwen 2.5 72B",
+      "context_length": 32768
+    },
+    {
+      "id": "mistralai/mistral-large-latest",
+      "name": "Mistral Large",
+      "context_length": 8192
+    },
+    {
+      "id": "cohere/command-r-plus",
+      "name": "Command R+",
+      "context_length": 8192
+    }
+  ],
+  "personal_usage_per_model": {
+    "openai/gpt-4o": {
+      "tokens_total": 1000000,
+      "total_usage": 12.34
+    },
+    "anthropic/claude-3-opus": {
+      "tokens_total": 800000,
+      "total_usage": 9.87
+    },
+    "meta-llama/llama-3-70b": {
+      "tokens_total": 500000,
+      "total_usage": 6.55
+    }
+  },
+  "personal_spend_last_24h": 29.76
+}
+
+--- Simulating openrouter_widget.py logic ---
+clock text: '11:01:05'
+{"blocking_reasons": ["observations_below_100", "outcomes_below_30", "rejected_candidates_unlabelled"], "output_dir": "/tmp/tmpcj9szlqb/reports", "proposal_generation_allowed": false, "state": "ENTRY_QUALITY_EVIDENCE_REPORT"}
+{"blocking_reasons": ["rejected_candidates_unlabelled"], "output_dir": "/tmp/tmpr58j1z4o/reports", "proposal_generation_allowed": false, "state": "ENTRY_QUALITY_EVIDENCE_REPORT"}
+[grid] rebuilt around 100.0000 (9 levels, 96.0000-104.0000), reset #1
+[grid] rebuilt around 100.0000 (9 levels, 96.0000-104.0000), reset #1
+[grid] rebuilt around 90.0000 (9 levels, 86.4000-93.6000), reset #2
+[grid] rebuilt around 100.0000 (9 levels, 96.0000-104.0000), reset #1
+[grid] rebuilt around 100.0000 (9 levels, 96.0000-104.0000), reset #1
+{"deployment_state": "rejected", "output_dir": "/tmp/tmpsho23t9g/results/20260918-110127", "promotion_gate_accepted": false, "promotion_gate_reasons": ["test_sample_below_20", "total_sample_below_50", "negative_stress_expectancy", "walk_forward_majority_not_won"], "report_md": "/tmp/tmpsho23t9g/results/20260918-110127/report.md", "source_db": "/tmp/tmpsho23t9g/source.db", "state": "OPTIMIZER_RUN_COMPLETE"}
+{"deployment_state": "rejected", "output_dir": "/tmp/tmp_deil68m/results/20260918-110127", "promotion_gate_accepted": false, "promotion_gate_reasons": ["test_sample_below_20", "total_sample_below_50", "negative_stress_expectancy", "walk_forward_majority_not_won"], "report_md": "/tmp/tmp_deil68m/results/20260918-110127/report.md", "source_db": "/tmp/tmp_deil68m/source.db", "state": "OPTIMIZER_RUN_COMPLETE"}
+{"deployment_state": "rejected", "output_dir": "/tmp/tmp_deil68m/results/20260918-110127", "promotion_gate_accepted": false, "promotion_gate_reasons": ["test_sample_below_20", "total_sample_below_50", "negative_stress_expectancy", "walk_forward_majority_not_won"], "report_md": "/tmp/tmp_deil68m/results/20260918-110127/report.md", "source_db": "/tmp/tmp_deil68m/source.db", "state": "OPTIMIZER_RUN_COMPLETE"}
+[11:01:36] [WARN] safety check RPC error for So11111111111111111111111111111111111111112: Solana dependencies unavailable
+[11:01:36] [INFO] CLOSE TOKEN take_profit pct=+50.00% usd=+0.5000
+[11:01:36] [INFO] SIGNAL name -> JUP UP (sig sig...)
+[whale_trader] CLOSE LONG SOL take_profit pct=+10.000% usd=+1.0000
+======================================================================
+ERROR: test_real_tick_opens_closes_and_accounts_for_costs (test_sampled_price_replay.SampledReplayTests.test_real_tick_opens_closes_and_accounts_for_costs)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/kelly/multihedge/test_sampled_price_replay.py", line 26, in test_real_tick_opens_closes_and_accounts_for_costs
+    self.assertEqual(con.execute('select count(*) from mh_shadow_entry_outcomes').fetchone()[0], 1)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: mh_shadow_entry_outcomes
+
+======================================================================
+ERROR: test_volatility_gate_disabled_preserves_signal (test_volatility_gate.VolatilityGateTests.test_volatility_gate_disabled_preserves_signal)
+Gate disabled → no new filtering, signal passes as before.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/kelly/multihedge/test_volatility_gate.py", line 29, in test_volatility_gate_disabled_preserves_signal
+    result = _entry_signal(row, trend_filter_enabled=True,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: _entry_signal() got an unexpected keyword argument 'trend_filter_enabled'
+
+======================================================================
+ERROR: test_volatility_gate_enabled_block_when_no_history (test_volatility_gate.VolatilityGateTests.test_volatility_gate_enabled_block_when_no_history)
+Gate enabled, fewer than 6 prior prices → block entry.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/kelly/multihedge/test_volatility_gate.py", line 41, in test_volatility_gate_enabled_block_when_no_history
+    result = _entry_signal(row, trend_filter_enabled=True,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: _entry_signal() got an unexpected keyword argument 'trend_filter_enabled'
+
+======================================================================
+ERROR: test_volatility_gate_enabled_high_vol_pct_blocks (test_volatility_gate.VolatilityGateTests.test_volatility_gate_enabled_high_vol_pct_blocks)
+Gate enabled, 1h vol above threshold → blocks entry.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/kelly/multihedge/test_volatility_gate.py", line 70, in test_volatility_gate_enabled_high_vol_pct_blocks
+    result = _entry_signal(row, trend_filter_enabled=True,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: _entry_signal() got an unexpected keyword argument 'trend_filter_enabled'
+
+======================================================================
+ERROR: test_volatility_gate_enabled_low_vol_pct_allows (test_volatility_gate.VolatilityGateTests.test_volatility_gate_enabled_low_vol_pct_allows)
+Gate enabled, 1h vol below threshold → does not block.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/kelly/multihedge/test_volatility_gate.py", line 55, in test_volatility_gate_enabled_low_vol_pct_allows
+    result = _entry_signal(row, trend_filter_enabled=True,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: _entry_signal() got an unexpected keyword argument 'trend_filter_enabled'
+
+----------------------------------------------------------------------
+Ran 333 tests in 43.291s
+
+FAILED (errors=5, skipped=4)
