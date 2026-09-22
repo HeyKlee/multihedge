@@ -200,7 +200,7 @@ def risk_params(mint: str, cfg: dict | None, db_path=None, *, allow_tuned: bool 
     return _default_params(mode)
 
 
-BUSY_TIMEOUT_SECONDS = 30.0
+BUSY_TIMEOUT_SECONDS = 15.0
 
 
 def _connect(path: Path):

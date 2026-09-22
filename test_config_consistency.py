@@ -21,6 +21,11 @@ REPO_ROOT = Path(__file__).resolve().parent
 DEPLOYED_CONFIG = REPO_ROOT / "config.yaml"
 PRODUCTION_DB = REPO_ROOT / "deploy/data/multihedge.db"
 
+_REASONER_KEYS = {
+    "POSITION_FRACTION", "TAKE_PROFIT", "STOP_LOSS", "MAX_HOLD_SECS",
+    "TRAIL_ARM", "TRAIL_DIST", "CONFIDENCE_MIN",
+}
+
 
 class ReasonerParameterChainTests(unittest.TestCase):
     def setUp(self):
@@ -62,10 +67,19 @@ class DeployedReasonerConfigTests(unittest.TestCase):
     def test_declared_values_match_what_the_reasoner_actually_applied(self):
         if not PRODUCTION_DB.exists():
             self.skipTest("production database not present in this environment")
-        with sqlite3.connect(f"file:{PRODUCTION_DB}?mode=ro", uri=True) as con:
-            row = con.execute(
-                "SELECT settings_json FROM mh_parameter_application WHERE trader='reasoner'"
-            ).fetchone()
+        try:
+            con = sqlite3.connect(
+                f"file:{PRODUCTION_DB}?mode=ro", uri=True, timeout=5)
+            with con:
+                row = con.execute(
+                    "SELECT settings_json FROM mh_parameter_application WHERE trader='reasoner'"
+                ).fetchone()
+        except sqlite3.OperationalError as exc:
+            msg = str(exc).lower()
+            if "locked" in msg or "busy" in msg:
+                self.skipTest(
+                    f"production database locked by running container: {exc}")
+            raise
         if row is None:
             self.skipTest("no applied reasoner settings recorded yet")
         applied = json.loads(row[0])
@@ -74,6 +88,23 @@ class DeployedReasonerConfigTests(unittest.TestCase):
             self.assertIn(key, applied, f"{key} declared but never applied")
             self.assertEqual(float(value), float(applied[key]),
                              f"{key} drift: config declares {value}, runtime applied {applied[key]}")
+
+    def test_code_defaults_agree_with_config_block_values(self):
+        declared = yaml.safe_load(DEPLOYED_CONFIG.read_text(encoding="utf-8"))["reasoner"]
+        for key in _REASONER_KEYS:
+            if key in declared:
+                with self.subTest(key=key):
+                    self.assertEqual(
+                        mh_reasoner.DEFAULT_PARAMS[key],
+                        declared[key],
+                        f"code DEFAULT_PARAMS.{key}={mh_reasoner.DEFAULT_PARAMS[key]} "
+                        f"does not match config.yaml reasoner.{key}={declared[key]}")
+
+    def test_all_reasoner_keys_have_config_block_values(self):
+        declared = yaml.safe_load(DEPLOYED_CONFIG.read_text(encoding="utf-8"))["reasoner"]
+        missing = _REASONER_KEYS - set(declared)
+        if missing:
+            self.fail(f"config.yaml reasoner block is missing keys: {missing}")
 
 
 if __name__ == "__main__":

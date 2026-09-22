@@ -30,12 +30,12 @@ DB_PATH = CUR_DIR / "multihedge.db"
 # --- tunable reasoner params (may be overridden by config.yaml / DB optimizer) ---
 DEFAULT_PARAMS = {
     "POSITION_FRACTION": 0.50,
-    "TAKE_PROFIT": 0.025,
+    "TAKE_PROFIT": 0.015,
     "STOP_LOSS": 0.015,
     "MAX_HOLD_SECS": 2 * 3600,
-    "TRAIL_ARM": 0.01,
-    "TRAIL_DIST": 0.005,
-    "CONFIDENCE_MIN": 0.55,
+    "TRAIL_ARM": 0.008,
+    "TRAIL_DIST": 0.004,
+    "CONFIDENCE_MIN": 0.35,
 }
 
 PARAMS_SCHEMA = """CREATE TABLE IF NOT EXISTS mh_reasoner_params (
