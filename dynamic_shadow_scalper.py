@@ -46,6 +46,7 @@ POSITION_FRACTION = 0.15   # use 15% of available wallet per proven coin
 MIN_COMPOUND_COIN_TRADES = 5
 MIN_COMPOUND_COIN_WIN_RATE = 0.60
 STOP_LOSS_REENTRY_COOLDOWN_SECONDS = 30 * 60
+FORWARD_LABEL_HORIZON = 900  # 15-minute forward labels, matches the RSI compute window
 
 def _connect(path: Path):
     con = sqlite3.connect(Path(path), timeout=30)
@@ -86,6 +87,11 @@ def _connect(path: Path):
         "CREATE TABLE IF NOT EXISTS mh_scalp_policy_evidence ("
         "mint TEXT NOT NULL,opened_ts REAL NOT NULL,policy_json TEXT NOT NULL,"
         "mixed INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(mint,opened_ts))"
+    )
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS mh_shadow_forward_labels ("
+        "observed_ts REAL NOT NULL,mint TEXT NOT NULL,label_ts REAL NOT NULL,"
+        "forward_return_pct REAL NOT NULL,PRIMARY KEY(observed_ts,mint))"
     )
     return con
 
@@ -493,6 +499,41 @@ def run_cycle(cfg: dict, db_path: Path, *, now: float, api_key: str, get=None,
         price = float(market.get("latest_usd", 0.0))
         if price > 0:
             pricefeed._update_price_history(mint, now, price, 0, 0)
+    # Label rejected candidates with a 15-minute forward return
+    with _connect(db_path) as label_con:
+        pending = label_con.execute(
+            "SELECT o.observed_ts, o.mint, o.latest_usd "
+            "FROM mh_shadow_entry_observations o "
+            "LEFT JOIN mh_shadow_forward_labels f "
+            "ON o.observed_ts=f.observed_ts AND o.mint=f.mint "
+            "WHERE o.entry_signal=1 AND o.entry_opened=0 AND f.observed_ts IS NULL"
+        ).fetchall()
+        for obs in pending:
+            obs_ts = float(obs["observed_ts"])
+            mint = str(obs["mint"])
+            entry_price = float(obs["latest_usd"])
+            if entry_price <= 0:
+                continue
+            target_ts = obs_ts + FORWARD_LABEL_HORIZON
+            # Find the closest future observation for this mint within a tolerance window
+            future = label_con.execute(
+                "SELECT MIN(observed_ts) as match_ts, latest_usd "
+                "FROM mh_shadow_entry_observations "
+                "WHERE mint=? AND observed_ts>=? AND observed_ts<=?",
+                (mint, target_ts - 60, target_ts + 120)
+            ).fetchone()
+            if not future or future["match_ts"] is None or future["latest_usd"] is None:
+                continue
+            future_price = float(future["latest_usd"])
+            if future_price <= 0:
+                continue
+            forward_return_pct = (future_price - entry_price) / entry_price
+            label_con.execute(
+                "INSERT OR IGNORE INTO mh_shadow_forward_labels("
+                "observed_ts,mint,label_ts,forward_return_pct) VALUES(?,?,?,?)",
+                (obs_ts, mint, float(future["match_ts"]), forward_return_pct)
+            )
+        label_con.commit()
     exit_decision = forced_exit(
         db_path, {mint: row["market"]["latest_usd"] for mint, row in all_tokens.items()}, now=now,
         cfg=cfg,
