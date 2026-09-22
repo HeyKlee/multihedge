@@ -55,7 +55,7 @@ strat_select, but generalised per-coin.)
 - All trades logged to `multihedge.db` (`mh_trades`), equity per coin in
   `mh_accounts`.
 
-## Live gate (Kelly's rule, enforced)
+## Live gate (HeyKlee's rule, enforced)
 
 Real wallet is **untouched** until paper proves it. `live_bridge.py` is the ONLY
 module that can write on-chain, and it refuses unless:

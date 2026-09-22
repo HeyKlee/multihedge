@@ -5,13 +5,13 @@ The ONLY module that can touch the real wallet. It reuses AutoHedge's generic
 chain.py (Solana RPC + Jupiter swap wrapper) for execution. It is deliberately
 off by default and refuses every real write until ALL of:
 
-  1. network is mainnet (or devnet for test) AND live_mode=1 set by Kelly
+  1. network is mainnet (or devnet for test) AND live_mode=1 set by HeyKlee
   2. wallet has balance > safe reserve
   3. the paper gate passes: the coin has a 3:1 or 7:1 win/loss over a
      meaningful sample (see paper_gate_status) — enforced here, not just printed
   4. an explicit per-trade confirmation flag exists
 
-Kelly's rule is unchanged from AutoHedge: real wallet stays untouched until
+HeyKlee's rule is unchanged from AutoHedge: real wallet stays untouched until
 paper shows consistent win/loss (3:1 or 7:1) across a meaningful sample. This
 module enforces exactly that. If the gate fails, it raises and writes NOTHING.
 """
@@ -43,7 +43,7 @@ RESERVE_SYMBOL = "USDC"
 RESERVE_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 MIN_SOL_FEE_RESERVE = 0.01
 # Immutable default for this shadow-only boot. This may only change after the
-# complete activation checklist, independent review, and Kelly's authenticated
+# complete activation checklist, independent review, and HeyKlee's authenticated
 # approval. A confirmation flag alone is deliberately insufficient.
 SOVEREIGN_MAINNET_AUTHORITY_ENABLED = True
 ISOLATED_SIGNER_READY = True

@@ -22,7 +22,7 @@ services:
     ports:
       # Dashboard UI. Host-reachable on 0.0.0.0 so XORA's Tailscale interface
       # (100.64.0.1:9052) can forward to it. Tailnet ACLs handle access control.
-      # Do NOT add public exposure (kittxora.duckdns.org) without Kelly's OK.
+      # Do NOT add public exposure (kittxora.duckdns.org) without HeyKlee's OK.
       - "0.0.0.0:9052:9052"
     logging:
       driver: json-file

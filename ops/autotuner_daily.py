@@ -6,7 +6,7 @@ report, and never promotes to live trading. All changes remain paper-only
 shadow parameters until evidence gates are satisfied.
 
 This is the daily implementation of the "24h test adjustments, 6-day confirmation"
-workflow requested by Kelly. The autotuner already enforces:
+workflow requested by HeyKlee. The autotuner already enforces:
 - MIN_SAMPLE_CLOSED = 30 closed trades per class before tuning
 - Chronological walk-forward validation with 25% holdout
 - IMPROVEMENT_MARGIN = 2pp over incumbent on holdout

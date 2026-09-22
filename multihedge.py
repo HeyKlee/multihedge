@@ -155,7 +155,7 @@ def run_tick(cfg):
                 setup_signal = strat.SETUP_SIGNALS[setup]
                 sig = setup_signal(closes_scalper) if len(closes_scalper) >= 2 else "FLAT"
                 if sig in ("LONG", "SHORT"):
-                    # Scalper is LONG-only by design (Kelly: no shorts on the scalper).
+                    # Scalper is LONG-only by design (HeyKlee: no shorts on the scalper).
                     # SHORT signals are observed but never opened, so they can't appear
                     # in history/stats again.
                     sig = "LONG" if sig == "LONG" else None

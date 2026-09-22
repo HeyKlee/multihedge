@@ -9,7 +9,7 @@ runtime are authoritative when older documentation disagrees.
 
 ## What MultiHedge Is
 
-MultiHedge is Kelly's Solana trading system. It combines paper strategies, a dynamic Solana
+MultiHedge is HeyKlee's Solana trading system. It combines paper strategies, a dynamic Solana
 token incubator, deterministic risk controls, an autonomous advisory model, a key-isolated
 execution path, and a FastAPI dashboard. The Xora-Survival surface separates canonical
 on-chain activity from explicitly labelled paper evidence.
@@ -30,7 +30,7 @@ Two principles govern every change:
 - Never print, transmit, commit, log, or place wallet private keys, seed phrases, API keys, or
   tokens in model output. Secret values belong only in protected environment files.
 - Never create or remove `confirm_live.flag`, change sovereign mainnet authority, enable live
-  promotion, weaken evidence gates, or alter signer isolation without Kelly's explicit approval
+  promotion, weaken evidence gates, or alter signer isolation without HeyKlee's explicit approval
   for that exact action.
 - Preserve the immutable NZ$60 protected floor and NZ$40 death threshold in
   `survival_policy.py`. Do not reinterpret missing treasury data as zero.
@@ -49,9 +49,9 @@ Two principles govern every change:
 - Keep paper and live provenance separate. `mh_trades` contains paper rows, including rows with
   `setup='dynamic_scalper'`. A trade is live only when tied to canonical on-chain fill records.
 - Leave the orphan `autohedge` container untouched. Never use Compose's `--remove-orphans` flag
-  unless Kelly explicitly approves removing it.
+  unless HeyKlee explicitly approves removing it.
 - Do not expose dashboard port 9052 publicly. Tailnet access is intentional. Public DNS or proxy
-  exposure requires Kelly's approval.
+  exposure requires HeyKlee's approval.
 
 ## Current Xora-Survival Policy
 

@@ -194,7 +194,7 @@ def _latest_bias(symbol):
     return {"direction": row["direction"], "confidence": row["confidence"]}
 
 
-# --- Tier-1 price-concurrence gate (Kelly / Council fix) ---
+# --- Tier-1 price-concurrence gate (HeyKlee / Council fix) ---
 # The reasoner used to open purely on LLM-news-bias direction, which read
 # near-uniform bullish and kept opening LONGs into a chopping/down tape.
 # This gate requires price to actually CONFIRM the bias direction over a
@@ -202,7 +202,7 @@ def _latest_bias(symbol):
 # effectively bull-silenced before). Zero hand-tuned params: it just checks
 # whether the coin's recent pxhist momentum agrees with the bias.
 CONCUR_WINDOW_SECS = 1800          # 30 min of recent pxhist to judge against
-CONCUR_ALLOW_SHORT = False         # Kelly: NO shorts allowed. DOWN bias => hold USDC (stay flat)
+CONCUR_ALLOW_SHORT = False         # HeyKlee: NO shorts allowed. DOWN bias => hold USDC (stay flat)
 
 def _momentum_ok(symbol, px, side):
     """Require price to confirm the bias side over recent pxhist (0-param).

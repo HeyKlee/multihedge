@@ -22,7 +22,7 @@ You have access to the current repository, tests, SQLite data, configuration, an
 8. Make no live promotion from a tiny sample. If evidence is insufficient, continue paper or shadow evaluation and report the exact missing sample.
 9. Change one coherent hypothesis at a time. Every accepted change must be attributable, reversible, logged, and covered by tests.
 10. Reject improvements that merely increase gross return by taking materially more risk.
-11. Preserve Kelly's no-short policy for the scalper and reasoner unless Kelly explicitly changes it.
+11. Preserve HeyKlee's no-short policy for the scalper and reasoner unless HeyKlee explicitly changes it.
 12. Use the authoritative running database. Discover it from the runtime and configuration. Do not silently analyse a stale workspace copy.
 13. Do not tune risk limits online. Strategy selection may adapt online within bounded exploration, but sizing, stop-loss, drawdown, and live-gate changes require offline validation and explicit approval.
 14. Do not edit archived files under `audit/` as the implementation target.
@@ -118,7 +118,7 @@ Create candidate changes only for the strongest hypotheses. Prefer simple and ex
 - cooldown and re-entry logic to prevent churn and buyback at worse prices
 - ATR or realised-volatility based exits with strict bounds
 - portfolio heat and correlation-aware sizing
-- fractional Kelly sizing using a conservative lower-confidence estimate, capped below existing risk limits
+- fractional HeyKlee sizing using a conservative lower-confidence estimate, capped below existing risk limits
 - break-even and trailing logic that reduces profit giveback without clipping winners
 - liquidity, spread, and quote-quality gates
 - confidence calibration and deterministic abstention for advisory agents
@@ -200,7 +200,7 @@ Use a canary ladder for accepted improvements:
 - Stage 1: shadow decisions with no orders
 - Stage 2: paper execution with isolated accounting
 - Stage 3: extended paper evaluation across enough trades and regimes
-- Stage 4: eligible for Kelly's manual live review only if all existing live gates and new expectancy and drawdown gates pass
+- Stage 4: eligible for HeyKlee's manual live review only if all existing live gates and new expectancy and drawdown gates pass
 
 Automatically roll back a paper challenger when it breaches its predefined drawdown, cost, error-rate, stale-data, or underperformance boundary. Never auto-promote to live.
 
