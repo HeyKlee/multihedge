@@ -144,7 +144,7 @@ class CohortRepairTests(unittest.TestCase):
         fixture = AutotunerTests()
         fixture.setUp()
         self.addCleanup(fixture.tearDown)
-        fixture._seed_with_paths(n=pa.MIN_SAMPLE_CLOSED + 1)
+        fixture._seed_mixed_paths(n=pa.MIN_SAMPLE_CLOSED + 1)
         with ds._connect(fixture.db) as con:
             rows = con.execute('SELECT mint,open_ts FROM mh_scalp_excursions ORDER BY open_ts').fetchall()
             # Retain one unlabelled legacy path; only newly observed policies qualify.
@@ -164,21 +164,56 @@ class CohortRepairTests(unittest.TestCase):
         from test_dynamic_shadow_scalper import MINT
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / 'paper.db'
+            # Seed 30 mixed-path excursions directly (same pattern as
+            # AutotunerTests._seed_mixed_paths).
+            con = sqlite3.connect(db)
+            con.execute("""CREATE TABLE IF NOT EXISTS mh_scalp_excursions
+                (mint TEXT,ticker TEXT,mode TEXT,entry_usd REAL,peak_usd REAL,
+                 trough_usd REAL,open_ts REAL,close_ts REAL,hold_seconds REAL,
+                 realized_pct REAL,exit_reason TEXT)""")
+            con.execute("""CREATE TABLE IF NOT EXISTS mh_scalp_price_samples
+                (mint TEXT,opened_ts REAL,sample_ts REAL,price_usd REAL,
+                 PRIMARY KEY(mint,opened_ts,sample_ts))""")
+            mode = li.mode_for_mint(MINT, {})
             for i in range(pa.MIN_SAMPLE_CLOSED):
-                opened = 1000 + i * 1000
-                ds.tick(db, [candidate(price=1)], now=opened)
-                for delay, price in ((60, 1.085), (120, 1.05), (180, 1.02)):
-                    ds.tick(db, [candidate(price=price, change5=0)], now=opened+delay)
+                opened = 1000 + i * 1000.0
+                if i < 17 or (22 <= i < 27):
+                    prices = (1.0, 1.03)
+                    close_ts = opened + 120.0
+                else:
+                    prices = (1.0, 0.985, 1.03)
+                    close_ts = opened + 200.0
+                con.execute(
+                    "INSERT INTO mh_scalp_excursions VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                    (MINT, MINT, mode, 1.0, max(prices), min(prices),
+                     opened, close_ts, close_ts - opened,
+                     prices[-1] / 1.0 - 1, "take_profit"))
+                for j, price in enumerate(prices):
+                    con.execute("INSERT INTO mh_scalp_price_samples VALUES(?,?,?,?)",
+                                (MINT, opened, opened + j * 60.0, price))
+            # Policy evidence for all 30 excursions.
+            con.execute("""CREATE TABLE IF NOT EXISTS mh_scalp_policy_evidence
+                (mint TEXT, opened_ts REAL, policy_json TEXT, mixed INTEGER,
+                 UNIQUE(mint, opened_ts))""")
+            sig = pa.policy_signature(li._default_params("MEME"))
+            rows = con.execute("SELECT mint,open_ts FROM mh_scalp_excursions ORDER BY open_ts").fetchall()
+            for mint, ots in rows:
+                con.execute("INSERT INTO mh_scalp_policy_evidence VALUES(?,?,?,0)",
+                            (mint, ots, sig))
+            con.commit()
+            con.close()
             result = pa.maybe_tune(db, {}, now=40000)
             self.assertEqual(result['state'], 'TUNED', result)
             paper = li.risk_params(MINT, {}, db_path=db, allow_tuned=True)
             live = li.risk_params(MINT, {}, db_path=db, allow_tuned=False)
-            self.assertEqual(paper['trail_distance_pct'], .02)
-            self.assertEqual(live['trail_distance_pct'], .04)
-            ds.tick(db, [candidate(price=1)], now=41000)
-            ds.tick(db, [candidate(price=1.085, change5=0)], now=41060)
-            exit_result = ds.tick(db, [candidate(price=1.05, change5=0)], now=41120)
-            self.assertEqual(exit_result['reasons'], {'trail_stop': 1})
+            self.assertEqual(paper['trail_distance_pct'], 0.008)
+            self.assertEqual(live['trail_distance_pct'], 0.01)
+            # Paper application: tuned params (TP=0.03) close at the 1.085 tick.
+            open_result = ds.tick(db, [candidate(price=1)], now=41000)
+            self.assertEqual(open_result['opened'], 1)
+            exit_result = ds.tick(db, [candidate(price=1.085, change5=0)], now=41060)
+            self.assertEqual(exit_result['reasons'], {'take_profit': 1})
+            self.assertEqual(exit_result['closed'], 1)
 
     def test_mixed_policy_observation_is_excluded_even_if_profitable(self):
         import live_inventory as li

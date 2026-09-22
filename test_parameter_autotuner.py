@@ -42,13 +42,13 @@ class RiskParamsOverrideTests(unittest.TestCase):
             "trail_distance_pct": 0.01, "max_hold_seconds": 1200, "mode": "MEME",
         }, source="test", sample_n=40)
         # Live/default reads ignore an unpromoted paper candidate.
-        self.assertEqual(li.risk_params(MINT, cfg(), db_path=self.db)["take_profit_pct"], 0.20)
+        self.assertEqual(li.risk_params(MINT, cfg(), db_path=self.db)["take_profit_pct"], 0.015)
         got = li.risk_params(MINT, cfg(), db_path=self.db, allow_tuned=True)
         self.assertEqual(got["take_profit_pct"], 0.30)
         self.assertEqual(got["stop_loss_pct"], -0.12)
         self.assertEqual(got["max_hold_seconds"], 1200)
         # SERIOUS unaffected by the MEME override.
-        self.assertEqual(li.risk_params(JUP, cfg(), db_path=self.db)["take_profit_pct"], 0.05)
+        self.assertEqual(li.risk_params(JUP, cfg(), db_path=self.db)["take_profit_pct"], 0.010)
 
     def test_check_constraint_rejects_degenerate_params(self):
         with self.assertRaises(sqlite3.IntegrityError):
@@ -101,6 +101,48 @@ class AutotunerTests(unittest.TestCase):
         con.commit()
         con.close()
 
+    def _seed_mixed_paths(self, n=30):
+        """Seed MEME-mode excursions with a mix of path types that produce
+        a >2pp improvement margin between the best candidate (TP=0.03,
+        SL=-0.02) and the current MEME defaults (TP=0.015, SL=-0.015).
+
+        22 `good` excursions (17 train + 5 holdout):
+          1.0 -> 1.03  — both incumbent and best exit via TP.
+          Gap per excursion = 0.022 - 0.007 = 0.015 = 1.5pp.
+
+        8 `bad` excursions (5 train + 3 holdout):
+          1.0 -> 0.985 -> 1.03  — incumbent SL=-0.015 fires at -0.023;
+          best (SL=-0.02) survives the dip and reaches TP=0.03 for 0.022.
+          Gap per excursion = 0.022 - (-0.023) = 0.045 = 4.5pp.
+
+        Train average gap: (17*0.015 + 5*0.045) / 22 = 0.0218 > 0.02
+        Holdout average gap: (5*0.015 + 3*0.045) / 8 = 0.02625 > 0.02
+        Win rate: 100% (both paths end positive for the best candidate).
+        """
+        con = sqlite3.connect(self.db)
+        entry = 1.0
+        for i in range(n):
+            opened = float(i * 10_000)
+            # Train: indices 0-21 (17 good + 5 bad).
+            # Holdout: indices 22-29 (5 good + 3 bad).
+            if i < 17 or (22 <= i < 27):
+                prices = (entry, 1.03)
+                close_ts = opened + 120.0
+            else:
+                prices = (entry, 0.985, 1.03)
+                close_ts = opened + 200.0
+            con.execute(
+                "INSERT INTO mh_scalp_excursions VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                (MINT, "X", li.mode_for_mint(MINT, cfg()),
+                 entry, max(prices), min(prices),
+                 opened, close_ts, close_ts - opened,
+                 prices[-1] / entry - 1, "take_profit"))
+            for j, price in enumerate(prices):
+                con.execute("INSERT INTO mh_scalp_price_samples VALUES(?,?,?,?)",
+                            (MINT, opened, opened + j * 60.0, price))
+        con.commit()
+        con.close()
+
     def test_trailing_is_inside_the_search_space(self):
         # Trail exits dominate the MEME class, so a search that freezes the arm
         # and distance cannot fix the thing that actually costs money.
@@ -110,28 +152,32 @@ class AutotunerTests(unittest.TestCase):
         self.assertGreater(len(arms), 1)
         self.assertGreater(len(dists), 1)
         # The incumbent's own pair stays reachable so the comparison is fair.
-        self.assertIn(0.08, arms)
-        self.assertIn(0.04, dists)
+        self.assertIn(0.02, arms)  # incumbent MEME trail_arm = 0.02
+        self.assertIn(0.01, dists)  # incumbent MEME trail_distance = 0.01
         for c in candidates:
             self.assertLess(c["trail_distance_pct"], c["trail_arm_pct"])
 
     def test_meme_candidate_grid_includes_defensive_bearish_profile(self):
         candidates = list(pa._candidates("MEME"))
         self.assertIn({
-            "take_profit_pct": 0.10,
-            "stop_loss_pct": -0.07,
-            "trail_arm_pct": 0.05,
-            "trail_distance_pct": 0.03,
-            "max_hold_seconds": 600,
+            "take_profit_pct": 0.02,
+            "stop_loss_pct": -0.015,
+            "trail_arm_pct": 0.02,
+            "trail_distance_pct": 0.01,
+            "max_hold_seconds": 1800,
             "mode": "MEME",
         }, candidates)
-        self.assertNotIn(0.10, {c["take_profit_pct"] for c in pa._candidates("SERIOUS")})
+        self.assertNotIn(0.02, {c["take_profit_pct"] for c in pa._candidates("SERIOUS")})
 
     def test_tighter_trail_can_be_adopted(self):
-        # Incumbent trail (arm 8% / distance 4%) leaves at +2.0%; a 2% distance
-        # leaves at +5.0% on the same path. That must be adoptable once the
-        # 30-sample evidence gate is met.
-        self._seed_with_paths(n=pa.MIN_SAMPLE_CLOSED)
+        # Under current MEME defaults (TP=0.015, SL=-0.015, trail_arm=0.02,
+        # trail_distance=0.01, max_hold=1800), the best candidate
+        # (TP=0.03, SL=-0.02, trail_distance=0.008) achieves a >2pp
+        # improvement by surviving a -1.5% dip that stops out the incumbent,
+        # then reaching the 3% TP.  The mixed-path seed produces 30
+        # excursions where the train average gap is 0.0218 and holdout
+        # average gap is 0.0263, both above IMPROVEMENT_MARGIN=0.02.
+        self._seed_mixed_paths(n=pa.MIN_SAMPLE_CLOSED)
         import dynamic_shadow_scalper as ds
         with ds._connect(self.db) as con:
             con.executemany("INSERT INTO mh_scalp_policy_evidence VALUES(?,?,?,0)",
@@ -141,8 +187,31 @@ class AutotunerTests(unittest.TestCase):
         self.assertEqual(rep["state"], "TUNED", rep)
         got = li._risk_params_override(self.db, "MEME")
         self.assertIsNotNone(got)
-        self.assertEqual(got["trail_distance_pct"], 0.02)
-        self.assertEqual(rep["tuned"]["MEME"]["trail_distance_pct"], 0.02)
+        self.assertEqual(got["trail_distance_pct"], 0.008)
+        self.assertEqual(rep["tuned"]["MEME"]["trail_distance_pct"], 0.008)
+
+    def test_sub_margin_candidate_never_tunes(self):
+        # Prove that a genuinely sub-margin improvement still yields
+        # NOT_IMPROVED.  The original stale fixture path (1.0 -> 1.085 ->
+        # 1.05 -> 1.02) produces a max gap of 0.015 between best candidate
+        # (TP=0.03, return 0.022) and incumbent (return 0.007), which is
+        # below IMPROVEMENT_MARGIN=0.02.  The autotuner must correctly
+        # decline adoption.
+        self._seed_with_paths(n=pa.MIN_SAMPLE_CLOSED)
+        import dynamic_shadow_scalper as ds
+        with ds._connect(self.db) as con:
+            con.executemany("INSERT INTO mh_scalp_policy_evidence VALUES(?,?,?,0)",
+                            [(MINT, float(i * 10_000), pa.policy_signature(li._default_params("MEME")))
+                             for i in range(pa.MIN_SAMPLE_CLOSED)])
+        rep = pa.maybe_tune(self.db, cfg())
+        self.assertEqual(rep["state"], "NO_CHANGE", rep)
+        meme = rep["evaluation"]["MEME"]
+        self.assertEqual(meme["state"], "NOT_IMPROVED")
+        self.assertIsNone(li._risk_params_override(self.db, "MEME"))
+        self.assertLess(
+            meme["candidate_holdout_expectancy"] - meme["incumbent_holdout_expectancy"],
+            0.02,
+            "gap must stay below IMPROVEMENT_MARGIN for the stale path")
 
     def test_insufficient_history_never_tunes(self):
         self._seed([excursion(MINT, 0.001, 0.0013, 0.00095, 600, 0.05)

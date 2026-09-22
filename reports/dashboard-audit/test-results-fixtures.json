@@ -1,0 +1,72 @@
+{
+  "before": {
+    "test_tighter_trail_can_be_adopted": {
+      "result": "FAIL",
+      "reason": "0.015 gap < 0.020 IMPROVEMENT_MARGIN, expected TUNED got NOT_IMPROVED",
+      "incumbent_holdout_expectancy": 0.007,
+      "candidate_holdout_expectancy": 0.022,
+      "gap": 0.015
+    },
+    "test_legacy_path_does_not_permanently_poison_new_policy_cohort": {
+      "result": "FAIL",
+      "reason": "Same root cause: 0.015 gap < 0.020 margin, expected TUNED got NOT_IMPROVED",
+      "incumbent_holdout_expectancy": 0.007,
+      "candidate_holdout_expectancy": 0.022,
+      "gap": 0.015
+    },
+    "test_collection_tuning_and_paper_application_work_end_to_end": {
+      "result": "FAIL",
+      "reason": "Same root cause + stale assertion values (expected paper.trail_distance=0.02, live=0.04)",
+      "incumbent_holdout_expectancy": 0.007,
+      "candidate_holdout_expectancy": 0.022,
+      "gap": 0.015
+    }
+  },
+  "after": {
+    "test_tighter_trail_can_be_adopted": {
+      "result": "PASS",
+      "seed": "mixed_paths: 17 good + 5 bad (train), 5 good + 3 bad (holdout)",
+      "best_candidate": {
+        "TP": 0.03,
+        "SL": -0.02,
+        "trail_arm": 0.015,
+        "trail_distance": 0.008,
+        "max_hold": 900
+      },
+      "override_trail_distance": 0.008,
+      "train_gap": 0.0218,
+      "holdout_gap": 0.0263
+    },
+    "test_sub_margin_candidate_never_tunes": {
+      "result": "PASS",
+      "note": "New negative control: proves stale path still yields NOT_IMPROVED",
+      "seed": "original path (1.0->1.085->1.05->1.02)",
+      "gap": 0.015,
+      "state": "NO_CHANGE"
+    },
+    "test_legacy_path_does_not_permanently_poison_new_policy_cohort": {
+      "result": "PASS",
+      "seed": "fixture._seed_mixed_paths(n=MIN_SAMPLE_CLOSED+1)",
+      "state": "TUNED",
+      "policy_matched": 30,
+      "excluded_policy": 1
+    },
+    "test_collection_tuning_and_paper_application_work_end_to_end": {
+      "result": "PASS",
+      "seed": "direct DB seed matching _seed_mixed_paths",
+      "paper_trail_distance": 0.008,
+      "live_trail_distance": 0.01,
+      "paper_exit_reason": "take_profit"
+    }
+  },
+  "total": {
+    "before_failures": 3,
+    "after_failures": 0,
+    "regressions": 0
+  },
+  "static_checks": {
+    "compileall": "PASS",
+    "git_diff_check": "PASS",
+    "full_suite": "339 tests, 1 pre-existing failure (test_config_consistency - documented blocker)"
+  }
+}
