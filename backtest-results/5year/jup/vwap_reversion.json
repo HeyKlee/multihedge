@@ -9,9 +9,9 @@
     "Data gaps in Binance klines are silently skipped; no interpolation.",
     "Paper-only \u2014 not a live P&L forecast."
   ],
-  "closes_used": 23112,
-  "ending_equity_usd": 0.5559,
-  "gross_loss_usd": 32.4102,
+  "closes_used": 23136,
+  "ending_equity_usd": 0.5582,
+  "gross_loss_usd": 32.4079,
   "gross_profit_usd": 21.6619,
   "losses": 723,
   "max_drawdown_pct": 97.7202,
@@ -21,11 +21,11 @@
   "position_fraction": 0.3,
   "profit_factor": 0.6684,
   "round_trip_bps": 80.0,
-  "sharpe_per_trade": -3.0874,
-  "sortino_per_trade": -3.586,
+  "sharpe_per_trade": -3.0867,
+  "sortino_per_trade": -3.5852,
   "starting_equity_usd": 24.0,
-  "total_net_pnl_usd": -10.7484,
-  "total_return_pct": -97.6837,
+  "total_net_pnl_usd": -10.746,
+  "total_return_pct": -97.674,
   "trades": [
     {
       "cost": 0.029951312649164678,
@@ -18013,12 +18013,12 @@
       "ts": null
     },
     {
-      "cost": 0.0006610129644185256,
-      "gross": 0.1652532411046314,
+      "cost": 0.0006703576417428948,
+      "gross": 0.1675894104357237,
       "index": 23111,
-      "net": 0.16459222814021288,
-      "pnl": -0.0024438790328837057,
-      "price": 0.2688,
+      "net": 0.1669190527939808,
+      "pnl": -0.00011705437911577188,
+      "price": 0.2726,
       "qty": 0.6147814029190157,
       "side": "SELL",
       "ts": null

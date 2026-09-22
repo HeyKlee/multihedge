@@ -1,8 +1,8 @@
 # XORA-SURVIVAL Entry-Quality Evidence Report
 
-- Valid observations: 6869
+- Valid observations: 10237
 - Valid linked outcomes: 8
-- Rejected candidates without outcome labels: 6859
+- Rejected candidates without outcome labels: 10226
 - Proposal generation: BLOCKED
 
 ## Blocking conditions

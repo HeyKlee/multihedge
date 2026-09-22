@@ -5,15 +5,16 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-# Memecoin scalp (fast): tightest allowed thresholds to force frequent closes.
-# 0.5% TP, 0.5% SL means trades close quickly, accumulating evidence faster
-# toward the 30-trade evidence gate. Max hold at 600s with TP-flashed-only
-# fallback ensures stale positions don't linger.
-MEME_TAKE_PROFIT_PCT = 0.005
-MEME_STOP_LOSS_PCT = -0.005
-MEME_TRAIL_ARM_PCT = 0.008
-MEME_TRAIL_DISTANCE_PCT = 0.005
-MEME_MAX_HOLD_SECONDS = 600
+# Memecoin scalp (fast): match the observed +0.34% mean 1h forward return
+# and 55.7% positive label rate. 1.5% TP / 1.5% SL gives trades room to
+# realize the signal while containing downside. Trail arm at 2% captures
+# stronger moves. Max hold 1800s (30 min) keeps evidence accumulating.
+# These values stay fixed until the evidence gate opens at 30 closed trades.
+MEME_TAKE_PROFIT_PCT = 0.015
+MEME_STOP_LOSS_PCT = -0.015
+MEME_TRAIL_ARM_PCT = 0.020
+MEME_TRAIL_DISTANCE_PCT = 0.010
+MEME_MAX_HOLD_SECONDS = 1800
 
 # Serious / backed coins (present in the config `coins` list, e.g. JUP, ETH):
 # day-traded, allowed to swing over hours instead of a 15-minute scalp.
