@@ -257,14 +257,26 @@ def _connect(path: Path):
     return con
 
 
+def _connect_ro(path: Path):
+    """Open a read-only connection using URI mode, for read-only containers.
+
+    Default _connect opens in read-write mode and SQLite tries to create journal
+    files, which fails in --read-only containers. URI mode ?mode=ro avoids this.
+    """
+    uri = f"file:{Path(path).resolve()}?mode=ro"
+    con = sqlite3.connect(uri, uri=True, timeout=BUSY_TIMEOUT_SECONDS)
+    con.row_factory = sqlite3.Row
+    return con
+
+
 def get_holding(path: Path, mint: str) -> dict | None:
-    with _connect(path) as con:
+    with _connect_ro(path) as con:
         row = con.execute("SELECT * FROM mh_live_inventory WHERE mint=?", (mint,)).fetchone()
     return dict(row) if row else None
 
 
 def list_holdings(path: Path) -> list[dict]:
-    with _connect(path) as con:
+    with _connect_ro(path) as con:
         rows = con.execute("SELECT * FROM mh_live_inventory ORDER BY opened_ts").fetchall()
     return [dict(row) for row in rows]
 
