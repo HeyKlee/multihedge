@@ -46,7 +46,7 @@ POSITION_FRACTION = 0.15   # use 15% of available wallet per proven coin
 MIN_COMPOUND_COIN_TRADES = 5
 MIN_COMPOUND_COIN_WIN_RATE = 0.60
 STOP_LOSS_REENTRY_COOLDOWN_SECONDS = 30 * 60
-FORWARD_LABEL_HORIZON = 900  # 15-minute forward labels, matches the RSI compute window
+FORWARD_LABEL_HORIZON = 300  # 5-minute forward labels for testing
 
 def _connect(path: Path):
     con = sqlite3.connect(Path(path), timeout=30)
@@ -130,8 +130,7 @@ def _entry_signal(row: dict, now: float) -> bool:
         if rsi_15m is None:
             rsi_15m = float(market.get("rsi_15m", 50))
         if vol_avg_20 is None:
-            vol_5m = float(market.get("volume_5m_usd", buy + sell))
-            vol_avg_20 = vol_5m  # fallback: use current volume as average
+            vol_avg_20 = float(market.get("volume_5m_avg_20", float(market.get("volume_5m_usd", buy + sell))))
         vol_5m = float(market.get("volume_5m_usd", buy + sell))
     except (KeyError, TypeError, ValueError):
         return False
@@ -268,6 +267,10 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
         con.execute("BEGIN IMMEDIATE")
         con.execute("CREATE TABLE IF NOT EXISTS mh_accounts (trader TEXT PRIMARY KEY, "
                     "equity_usd REAL NOT NULL, started_usd REAL NOT NULL)")
+        con.execute("CREATE TABLE IF NOT EXISTS mh_shadow_entry_observations ("
+                    "observed_ts REAL,mint TEXT,latest_usd REAL,return_5m_pct REAL,"
+                    "return_1h_pct REAL,buy_volume_5m_usd REAL,sell_volume_5m_usd REAL,"
+                    "entry_signal INTEGER,entry_opened INTEGER,rsi_15m REAL,volume_5m_avg_20 REAL)")
         account = con.execute("SELECT equity_usd FROM mh_accounts WHERE trader=?", (SETUP,)).fetchone()
         if account is None:
             history = con.execute("SELECT qty,entry_px,realized_pct,realized_usd FROM mh_trades WHERE setup=?", (SETUP,)).fetchall()

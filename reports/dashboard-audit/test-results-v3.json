@@ -1,0 +1,96 @@
+{
+  "timestamp": "2026-09-22T19:35:00+12:00",
+  "repair_version": "v3",
+  "agent": "thecryptobot (deepseek/deepseek-v4-flash via openrouter)",
+  "exit_code": 1,
+  "duration_seconds": 50.3,
+  "total_tests": 336,
+  "pass": 324,
+  "fail": 4,
+  "error": 1,
+  "expected_failure": 0,
+  "skip": 4,
+  "summary": "FAILED (failures=4, errors=1, skipped=4)",
+  "changes_from_v2": {
+    "replay_tests_resolved": 3,
+    "removed_expected_failures": 2,
+    "net_failures": 5
+  },
+  "failures": [
+    {
+      "test": "test_declared_values_match_what_the_reasoner_actually_applied",
+      "module": "test_config_consistency",
+      "class": "DeployedReasonerConfigTests",
+      "issue_id": "i-010",
+      "disposition": "flag_orchestrator",
+      "detail": "Config declares TAKE_PROFIT=0.015, reasoner DB applies 0.05. Database locked during test. Trading-core config/runtime drift outside dashboard scope."
+    },
+    {
+      "test": "test_busy_wait_is_bounded_in_both_connection_helpers",
+      "module": "test_db_lock_discipline",
+      "class": "BoundedWaitTests",
+      "issue_id": "new (restored policy assertion)",
+      "disposition": "flag_orchestrator",
+      "detail": "live_inventory.BUSY_TIMEOUT_SECONDS=30.0 exceeds 15s bounded-wait policy. live_inventory.py:203. Trading-core timeout value change."
+    },
+    {
+      "test": "test_tighter_trail_can_be_adopted",
+      "module": "test_parameter_autotuner",
+      "class": "AutotunerTests",
+      "issue_id": "i-015",
+      "disposition": "flag_orchestrator",
+      "detail": "Candidate 0.008 does not beat incumbent 0.01 (NOT_IMPROVED). Changed MEME defaults affect tuning outcome. Trading-core outside dashboard scope."
+    },
+    {
+      "test": "test_collection_tuning_and_paper_application_work_end_to_end",
+      "module": "test_survival_repair",
+      "class": "CohortRepairTests",
+      "issue_id": "i-014",
+      "disposition": "flag_orchestrator",
+      "detail": "Autotuner NO_CHANGE vs TUNED with tightened MEME defaults. Trading-core tuning pipeline issue outside dashboard scope."
+    },
+    {
+      "test": "test_legacy_path_does_not_permanently_poison_new_policy_cohort",
+      "module": "test_survival_repair",
+      "class": "CohortRepairTests",
+      "issue_id": "i-014",
+      "disposition": "flag_orchestrator",
+      "detail": "Autotuner NO_CHANGE vs TUNED. Same root cause as above. Trading-core outside dashboard scope."
+    }
+  ],
+  "volatility_gate_tests": {
+    "status": "PASS",
+    "count": 4,
+    "hidden_expected_failures_removed": 2,
+    "notes": "Tests now exercise real _entry_signal behavior without @expectedFailure or silent kwargs. Feature (trend_filter_enabled, volatility min/max) remains unimplemented."
+  },
+  "dashboard_specific_tests": {
+    "test_mh_ui": "PASS (31/31)",
+    "test_dashboard": "PASS (10/10)",
+    "total": 41,
+    "failures": 0
+  },
+  "static_checks": {
+    "compileall": "PASS (exit 0)",
+    "git_diff_check": "PASS (exit 0)"
+  },
+  "container_state": {
+    "running": true,
+    "supervised_processes": 9,
+    "image": "deploy-multihedge",
+    "image_started": "2026-09-22T18:30:37+12:00",
+    "mh_dash_hash_match": false,
+    "workspace_mh_dash_hash": "3e52be45bdf761a90658c13f7349e7593bd2be6ea74245a43e89723355e084c0",
+    "container_mh_dash_hash": "921328442ef49a02206096db0aa8f3e9ef75317988be931b061cef645f43654d",
+    "v3_fixes_in_container": {
+      "editing_guard": "present",
+      "css_span_classes": "present",
+      "xora_tab_balance_loading": "absent (shows 'live 0')",
+      "paper_trader_66.7pct": "absent (shows 75%)",
+      "gate_row_66.7pct": "absent (shows 75%)"
+    },
+    "dynamic_shadow_scalper_hash_mismatch": true,
+    "note": "Container deployed by blocked release worker. No deploy from this task."
+  },
+  "model_usage": "deepseek/deepseek-v4-flash (openrouter) - measured by actual task execution"
+}

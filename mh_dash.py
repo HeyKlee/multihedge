@@ -23,6 +23,8 @@ from fastapi.responses import HTMLResponse, JSONResponse
 import paper
 import pricefeed as pricefeed_module
 import mh_ui
+import mh_reasoner  # HOTSPOT: expose effective runtime reasoner params
+# so the API truthfully shows DB-override values alongside config.yaml declarations
 
 DB_PATH = Path(os.environ.get("MULTIHEDGE_DB", str(Path(__file__).parent / "multihedge.db")))
 paper.DB_PATH = DB_PATH  # dashboard and engine share the same ledger
@@ -134,6 +136,9 @@ def _reasoner():
     return {
         "accounts": accounts,
         "positions": poss, "bias": bias,
+        # HOTSPOT: effective runtime params from mh_reasoner._load_params()
+        # (includes DB overrides, which take precedence over config.yaml)
+        "params": mh_reasoner._load_params(),
     }
 
 
@@ -1048,7 +1053,7 @@ button,select{font:inherit}.app-shell{width:min(1600px,100%);min-height:100vh;ma
 .workspace{min-width:0;padding:30px 34px 70px}.workspace-header{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:22px}.page-eyebrow{font-size:10px;font-weight:700;color:var(--lav);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}.workspace-header h1{font-family:'Space Grotesk';font-size:30px;line-height:1.1;letter-spacing:-.03em;color:var(--navy)}.workspace-header p{color:var(--text-dim);margin-top:7px;font-size:13px;max-width:680px}.header-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}.status-pill{font-size:10px;font-weight:700;color:var(--lav);background:var(--lav-dim);border:1px solid var(--border-strong);padding:8px 12px;border-radius:8px;white-space:nowrap}
 .ticker{overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--surface);margin-bottom:16px;white-space:nowrap;padding:9px 0}.ticker-track{display:flex;gap:30px;animation:scroll 40s linear infinite;width:max-content}@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}.ticker-item{font:11px 'IBM Plex Mono';color:var(--text-dim);display:inline-flex;gap:6px;padding:0 8px;white-space:nowrap}.ticker-item b{color:var(--text)}.ticker-item .up{color:var(--green)}.ticker-item .down{color:var(--red)}
 .hero{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin-bottom:18px}.kpi{position:relative;background:var(--surface);border:1px solid var(--border);padding:18px;border-radius:12px;box-shadow:var(--shadow);overflow:hidden}.kpi .lbl{font-size:10px;font-weight:700;color:var(--text-dim);letter-spacing:.06em;text-transform:uppercase;padding-right:100px}.kpi .val{font-family:'Space Grotesk';font-size:25px;font-weight:700;letter-spacing:-.03em;color:var(--navy);margin-top:3px}.kpi .val.neg{color:var(--red)}.kpi-detail{color:var(--text-dim)}
-.card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:15px;box-shadow:var(--shadow);overflow-x:auto}.card h3{font-family:'Space Grotesk';font-size:15px;font-weight:700;color:var(--navy);letter-spacing:-.01em;margin-bottom:13px;padding-right:110px}.grid{display:grid;gap:15px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}canvas{display:block;max-width:100%;width:100%;height:130px;background:var(--chart-bg);border:1px solid var(--border);border-radius:8px}#mkcv,#gld-cv{height:min(56vh,520px);min-height:300px}.tfbar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 8px}.tfbar button{min-height:32px;font:600 11px 'IBM Plex Mono';background:var(--surface-2);color:var(--text-dim);border:1px solid var(--border);border-radius:7px;padding:5px 10px;cursor:pointer}.tfbar button:hover{border-color:var(--lav);color:var(--lav)}.tfbar button.on{background:var(--lav);color:var(--surface);border-color:var(--lav)}.tfbar button:disabled{opacity:.35;cursor:not-allowed}
+.card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:15px;box-shadow:var(--shadow);overflow-x:auto}.card h3{font-family:'Space Grotesk';font-size:15px;font-weight:700;color:var(--navy);letter-spacing:-.01em;margin-bottom:13px;padding-right:110px}.grid{display:grid;gap:15px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}.span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-12{grid-column:1/-1}canvas{display:block;max-width:100%;width:100%;height:130px;background:var(--chart-bg);border:1px solid var(--border);border-radius:8px}#mkcv,#gld-cv{height:min(56vh,520px);min-height:300px}.tfbar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 8px}.tfbar button{min-height:32px;font:600 11px 'IBM Plex Mono';background:var(--surface-2);color:var(--text-dim);border:1px solid var(--border);border-radius:7px;padding:5px 10px;cursor:pointer}.tfbar button:hover{border-color:var(--lav);color:var(--lav)}.tfbar button.on{background:var(--lav);color:var(--surface);border-color:var(--lav)}.tfbar button:disabled{opacity:.35;cursor:not-allowed}
 .toolbar-btn{min-height:38px;padding:7px 11px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);color:var(--text);font-weight:650;font-size:12px;cursor:pointer}.toolbar-btn:hover{border-color:var(--lav);color:var(--lav)}button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--lav);outline-offset:2px}.update-state{font:11px 'IBM Plex Mono';color:var(--text-faint);white-space:nowrap}.widget-tools{position:absolute;right:12px;top:12px;display:flex;gap:4px;z-index:3}.widget-tools button{width:28px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--surface-2);color:var(--text-dim);cursor:pointer}.widget-tools button:hover{color:var(--lav);border-color:var(--lav)}.widget-report-btn{position:absolute;right:10px;top:10px;width:28px;height:28px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text-dim);cursor:pointer;display:grid;place-items:center;font-size:13px;z-index:6;opacity:.72}.widget-report-btn:hover{opacity:1;color:var(--red);border-color:var(--red)}.free-edit .widget-report-btn{display:none}.issue-modal-field{margin:12px 0}.issue-modal-field label{display:block;font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}.issue-modal-field textarea{width:100%;min-height:110px;resize:vertical;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-2);color:var(--text);padding:10px;font:13px 'Inter'}.issue-modal-field select,.issue-modal-field input[type=file]{width:100%;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface-2);color:var(--text);padding:8px;font-size:12px}.issue-widget-context{max-height:130px;overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);padding:9px;font:11px 'IBM Plex Mono';color:var(--text-dim);white-space:pre-wrap}.widget-drag{cursor:grab}.widget-dragging{opacity:.48}.widget-wide{grid-column:1/-1}.loading{padding:32px;text-align:center;color:var(--text-dim)}.load-error{padding:12px 14px;border:1px solid var(--red);border-radius:8px;color:var(--red);background:var(--red-dim);margin-bottom:14px}
 table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}th,td{padding:10px 11px;text-align:left;border-bottom:1px solid var(--border)}th{color:var(--text-faint);font-weight:700;font-size:10px;letter-spacing:.05em;text-transform:uppercase;background:var(--surface-2)}tr:last-child td{border-bottom:0}.pos{color:var(--green)}.neg{color:var(--red)}.pilltag{display:inline-block;padding:3px 9px;border-radius:12px;font-size:10px;font-weight:700}.pilltag.ok{background:var(--green-dim);color:var(--green);border:1px solid var(--border)}.pilltag.no{background:var(--red-dim);color:var(--red);border:1px solid var(--border)}.ok-tag{display:inline-block;padding:3px 9px;border-radius:12px;font-size:10px;font-weight:700;background:var(--green-dim);color:var(--green)}.no-tag{display:inline-block;padding:3px 9px;border-radius:12px;font-size:10px;font-weight:700;background:var(--red-dim);color:var(--red)}.scroll-wrap{max-height:230px;overflow:auto;border-radius:8px;border:1px solid var(--border)}.scroll-wrap table thead th{position:sticky;top:0;background:var(--surface-2);z-index:2}.chart-flex{display:flex;gap:16px;align-items:flex-start}.chart-legend{min-width:170px;font:11px 'IBM Plex Mono';display:flex;flex-direction:column;gap:7px}.whats{font-size:13px;color:var(--text-dim);line-height:1.65}.whats b{color:var(--navy);font-family:'Space Grotesk';font-size:13px}
 @media (max-width:1300px){.ticker{display:none}}
@@ -1403,9 +1408,9 @@ function edgeChart(id,data){
 }
 // Known scalper strategies with a one-line "what it does" each (for the Scalper tab).
 const STRAT_INFO={
-  momentum_breakout:'Buys a coin that breaks above its recent high on volume, riding the continuation for a quick 2.5% scalp.',
+  momentum_breakout:'Buys a coin that breaks above its recent high on volume, riding the continuation for a quick 1.5% scalp.',
   mean_reversion:'Fades sharp spikes: buys when price stretches far above/below its moving average, betting on a snap-back.',
-  rsi_oversold:'Watches RSI and buys when it dips into oversold territory, capturing the bounce to the 2.5% target.',
+  rsi_oversold:'Watches RSI and buys when it dips into oversold territory, capturing the bounce to the 1.5% target.',
   vwap_reversion:'Re-enters when price trades well away from VWAP, buying the reversion to the volume-weighted mean.'
 };
 async function renderExitGraph(){
@@ -1663,7 +1668,7 @@ async function renderOverview(sum,runId){
     <table><tr><th>Trader</th><th>Coin</th><th>Entry position (coin amount)</th><th>Entry amount</th><th>TP</th><th>SL</th><th>Open/Close</th><th>W/L</th><th>Total W/L</th></tr>
     ${rowsHtml}
     </table>
-    <div style="font-size:11px;color:var(--text-faint);margin-top:6px">TP/SL prices are derived from entry and the per-trader take-profit/stop-loss config (scalper 2.5%/1.5%, reasoner 1.5%/1.5%). Grid trader shows its range frame (SL=lower bound, TP=upper sell levels) and realized cycles as its W/L.</div>
+    <div style="font-size:11px;color:var(--text-faint);margin-top:6px">TP/SL prices are derived from entry and the per-trader take-profit/stop-loss config (scalper 1.5%/1.5%, reasoner 1.5%/1.5%). Grid trader shows its range frame (SL=lower bound, TP=upper sell levels) and realized cycles as its W/L.</div>
     </div>`);
   const panels=document.getElementById('tab-panels');
   // Per-trader W/L ratios from livegate; exit reasons with vertical labels
@@ -1678,7 +1683,7 @@ async function renderOverview(sum,runId){
     return `<div class="todo-item"><span class="todo-check ${ok?'ok':''}"></span><div><div class="todo-title">${item.title}</div><div class="todo-detail">${due} · ${item.detail}</div></div></div>`;
   }).join('')||'<div class="todo-detail">No action feed available</div>';
   const gateRow=(name,v)=>{const ok=!!v.eligible;const wr=(v.win_rate||0)*100;const cl=v.n||0;
-    return `<div class="gate-row"><span class="gate-name">${name}</span><span class="gate-meta ${ok?'pos':'neg'}">${cl} closed · need 20 · ${wr.toFixed(1)}% wr (need 75%)</span><span class="pilltag ${ok?'ok':'no'}">${ok?'READY':'BLOCKED'}</span></div>`;};
+    return `<div class="gate-row"><span class="gate-name">${name}</span><span class="gate-meta ${ok?'pos':'neg'}">${cl} closed · need 20 · ${wr.toFixed(1)}% wr (need 66.7%)</span><span class="pilltag ${ok?'ok':'no'}">${ok?'READY':'BLOCKED'}</span></div>`;};
   const gd=(sum.grid||{});
   const gridGateRow=`<div class="gate-row"><span class="gate-name">grid</span><span class="gate-meta">${gd.cycles_completed||0} cycles · not gated (own paper wallet)</span><span class="pilltag no">PAPER</span></div>`;
   const sed=(surv.edge||{});const sN=sed.paper_n||0;const sWr=(sed.paper_win_rate||0)*100;const sNet=sed.paper_net_usd||0;
@@ -1748,12 +1753,12 @@ async function renderScalper(){
   if(TAB!=='strategies')return;
   const st=trades.filter(t=>t.setup!=='reasoner'&&t.setup!=='whale_trader');
   const strats=[...new Set(s.map(x=>x.setup))];
-  const what=strats.map(ss=>`<div style="margin-bottom:8px"><b>${ss}</b><br>${STRAT_INFO[ss]||'Short-horizon setup with a quick 2.5% take-profit / 1.5% stop-loss scalp target.'}</div>`).join('')||'<div>Rotates between several short-horizon setups with a 2.5% take-profit / 1.5% stop-loss.</div>';
+  const what=strats.map(ss=>`<div style="margin-bottom:8px"><b>${ss}</b><br>${STRAT_INFO[ss]||'Short-horizon setup with a quick 1.5% take-profit / 1.5% stop-loss scalp target.'}</div>`).join('')||'<div>Rotates between several short-horizon setups with a 1.5% take-profit / 1.5% stop-loss.</div>';
   p.innerHTML=`
   <div class="card"><h3>Scalper &middot; fast momentum layer &middot; own wallet</h3>
-    <div style="font-size:12px;color:var(--text-dim)">own wallet &middot; scalps on 2.5% take-profit / 1.5% stop-loss, ~1h max hold</div></div>
+    <div style="font-size:12px;color:var(--text-dim)">own wallet &middot; scalps on 1.5% take-profit / 1.5% stop-loss, 30min max hold</div></div>
   <div class="card"><h3>What it does</h3>
-    <div class="whats">The fast, high-frequency layer of the bot. It rotates between several short-horizon strategies and enters whenever the active setup fires, always aiming for a quick 2.5% scalp with a 1.5% stop-loss cap. Breakdown of the strategies it switches between:<br><br>${what}</div></div>
+    <div class="whats">The fast, high-frequency layer of the bot. It rotates between several short-horizon strategies and enters whenever the active setup fires, always aiming for a quick 1.5% scalp with a 1.5% stop-loss cap. Breakdown of the strategies it switches between:<br><br>${what}</div></div>
   <div class="card"><h3>Scalper wallet &middot; strategy rotations</h3><table><tr><th>Coin</th><th>Setup</th><th>Pts</th><th>W/L</th><th>W%</th></tr>
   ${s.map(x=>`<tr><td>${x.coin}</td><td>${x.setup}</td><td>${x.points}</td><td>${x.wins}/${x.losses}</td><td class="${x.win_rate>=0.5?'pos':'neg'}">${(x.win_rate*100).toFixed(1)}%</td></tr>`).join('')}</table></div>
   <div class="grid">
@@ -1887,7 +1892,7 @@ async function renderMemecoin(){
   }).join('')||'<tr><td colspan="8" style="color:var(--text-faint)">no memecoin trades yet</td></tr>';
   p.innerHTML=`
   <div class="card"><h3>Memecoin &middot; long-only paper sniper &middot; own wallet</h3>
-    <div style="font-size:12px;color:var(--text-dim)">Snipes fresh memecoin signals from the pump monitor. Strict guardrails: $5 max per trade, +50% TP, -20% SL, 15-minute max hold, trailing stop at +30%/-10%. Long-only.</div></div>
+    <div style="font-size:12px;color:var(--text-dim)">Snipes fresh memecoin signals from the pump monitor. Strict guardrails: $5 max per trade, 1.5% TP, -1.5% SL, 30min max hold, trailing stop at +2%/-1%. Long-only.</div></div>
   <div class="grid">
     <div class="card"><h3>Memecoin wallet</h3>
       <div style="display:flex;gap:22px;flex-wrap:wrap">
@@ -1914,11 +1919,11 @@ async function renderGate(){
   const sN=sed.paper_n||0,sWr=(sed.paper_win_rate||0)*100,sNet=sed.paper_net_usd||0;
   const sOk=sN>=50&&(sed.paper_win_rate||0)>=0.667&&sNet>0;
   const traderRow=(t,v)=>{const cl=v.n||0,wr=(v.win_rate||0)*100,ok=!!v.eligible;
-    return `<tr><td>${t}</td><td>${cl} / 20</td><td class="${wr>=75?'pos':'neg'}">${wr.toFixed(1)}%</td><td><span class="pilltag ${ok?'ok':'no'}">${ok?'READY FOR LIVE':'NOT ELIGIBLE'}</span><div class="lg-sub">${cl}/20 closed · ${wr.toFixed(1)}% wr (need 75%)</div></td></tr>`;};
+    return `<tr><td>${t}</td><td>${cl} / 20</td><td class="${wr>=66.7?'pos':'neg'}">${wr.toFixed(1)}%</td><td><span class="pilltag ${ok?'ok':'no'}">${ok?'READY FOR LIVE':'NOT ELIGIBLE'}</span><div class="lg-sub">${cl}/20 closed · ${wr.toFixed(1)}% wr (need 66.7%)</div></td></tr>`;};
   const xoraRow=`<tr><td>xora-survival <span class="lg-sub">(paper incubator)</span></td><td>${sN} / 50</td><td class="${sWr>=66.7?'pos':'neg'}">${sWr.toFixed(1)}%</td><td><span class="pilltag ${sOk?'ok':'no'}">${sOk?'READY FOR LIVE':'NOT ELIGIBLE'}</span><div class="lg-sub">${sN}/50 closed · ${sWr.toFixed(1)}% wr (need 66.7%) · net ${sNet>=0?'+':''}${fmtMoney(sNet)}${sNet>0?'':' (needs positive net)'}</div></td></tr>`;
   const gridRow=`<tr><td>grid <span class="lg-sub">(spot long-only)</span></td><td>${gi.cycles_completed||0} cycles</td><td class="pos">-</td><td><span class="pilltag no">PAPER</span><div class="lg-sub">own paper wallet · excluded from go-live gate</div></td></tr>`;
   p.innerHTML=`<div class="card"><h3>Live Gate &middot; real wallet untouched until a trader passes its evidence bar</h3>
-  <div class="livegate-note">Paper traders need &ge;20 closed trades at &ge;75% win-rate. Xora-Survival paper incubator needs 50 closed trades at &ge;66.7% and a positive net. Grid is paper-only and never touches the real wallet.</div>
+  <div class="livegate-note">Paper traders need &ge;20 closed trades at &ge;66.7% win-rate. Xora-Survival paper incubator needs 50 closed trades at &ge;66.7% and a positive net. Grid is paper-only and never touches the real wallet.</div>
   <table><tr><th>Trader</th><th>Closed trades</th><th>Win%</th><th>Eligibility</th></tr>
   ${Object.entries(g).map(([t,v])=>traderRow(t,v)).join('')}
   ${xoraRow}
@@ -2123,8 +2128,8 @@ async function renderGridLadder(){
   ctx.fillText('▲ $'+fmt(last),w-70,yy-6);
   ctx.fillRect(w-6,yy-1.5,4,3);
 }
-// auto-refresh market + ladder while Overview is open
-setInterval(()=>{if(TAB==='overview'){renderMiniMarket(RUN_ID);}},8000);
+// auto-refresh market + ladder while Overview is open (pause during editing)
+setInterval(()=>{if(!EDITING&&TAB==='overview'){renderMiniMarket(RUN_ID);}},8000);
 function renderKpis(sum){
   const k=document.getElementById('kpis');
   const traders=(sum.traders||[]);
@@ -2134,7 +2139,7 @@ function renderKpis(sum){
   const compactWallet=(id,label,t)=>`<button class="wallet-tab ${pct(t)>=0?'good':'bad'}" data-wallet-tab="${id}" type="button">
       <span>${label}</span><b>NZ${fmtMoney(t.equity_nzd||0)}</b><small class="${pct(t)>=0?'pos':'neg'}">${pct(t)>=0?'+':''}${pct(t).toFixed(2)}%</small>
     </button>`;
-  const xoraTab=`<button class="wallet-tab good" data-wallet-tab="survival" type="button"><span>Xora-Survival</span><b id="xora-tab-balance">live 0</b><small>paper incubator</small></button>`;
+  const xoraTab=`<button class="wallet-tab good" data-wallet-tab="survival" type="button"><span>Xora-Survival</span><b id="xora-tab-balance">loading</b><small>paper incubator</small></button>`;
   const grid=sum.grid||{},gw=grid.wallet||{},gg=grid.grid||{};
   const gridTab=`<button class="wallet-tab good" data-wallet-tab="grid" type="button"><span>Grid</span><b>NZ${fmtMoney((grid.equity_usd||0)*fx)}</b><small>${gw.paused?'paused':'active'} · ${grid.open_sells||0} sells</small></button>`;
   const totalEquity=traders.reduce((a,t)=>a+(t.equity_nzd||0),0)+((grid.equity_usd||0)*fx);
@@ -2276,12 +2281,13 @@ async function renderSurvival(){
   <div class="card"><h3>Active exit params &middot; evidence-gated policy</h3><table><tr><th>Class</th><th>Take profit</th><th>Stop loss</th><th>Trail arm</th><th>Trail distance</th><th>Max hold</th><th>Source</th></tr>
     ${((s.risk_params||{}).MEME?'<tr><td><span class="pilltag no">MEME</span></td><td>'+(s.risk_params.MEME.take_profit_pct*100).toFixed(1)+'%</td><td>'+(s.risk_params.MEME.stop_loss_pct*100).toFixed(1)+'%</td><td>+'+(s.risk_params.MEME.trail_arm_pct*100).toFixed(1)+'%</td><td>'+(s.risk_params.MEME.trail_distance_pct*100).toFixed(1)+'% below peak</td><td>'+Math.round(s.risk_params.MEME.max_hold_seconds/60)+' min TP-miss fallback</td><td>'+(s.risk_params.MEME.source||'default')+'</td></tr>':'')}
     ${((s.risk_params||{}).SERIOUS?'<tr><td><span class="pilltag ok">SERIOUS</span></td><td>'+(s.risk_params.SERIOUS.take_profit_pct*100).toFixed(1)+'%</td><td>'+(s.risk_params.SERIOUS.stop_loss_pct*100).toFixed(1)+'%</td><td>+'+(s.risk_params.SERIOUS.trail_arm_pct*100).toFixed(1)+'%</td><td>'+(s.risk_params.SERIOUS.trail_distance_pct*100).toFixed(1)+'% below peak</td><td>'+Math.round(s.risk_params.SERIOUS.max_hold_seconds/3600*10)/10+' h TP-miss fallback</td><td>'+(s.risk_params.SERIOUS.source||'default')+'</td></tr>':'')}
-  </table><div style="font-size:10.5px;color:var(--text-faint);margin-top:6px">MEME trailing protection arms only after a meaningful +8% move and permits a 4% pullback from peak. Max hold only retries an exit after the recorded peak crossed TP but the sell did not complete. Age alone never closes a position. Stop loss remains unconditional. Tuned candidates can control paper exits, but live promotion remains locked.</div></div>
+  </table><div style="font-size:10.5px;color:var(--text-faint);margin-top:6px">MEME trailing protection arms only after a meaningful +${((s.risk_params||{}).MEME?(s.risk_params.MEME.trail_arm_pct*100).toFixed(1):'8.0')}% move and permits a ${((s.risk_params||{}).MEME?(s.risk_params.MEME.trail_distance_pct*100).toFixed(1):'4.0')}% pullback from peak. Max hold only retries an exit after the recorded peak crossed TP but the sell did not complete. Age alone never closes a position. Stop loss remains unconditional. Tuned candidates can control paper exits, but live promotion remains locked.</div></div>
   <div class="card"><h3>Survival &middot; live trade history (on-chain)</h3><div class="scroll-wrap"><table><tr><th>Coin</th><th>Side</th><th>When</th><th>Signature</th><th>State</th><th>Order</th></tr>${liveTr}</table></div></div>
   <div class="card"><h3>Paper incubator &middot; trade history</h3><div class="scroll-wrap"><table><tr><th>Coin</th><th>Side</th><th>Entry</th><th>Exit</th><th>P/L%</th><th>P/L$ (NZD)</th><th>Reason</th><th>Close</th><th>Mode</th></tr>${paperTr}</table></div></div>
   <div class="card"><h3>Decision log &middot; autonomous cycles</h3><div class="scroll-wrap"><table><tr><th>When</th><th>Action</th><th>Asset</th><th>State</th><th>Reason</th></tr>${cyc}</table></div></div>`;
 }
 async function run(){
+  if(EDITING)return;
   const runId=++RUN_ID;
   const sum=await load('summary');
   if(runId!==RUN_ID)return;
@@ -2518,6 +2524,9 @@ function freeWidgets(){
 }
 function enterEdit(){
   if(EDITING)return;if(!window._mhPrefs)window._mhPrefs={};
+  // Pause the auto-refresh while editing so it never re-renders and
+  // disrupts widget placement.
+  if(window._refreshInt){clearInterval(window._refreshInt);window._refreshInt=null;}
   window._editBaseline=JSON.stringify(layoutForTab());
   // Capture each widget's current on-screen position BEFORE the free-edit class
   // flips cards to absolute, so entering edit mode never stacks or moves them.
@@ -2565,7 +2574,11 @@ function cancelEdit(){
   const p=Object.assign({},window._mhPrefs||{});if(base&&Object.keys(base).length){p.layout=p.layout||{};if(Object.keys(base).length&&Object.values(base).some(v=>v.x!=null||v.hidden))p.layout[TAB]=base;else delete p.layout[TAB];}
   window._mhPrefs=p;
   if(Object.keys(base).length&&Object.values(base).some(v=>v.x!=null||v.hidden))applySavedLayout(base);
-  exitEdit();window._draftLayout=null;run();
+  exitEdit();window._draftLayout=null;
+  // Restart the auto-refresh after canceling edit mode.
+  const sec=(window._mhPrefs&&window._mhPrefs.refreshSeconds)||30;
+  if(sec>0&&sec<3600&&!window._refreshInt)window._refreshInt=setInterval(()=>run(),sec*1000);
+  run();
 }
 function attachFreeHandles(){
   detachFreeHandles();
@@ -2612,11 +2625,25 @@ function detachFreeHandles(){
 function applyWidgetStyle(w,root,st){
   if(!root)return;
   if(st.hidden){w.classList.add('free-hidden');return;}w.classList.remove('free-hidden');
-  w.style.position='absolute';
-  w.style.left=(st.x==null?0:st.x)+'px';
-  w.style.top=(st.y==null?0:st.y)+'px';
-  w.style.width=Math.max(180,st.w||300)+'px';
-  if(st.h)w.style.height=Math.max(80,st.h)+'px';
+  // In edit mode all cards position absolutely. In view mode only catalog
+  // widgets get absolute coordinates so CSS Grid cards stay in flow and
+  // never overlap with catalog floating elements.
+  const isEditing=document.body.classList.contains('free-edit');
+  if(isEditing||st.type==='catalog'){
+    w.style.position='absolute';
+    w.style.left=(st.x==null?0:st.x)+'px';
+    w.style.top=(st.y==null?0:st.y)+'px';
+    w.style.width=Math.max(180,st.w||300)+'px';
+    if(st.h)w.style.height=Math.max(80,st.h)+'px';
+    // Assign z-index based on y-position so earlier (top-left) widgets stack
+    // above later ones. A dragged widget may override this temporarily.
+    w.style.zIndex=(st.z!=null?st.z:(st.y!=null?Math.max(1,10000-Math.round(st.y)):1));
+  }else{
+    // View mode non-catalog: keep CSS Grid flow, clear any absolute leftovers
+    // from a previous edit session so grid cards never float over each other.
+    w.style.position='';w.style.left='';w.style.top='';
+    w.style.width='';w.style.height='';w.style.zIndex='';
+  }
 }
 function hideWidget(w){
   const lay=layoutForTab();const id=widgetIdOf(w);lay[id]=lay[id]||{};
@@ -2637,6 +2664,9 @@ function applySavedLayoutToView(){
   if(EDITING)return;
   const ws=layoutForTab()||{};
   if(!Object.keys(ws).length)return;
+  // Check if any saved widget is a catalog widget (free-positioned).
+  const hasCatalog=Object.values(ws).some(st=>st&&st.type==='catalog');
+  if(!hasCatalog)return; // no floating widgets to position
   freeRoots().forEach(r=>{if(r)r.classList.add('layout-reapplied');});
   freeWidgets().forEach(({w,root})=>{
     const st=ws[widgetIdOf(w)];
@@ -2650,6 +2680,9 @@ function startFreeDrag(e,w,root){
   const wb=w.getBoundingClientRect();const r=root.getBoundingClientRect();
   const ox=e.clientX-wb.left,oy=e.clientY-wb.top;
   w.classList.add('free-active');
+  // Bring the dragged widget to the front so it is never hidden behind
+  // another widget while being positioned.
+  w.style.zIndex=9999;
   const move=ev=>{
     let x=ev.clientX-r.left-ox,y=ev.clientY-r.top-oy;
     x=Math.max(0,Math.min(x,r.width-80));y=Math.max(0,Math.min(y,r.height-40));
@@ -2697,6 +2730,9 @@ async function saveLayout(){
   detachFreeHandles();
   document.body.classList.remove('free-edit');
   exitEdit();
+  // Restart the auto-refresh after saving and exiting edit mode.
+  const sec=(window._mhPrefs&&window._mhPrefs.refreshSeconds)||30;
+  if(sec>0&&sec<3600&&!window._refreshInt)window._refreshInt=setInterval(()=>run(),sec*1000);
   await persistLayout(lay);
   window._draftLayout=null;
   run();

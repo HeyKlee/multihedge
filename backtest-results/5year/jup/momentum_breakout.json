@@ -9,7 +9,7 @@
     "Data gaps in Binance klines are silently skipped; no interpolation.",
     "Paper-only \u2014 not a live P&L forecast."
   ],
-  "closes_used": 23136,
+  "closes_used": 23160,
   "ending_equity_usd": 0.8467,
   "gross_loss_usd": 26.4845,
   "gross_profit_usd": 15.0075,

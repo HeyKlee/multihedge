@@ -527,5 +527,233 @@ class DashboardFrontendTests(unittest.TestCase):
             "()=>document.querySelectorAll('.layout-reapplied').length>0", timeout=8000)
 
 
+    def test_refresh_pauses_during_edit_mode(self):
+        # The auto-refresh interval must be cleared when entering edit mode
+        # and restarted when exiting, so a running timer never re-renders
+        # during editing and disrupts widget placement.
+        self.page.wait_for_function("()=>!!window._refreshInt", timeout=5000)
+        has_interval = self.page.evaluate("()=>!!window._refreshInt")
+        self.assertTrue(has_interval, "refresh interval should be running on page load")
+        self.enter_edit_mode()
+        still_running = self.page.evaluate("()=>!!window._refreshInt")
+        self.assertFalse(still_running, "refresh interval should be cleared during edit mode")
+        self.page.locator("#settingsBtn").click()
+        self.page.locator("#editToggleBtn").click()
+        self.page.wait_for_function("()=>!document.body.classList.contains('free-edit')", timeout=8000)
+        # After exiting edit mode the interval must restart.
+        restarted = self.page.evaluate("()=>!!window._refreshInt")
+        self.assertTrue(restarted, "refresh interval should restart after exiting edit mode")
+
+    def test_overlapping_widgets_get_distinct_z_index(self):
+        # Widgets positioned via saved layout must not collide with identical
+        # z-index. Each widget gets a unique stacking order based on its
+        # y-position (earlier widgets stack above later ones).
+        self.page.evaluate("()=>document.getElementById('clockBtn')?.click()")
+        self.page.wait_for_selector(".kpi,.card", timeout=4000)
+        self.enter_edit_mode()
+        self.page.wait_for_selector(".free-grab")
+        # Set up overlapping positions to reproduce the overlap bug.
+        self.page.evaluate("""()=>{
+          const ws={};
+          const fw=window.freeWidgets?freeWidgets():[];
+          fw.forEach(({w},i)=>{
+            // Place all widgets roughly at the same spot to trigger overlap.
+            ws[w.dataset.widgetId]={x:20+i*10, y:20+i*8, w:300, h:160, z:i+1};
+          });
+          window._draftLayout=ws;
+          // Apply the draft so we can read z-index values.
+          const root=document.getElementById('tab-panels');
+          fw.forEach(({w})=>{
+            const id=w.dataset.widgetId;
+            const st=ws[id];
+            if(st&&root)w.style.zIndex=st.z;
+          });
+        }""")
+        z_indices = self.page.evaluate(
+            "()=>[...document.querySelectorAll('.card,.kpi,.widget-free')].map(e=>parseInt(e.style.zIndex)||0)")
+        # At least one widget should have a defined z-index > 0.
+        self.assertGreater(max(z_indices), 0)
+        # Widgets we explicitly placed must have distinct z-indices.
+        # Default widgets (KPIs etc.) may share z-index 1, but explicitly
+        # placed overlapping widgets must stack uniquely.
+        placed_ids = self.page.evaluate("""()=>{
+          const ws={};
+          const fw=window.freeWidgets?freeWidgets():[];
+          fw.forEach(({w})=>{
+            ws[w.dataset.widgetId]=parseInt(w.style.zIndex)||0;
+          });
+          return Object.values(ws);
+        }""")
+        placed_non_zero = [z for z in placed_ids if z > 0]
+        if len(placed_non_zero) > 1:
+            self.assertEqual(len(set(placed_non_zero)), len(placed_non_zero),
+                             "placed widgets with same z-index overlap invisibly")
+
+    def test_survival_risk_param_description_uses_api_values(self):
+        # The trailing stop description on the Active Exit Params widget must
+        # derive its figures from the API response, not hardcoded defaults.
+        # When the API returns trail_arm_pct=0.08 and trail_distance_pct=0.04,
+        # the description must mention "8%" and "4%" accordingly.
+        self.open_survival()
+        text = self.page.locator("body").inner_text()
+        # The description should mention percentages that match the API's
+        # risk_param values (MEME defaults from live_inventory: 0.08, 0.04).
+        self.assertIn("8.0%", text, "trail arm pct (8%) should appear in the description")
+        self.assertIn("4.0%", text, "trail distance pct (4%) should appear in the description")
+
+
+    def test_catalog_widgets_are_absolute_in_view_mode_non_catalog_cards_flow(self):
+        # Catalog widgets (type='catalog') in the saved layout must position
+        # absolutely in view mode while built-in grid cards stay in CSS Grid
+        # flow. This prevents saved positions from causing overlap.
+        layout = {"tab-panels-overview": {
+            "live-market-tick": {"type": "catalog", "x": 0, "y": 0, "w": 500, "h": 200},
+            "last-cycles-heatmap": {"x": 0, "y": 0, "w": 300, "h": 100},
+            "collective-wallet": {"x": 0, "y": 0, "w": 400, "h": 150}
+        }}
+        # Inject a layout with catalog + non-catalog widgets at overlapping
+        # positions (x=0,y=0 for all). Non-catalog must NOT get position:absolute.
+        self.page.evaluate("""(lay) => {
+          window._mhPrefs = window._mhPrefs || {};
+          window._mhPrefs.layout = window._mhPrefs.layout || {};
+          window._mhPrefs.layout['overview'] = lay;
+        }""", layout)
+        # Refresh to reapply
+        self.page.reload(wait_until="commit")
+        self.page.wait_for_selector("#themeToggle")
+        # Wait for render + layout reapply
+        self.page.wait_for_function("() => document.querySelector('.kpi,.card')", timeout=5000)
+        self.page.wait_for_timeout(500)
+        # Check non-catalog grid widgets do NOT have position:absolute
+        positions = self.page.evaluate("""() => {
+          const cards = [...document.querySelectorAll('.card,.kpi')];
+          return cards.map(c => ({
+            id: c.dataset.widgetId,
+            pos: getComputedStyle(c).position,
+            isCatalog: c.classList.contains('widget-free')
+          }));
+        }""")
+        for c in positions:
+            if c["isCatalog"]:
+                # Catalog widgets in a layout with just them would get
+                # position:absolute from applyWidgetStyle
+                pass  # May or may not match depends on render
+            else:
+                # Non-catalog must stay in flow in view mode
+                self.assertEqual(
+                    c["pos"], "relative",
+                    "Grid card '%s' has position:%s (should be relative/static)" % (c["id"], c["pos"])
+                )
+
+    def test_non_catalog_saved_positions_do_not_apply_absolute_in_view_mode(self):
+        # Saved layout positions for non-catalog widgets (e.g. overview grid
+        # cards) must NOT be applied as absolute positioning in view mode.
+        # They must stay in CSS Grid flow. Only catalog widgets float.
+        self.page.evaluate("""() => {
+          window._mhPrefs = window._mhPrefs || {};
+          window._mhPrefs.layout = window._mhPrefs.layout || {};
+          // Simulate a saved layout where a grid card has a saved position
+          window._mhPrefs.layout['overview'] = {
+            'best-setup': {'x': 712, 'y': 0, 'w': 344, 'h': 315, 'hidden': false, 'order': 0},
+            'what-to-do': {'x': 0, 'y': 300, 'w': 300, 'h': 200, 'order': 0}
+          };
+        }""")
+        self.page.reload(wait_until="commit")
+        self.page.wait_for_selector("#themeToggle")
+        self.page.wait_for_timeout(800)
+        # Non-catalog widgets must not have position:absolute in view mode
+        abs_count = self.page.evaluate("""() => {
+          return [...document.querySelectorAll('.card,.kpi')]
+            .filter(c => getComputedStyle(c).position === 'absolute')
+            .length;
+        }""")
+        # There should be no absolutely-positioned cards since none are catalog type
+        self.assertEqual(abs_count, 0,
+                         "Non-catalog widgets positioned absolutely in view mode")
+
+    def test_catalog_widget_gets_absolute_in_edit_mode(self):
+        # Catalog widgets must get position:absolute in edit mode
+        self.enter_edit_mode()
+        self.page.wait_for_selector(".free-grab")
+        # Check that widgets currently in the DOM have correct positioning
+        positions = self.page.evaluate("""() => {
+          return [...document.querySelectorAll('.card,.kpi')]
+            .map(c => getComputedStyle(c).position);
+        }""")
+        # In edit mode all cards should be absolutely positioned
+        self.assertGreater(len(positions), 0)
+        for p in positions:
+            self.assertEqual(p, "absolute",
+                             "Widget has position:%s in edit mode (expected absolute)" % p)
+
+    def test_survival_tab_widgets_respect_catalog_only_absolute(self):
+        # Survival tab has built-in cards (exit reasons, open live wallet,
+        # paper incubator, active exit params) and potentially catalog widgets.
+        # Non-catalog must stay in flow even when a layout exists.
+        self.page.evaluate("""() => {
+          window._mhPrefs = window._mhPrefs || {};
+          window._mhPrefs.layout = window._mhPrefs.layout || {};
+          // Survival tab with one catalog widget and several non-catalog
+          window._mhPrefs.layout['survival'] = {
+            'active-exit-params-evidence-gated-policy': {'type':'catalog','x':0,'y':400,'w':600,'h':200},
+            'exit-reasons-paper-incubator': {'x': 0, 'y': 0, 'w': 300, 'h': 200},
+            'open-live-wallet-positions': {'x': 300, 'y': 0, 'w': 300, 'h': 200}
+          };
+        }""")
+        self.page.evaluate("() => document.querySelector('[data-tab=\"survival\"]')?.click()")
+        self.page.wait_for_timeout(500)
+        self.page.wait_for_selector("#tab-panels")
+        abs_ids = self.page.evaluate("""() => {
+          return [...document.querySelectorAll('#tab-panels .card')]
+            .filter(c => getComputedStyle(c).position === 'absolute')
+            .map(c => c.dataset.widgetId || c.innerText.slice(0, 30));
+        }""")
+        # Only the catalog widget should be absolute; non-catalog cards must stay in flow
+        for wid in abs_ids:
+            self.assertIn("active-exit", wid or "",
+                          "Non-catalog survival widget '%s' has position:absolute" % wid)
+
+    def test_edit_then_refresh_does_not_overlay_widgets(self):
+        # Enter edit mode, place widgets, save, then refresh. After reload
+        # the placement should be preserved without overlap.
+        self.page.evaluate("() => document.getElementById('clockBtn')?.click()")
+        self.page.wait_for_selector(".kpi,.card", timeout=4000)
+        # Enter and exit edit mode to save current layout
+        self.enter_edit_mode()
+        self.page.wait_for_selector(".free-grab")
+        # Save using evaluate to avoid pointer interception from edit handles
+        self.page.evaluate("() => document.getElementById('settingsBtn')?.click()")
+        self.page.wait_for_selector("#editToggleBtn", timeout=3000)
+        self.page.evaluate("() => document.getElementById('editToggleBtn')?.click()")
+        self.page.wait_for_selector("#settingsClose", timeout=3000)
+        self.page.evaluate("() => document.getElementById('settingsClose')?.click()")
+        self.page.wait_for_timeout(500)
+        # Capture positions before reload
+        before = self.page.evaluate("""() => {
+          return [...document.querySelectorAll('.card,.kpi')].map(c => ({
+            id: c.dataset.widgetId,
+            left: Math.round(c.getBoundingClientRect().left),
+            top: Math.round(c.getBoundingClientRect().top)
+          }));
+        }""")
+        # Reload
+        self.page.reload(wait_until="commit")
+        self.page.wait_for_selector("#themeToggle")
+        self.page.wait_for_timeout(1000)
+        # After reload, widgets should not all be at position (0,0)
+        after = self.page.evaluate("""() => {
+          return [...document.querySelectorAll('.card,.kpi')].map(c => ({
+            id: c.dataset.widgetId,
+            left: Math.round(c.getBoundingClientRect().left),
+            top: Math.round(c.getBoundingClientRect().top)
+          }));
+        }""")
+        # At least some widgets should have non-zero positions
+        non_zero_before = sum(1 for c in before if c["left"] > 0 or c["top"] > 0)
+        non_zero_after = sum(1 for c in after if c["left"] > 0 or c["top"] > 0)
+        self.assertGreater(non_zero_after, 0,
+                           "All widgets collapsed to (0,0) after reload")
+
+
 if __name__ == "__main__":
     unittest.main()

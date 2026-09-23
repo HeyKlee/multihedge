@@ -18,20 +18,20 @@ class LiveInventoryDefaultsTest(unittest.TestCase):
     """Verify MEME and SERIOUS defaults match config.yaml intent."""
 
     def test_meme_defaults_match_intended_config(self):
-        """MEME defaults should be 5% TP, 2% SL, 1% trail arm, 0.5% trail dist, 2h max hold."""
-        self.assertAlmostEqual(MEME_TAKE_PROFIT_PCT, 0.05, places=4)
-        self.assertAlmostEqual(MEME_STOP_LOSS_PCT, -0.02, places=4)
-        self.assertAlmostEqual(MEME_TRAIL_ARM_PCT, 0.01, places=4)
-        self.assertAlmostEqual(MEME_TRAIL_DISTANCE_PCT, 0.005, places=4)
-        self.assertEqual(MEME_MAX_HOLD_SECONDS, 7200)
+        """MEME defaults should be 1.5% TP, 1.5% SL, 2% trail arm, 1% trail dist, 30min max hold."""
+        self.assertAlmostEqual(MEME_TAKE_PROFIT_PCT, 0.015, places=4)
+        self.assertAlmostEqual(MEME_STOP_LOSS_PCT, -0.015, places=4)
+        self.assertAlmostEqual(MEME_TRAIL_ARM_PCT, 0.020, places=4)
+        self.assertAlmostEqual(MEME_TRAIL_DISTANCE_PCT, 0.010, places=4)
+        self.assertEqual(MEME_MAX_HOLD_SECONDS, 1800)
 
     def test_serious_defaults_unchanged(self):
-        """SERIOUS defaults should remain at current values."""
-        self.assertAlmostEqual(SERIOUS_TAKE_PROFIT_PCT, 0.05, places=4)
-        self.assertAlmostEqual(SERIOUS_STOP_LOSS_PCT, -0.025, places=4)
-        self.assertAlmostEqual(SERIOUS_TRAIL_ARM_PCT, 0.04, places=4)
-        self.assertAlmostEqual(SERIOUS_TRAIL_DISTANCE_PCT, 0.015, places=4)
-        self.assertEqual(SERIOUS_MAX_HOLD_SECONDS, 6 * 3600)
+        """SERIOUS defaults should remain at current values: 1% TP, 1% SL, 1.5% trail arm, 0.8% dist, 30min hold."""
+        self.assertAlmostEqual(SERIOUS_TAKE_PROFIT_PCT, 0.010, places=4)
+        self.assertAlmostEqual(SERIOUS_STOP_LOSS_PCT, -0.010, places=4)
+        self.assertAlmostEqual(SERIOUS_TRAIL_ARM_PCT, 0.015, places=4)
+        self.assertAlmostEqual(SERIOUS_TRAIL_DISTANCE_PCT, 0.008, places=4)
+        self.assertEqual(SERIOUS_MAX_HOLD_SECONDS, 1800)
 
     def test_legacy_aliases_match_meme(self):
         """Legacy constant names should alias to MEME defaults."""

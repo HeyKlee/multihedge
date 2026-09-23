@@ -13,18 +13,18 @@
       "mint"
     ],
     "policy": "immutable append-only observation/outcome linkage",
-    "snapshot_key": "07c4181122a5ae13a03a9268010c5f19c42e882968b09eff4915d12893712281"
+    "snapshot_key": "2534050feb9accc1641649270a15bbcecdcac377ff52d400136aadfeb00af939"
   },
   "metrics": {
     "mean_realized_pct": -0.01289062256943771,
     "profit_factor": 0.7879344331676422,
     "win_rate": 0.375
   },
-  "opened_candidates": 11,
+  "opened_candidates": 17,
   "orphan_outcomes": 0,
   "proposal_generation_allowed": false,
-  "rejected_candidates": 10226,
+  "rejected_candidates": 11732,
   "state": "ENTRY_QUALITY_EVIDENCE_REPORT",
-  "valid_observations": 10237,
+  "valid_observations": 11749,
   "valid_outcomes": 8
 }

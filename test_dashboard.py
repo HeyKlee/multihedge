@@ -41,8 +41,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("SERIOUS.stop_loss_pct*100).toFixed(1)", dash._html())
     def test_survival_status_exposes_trailing_policy(self):
         status=dash._survival_risk_status(self.db)
-        self.assertEqual(status['MEME']['trail_arm_pct'],.08)
-        self.assertEqual(status['MEME']['trail_distance_pct'],.04)
+        self.assertEqual(status['MEME']['trail_arm_pct'],.02)
+        self.assertEqual(status['MEME']['trail_distance_pct'],.01)
         self.assertIn('<th>Trail arm</th><th>Trail distance</th>',dash._html())
 
     def test_dashboard_uses_grouped_sidebar_information_architecture(self):

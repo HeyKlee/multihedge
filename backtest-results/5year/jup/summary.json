@@ -1,10 +1,10 @@
 {
-  "closes": 23136,
+  "closes": 23160,
   "coin": "JUP",
   "strategies": {
     "mean_reversion": {
-      "avg_loss_usd": -0.0336,
-      "avg_win_usd": 0.0192,
+      "avg_loss_usd": -0.0335,
+      "avg_win_usd": 0.0191,
       "caveats": [
         "Next-bar execution at close; no latency, spread, or partial fills.",
         "Long-only; no shorting.",
@@ -13,23 +13,23 @@
         "Data gaps in Binance klines are silently skipped; no interpolation.",
         "Paper-only \u2014 not a live P&L forecast."
       ],
-      "closes_used": 23136,
-      "ending_equity_usd": 0.211,
-      "gross_loss_usd": 31.3153,
-      "gross_profit_usd": 20.1358,
-      "losses": 932,
-      "max_drawdown_pct": 99.1307,
-      "n_trades": 1981,
-      "payoff_ratio": 0.5713,
+      "closes_used": 23160,
+      "ending_equity_usd": 0.2119,
+      "gross_loss_usd": 31.3161,
+      "gross_profit_usd": 20.1389,
+      "losses": 934,
+      "max_drawdown_pct": 99.1322,
+      "n_trades": 1986,
+      "payoff_ratio": 0.5709,
       "per_side_bps": 40.0,
       "position_fraction": 0.3,
-      "profit_factor": 0.643,
+      "profit_factor": 0.6431,
       "round_trip_bps": 80.0,
-      "sharpe_per_trade": -3.2157,
-      "sortino_per_trade": -3.6596,
+      "sharpe_per_trade": -3.215,
+      "sortino_per_trade": -3.6588,
       "starting_equity_usd": 24.0,
-      "total_net_pnl_usd": -11.1795,
-      "total_return_pct": -99.1209,
+      "total_net_pnl_usd": -11.1773,
+      "total_return_pct": -99.1169,
       "trades": [
         {
           "cost": 0.029163841039121684,
@@ -21821,10 +21821,65 @@
           "qty": 0.23472707094040535,
           "side": "SELL",
           "ts": null
+        },
+        {
+          "cost": 0.00025000250528236747,
+          "gross": 0.06250062632059186,
+          "index": 23143,
+          "net": 0.06225062381530949,
+          "pnl": -0.0007940320614709812,
+          "price": 0.2987,
+          "qty": 0.20924213699562055,
+          "side": "SELL",
+          "ts": null
+        },
+        {
+          "cost": 0.0002515232104417158,
+          "gross": 0.06288080261042894,
+          "index": 23146,
+          "net": 0.06262927939998723,
+          "pnl": -0.00010246610977357462,
+          "price": 0.2953,
+          "qty": 0.21293871524019284,
+          "side": "SELL",
+          "ts": null
+        },
+        {
+          "cost": 0.0002565365573744039,
+          "gross": 0.06413413934360097,
+          "index": 23152,
+          "net": 0.06387760278622658,
+          "pnl": 0.0012517522446778284,
+          "price": 0.3019,
+          "qty": 0.21243504254256698,
+          "side": "SELL",
+          "ts": null
+        },
+        {
+          "cost": 0.0002587388130438106,
+          "gross": 0.06468470326095264,
+          "index": 23156,
+          "net": 0.06442596444790884,
+          "pnl": 0.0015012413563002258,
+          "price": 0.2977,
+          "qty": 0.21728150238815128,
+          "side": "SELL",
+          "ts": null
+        },
+        {
+          "cost": 0.0002556315338693643,
+          "gross": 0.06390788346734107,
+          "index": 23159,
+          "net": 0.06365225193347171,
+          "pnl": 0.0003544675923105173,
+          "price": 0.2933,
+          "qty": 0.2178925450642382,
+          "side": "SELL",
+          "ts": null
         }
       ],
-      "win_rate": 52.95,
-      "wins": 1049
+      "win_rate": 52.97,
+      "wins": 1052
     },
     "momentum_breakout": {
       "avg_loss_usd": -0.0252,
@@ -21837,7 +21892,7 @@
         "Data gaps in Binance klines are silently skipped; no interpolation.",
         "Paper-only \u2014 not a live P&L forecast."
       ],
-      "closes_used": 23136,
+      "closes_used": 23160,
       "ending_equity_usd": 0.8467,
       "gross_loss_usd": 26.4845,
       "gross_profit_usd": 15.0075,
@@ -37204,14 +37259,14 @@
         "Data gaps in Binance klines are silently skipped; no interpolation.",
         "Paper-only \u2014 not a live P&L forecast."
       ],
-      "closes_used": 23136,
-      "ending_equity_usd": 0.0098,
-      "gross_loss_usd": 25.2653,
-      "gross_profit_usd": 15.4998,
-      "losses": 1954,
-      "max_drawdown_pct": 99.9597,
-      "n_trades": 3438,
-      "payoff_ratio": 0.8078,
+      "closes_used": 23160,
+      "ending_equity_usd": 0.0097,
+      "gross_loss_usd": 25.2654,
+      "gross_profit_usd": 15.4999,
+      "losses": 1957,
+      "max_drawdown_pct": 99.9599,
+      "n_trades": 3444,
+      "payoff_ratio": 0.8074,
       "per_side_bps": 40.0,
       "position_fraction": 0.3,
       "profit_factor": 0.6135,
@@ -37219,8 +37274,8 @@
       "sharpe_per_trade": -4.1539,
       "sortino_per_trade": -4.8337,
       "starting_equity_usd": 24.0,
-      "total_net_pnl_usd": -9.7655,
-      "total_return_pct": -99.9592,
+      "total_net_pnl_usd": -9.7656,
+      "total_return_pct": -99.9598,
       "trades": [
         {
           "cost": 0.027215630169741694,
@@ -75039,10 +75094,76 @@
           "qty": 0.00977108258197083,
           "side": "SELL",
           "ts": null
+        },
+        {
+          "cost": 1.1463286681363017e-05,
+          "gross": 0.0028658216703407544,
+          "index": 23138,
+          "net": 0.0028543583836593916,
+          "pnl": -7.06825014140139e-05,
+          "price": 0.2952,
+          "qty": 0.009708067988959195,
+          "side": "SELL",
+          "ts": null
+        },
+        {
+          "cost": 1.1656627711333226e-05,
+          "gross": 0.0029141569278333065,
+          "index": 23142,
+          "net": 0.0029025003001219734,
+          "pnl": 2.089395533163771e-06,
+          "price": 0.2968,
+          "qty": 0.009818588031783378,
+          "side": "SELL",
+          "ts": null
+        },
+        {
+          "cost": 1.1617758447644364e-05,
+          "gross": 0.002904439611911091,
+          "index": 23146,
+          "net": 0.0028928218534634465,
+          "pnl": -4.732869425165889e-06,
+          "price": 0.2953,
+          "qty": 0.009835555746397192,
+          "side": "SELL",
+          "ts": null
+        },
+        {
+          "cost": 1.1515649097015924e-05,
+          "gross": 0.002878912274253981,
+          "index": 23151,
+          "net": 0.002867396625156965,
+          "pnl": -2.5266850679941336e-05,
+          "price": 0.2931,
+          "qty": 0.009822286844947051,
+          "side": "SELL",
+          "ts": null
+        },
+        {
+          "cost": 1.1653935595070513e-05,
+          "gross": 0.002913483898767628,
+          "index": 23155,
+          "net": 0.0029018299631725576,
+          "pnl": 2.0187418489821425e-05,
+          "price": 0.2928,
+          "qty": 0.009950423151528784,
+          "side": "SELL",
+          "ts": null
+        },
+        {
+          "cost": 1.1648065008392806e-05,
+          "gross": 0.0029120162520982016,
+          "index": 23159,
+          "net": 0.002900368187089809,
+          "pnl": 1.615161281593412e-05,
+          "price": 0.2933,
+          "qty": 0.009928456365830896,
+          "side": "SELL",
+          "ts": null
         }
       ],
-      "win_rate": 43.16,
-      "wins": 1484
+      "win_rate": 43.18,
+      "wins": 1487
     },
     "vwap_reversion": {
       "avg_loss_usd": -0.0448,
@@ -75055,23 +75176,23 @@
         "Data gaps in Binance klines are silently skipped; no interpolation.",
         "Paper-only \u2014 not a live P&L forecast."
       ],
-      "closes_used": 23136,
-      "ending_equity_usd": 0.5582,
-      "gross_loss_usd": 32.4079,
-      "gross_profit_usd": 21.6619,
-      "losses": 723,
-      "max_drawdown_pct": 97.7202,
-      "n_trades": 1636,
-      "payoff_ratio": 0.5293,
+      "closes_used": 23160,
+      "ending_equity_usd": 0.5608,
+      "gross_loss_usd": 32.4082,
+      "gross_profit_usd": 21.6668,
+      "losses": 724,
+      "max_drawdown_pct": 97.7308,
+      "n_trades": 1639,
+      "payoff_ratio": 0.529,
       "per_side_bps": 40.0,
       "position_fraction": 0.3,
-      "profit_factor": 0.6684,
+      "profit_factor": 0.6686,
       "round_trip_bps": 80.0,
-      "sharpe_per_trade": -3.0867,
-      "sortino_per_trade": -3.5852,
+      "sharpe_per_trade": -3.0853,
+      "sortino_per_trade": -3.5837,
       "starting_equity_usd": 24.0,
-      "total_net_pnl_usd": -10.746,
-      "total_return_pct": -97.674,
+      "total_net_pnl_usd": -10.7415,
+      "total_return_pct": -97.6633,
       "trades": [
         {
           "cost": 0.029951312649164678,
@@ -93068,10 +93189,43 @@
           "qty": 0.6147814029190157,
           "side": "SELL",
           "ts": null
+        },
+        {
+          "cost": 0.0006685314000132112,
+          "gross": 0.1671328500033028,
+          "index": 23152,
+          "net": 0.16646431860328958,
+          "pnl": -0.0003363693927194711,
+          "price": 0.3019,
+          "qty": 0.5536033454895753,
+          "side": "SELL",
+          "ts": null
+        },
+        {
+          "cost": 0.0006846278446515232,
+          "gross": 0.17115696116288082,
+          "index": 23156,
+          "net": 0.17047233331822928,
+          "pnl": 0.003972313322360005,
+          "price": 0.2977,
+          "qty": 0.5749310082730292,
+          "side": "SELL",
+          "ts": null
+        },
+        {
+          "cost": 0.0006764059245657587,
+          "gross": 0.1691014811414397,
+          "index": 23159,
+          "net": 0.16842507521687394,
+          "pnl": 0.0009379280242785559,
+          "price": 0.2933,
+          "qty": 0.5765478388729618,
+          "side": "SELL",
+          "ts": null
         }
       ],
-      "win_rate": 55.81,
-      "wins": 913
+      "win_rate": 55.83,
+      "wins": 915
     }
   },
   "symbol": "JUPUSDT"

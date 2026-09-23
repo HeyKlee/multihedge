@@ -1,0 +1,113 @@
+{
+  "overview_summary": {
+    "status": "ok",
+    "active_live": null,
+    "active_paper": null
+  },
+  "overview_trades": {
+    "status": "ok",
+    "count": 5
+  },
+  "overview_positions": {
+    "status": "ok",
+    "count": 2
+  },
+  "overview_market": {
+    "status": "ok",
+    "count": 3,
+    "stale": 0
+  },
+  "survival": {
+    "status": "ok",
+    "treasury": "?",
+    "at_risk": "?",
+    "cycles": 2587
+  },
+  "livegate": {
+    "status": "ok",
+    "gates": [
+      "scalper",
+      "reasoner",
+      "whale_trader",
+      "memecoin_trader"
+    ]
+  },
+  "reasoner": {
+    "status": "ok",
+    "bias": {
+      "SOL": {
+        "id": 9373,
+        "symbol": "SOL",
+        "direction": "UP",
+        "confidence": 0.65,
+        "rationale": "Positive catalysts from Moscow Exchange launching SOL futures and notable SOL accumulation (DFDV adding 101,381 SOL) support a near-term bullish bias.",
+        "headlines": "[\"Moscow Exchange Launches Crypto Futures for BTC, ETH, SOL, XRP, TRON\", \"Solana News: DFDV Adds 101,381 SOL as Peter Brandt Tracks SOL Price Setup\", \"Solana Price (SOL)\", \"SOL/JPY - Solana Japanese Yen\", \"3 Top Crypto to Buy Now: Pepeto SOL and XRP While Russia Opens Futures on September 22\"]",
+        "provider": "openrouter",
+        "ts": 1790107315.604725
+      },
+      "JUP": {
+        "id": 9374,
+        "symbol": "JUP",
+        "direction": "UP",
+        "confidence": 0.75,
+        "rationale": "Multiple bullish headlines around exchange expansion, staker perks, and broader Solana momentum suggest continued upward pressure in the near term.",
+        "headlines": "[\"JupiterExchange Launches New Perps Markets for $JUP Stakers\", \"Jupiter\\u2019s 15% rally \\u2013 Tokenized stocks on Solana fuel JUP\\u2019s jump\", \"Jupiter (JUP) Surges 5.1% on Universal Deposit Expansion\", \"Jupiter (JUP) Surges 4.46% on Macro Rebound and Solana Rotation\", \"Jupiter Exchange launches perps markets for SPCX, HYPE, and ZEC on Solana\"]",
+        "provider": "openrouter",
+        "ts": 1790107319.297793
+      },
+      "ETH": {
+        "id": 9375,
+        "symbol": "ETH",
+        "direction": "UP",
+        "confidence": 0.65,
+        "rationale": "ETH reclaiming $2700 for the first time since January 2026, coupled with institutional accumulation headlines, suggests bullish momentum toward the $2800 level.",
+        "headlines": "[\"Bitmine Immersion Technologies (BMNR) Announces ETH Holdings Reach 5.98 Million Tokens, and Total Crypto and Total Cash Holdings of $17.1 Billion\", \"Ethereum (ETH) Price: Reclaims $2700 For First Time Since January 2026\", \"Peter Brandt Just Posted Long-Term XRP and ETH Charts \\u2014 Read His Warning First\", \"Tom Lee Says Institutions Are Still Underweight Crypto After Latest BitMine ETH Buy\", \"Can ETH Price Flip $2800 Early or Repeat Its 2025 Rally Pattern?\"]",
+        "provider": "openrouter",
+        "ts": 1790107324.1143992
+      }
+    },
+    "params_keys": [
+      "POSITION_FRACTION",
+      "TAKE_PROFIT",
+      "STOP_LOSS",
+      "MAX_HOLD_SECS",
+      "TRAIL_ARM",
+      "TRAIL_DIST",
+      "CONFIDENCE_MIN"
+    ]
+  },
+  "whale": {
+    "status": "ok",
+    "count": 0
+  },
+  "memecoin": {
+    "status": "ok",
+    "count": 0
+  },
+  "grid": {
+    "status": "ok",
+    "count": 0
+  },
+  "research_edge": {
+    "status": "ok"
+  },
+  "research_strategies": {
+    "status": "ok",
+    "count": 12
+  },
+  "actions": {
+    "status": "ok",
+    "count": 0
+  },
+  "requests": {
+    "status": "ok",
+    "count": 1
+  },
+  "council": {
+    "status": "ok"
+  },
+  "widget_issues": {
+    "status": "ok",
+    "open_count": 3
+  }
+}

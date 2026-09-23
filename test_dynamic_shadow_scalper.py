@@ -82,9 +82,10 @@ class DynamicShadowScalperTests(unittest.TestCase):
         with sqlite3.connect(self.db) as con:
             con.execute(
                 "UPDATE mh_dynamic_scalp_positions SET peak_usd=? WHERE mint=?",
-                (.00121, MINT),
+                (.00121, MINT),  # 21% peak > 1.5% TP → TP was crossed historically
             )
-        result = ds.tick(self.db, [candidate(price=.00105, change5=0)], now=1901)
+        # Current price 0.001008 (0.8%) is below TP (1.5%), so max_hold fallback applies.
+        result = ds.tick(self.db, [candidate(price=.001008, change5=0)], now=2801)
         self.assertEqual(result["reasons"], {"max_hold": 1})
 
     def test_no_entry_without_balanced_sell_liquidity_and_momentum(self):
@@ -95,15 +96,15 @@ class DynamicShadowScalperTests(unittest.TestCase):
         # JUP is a config `coins` entry -> SERIOUS day-trade params.
         cfg = {"coins": [{"symbol": "JUP", "mint": MINT}]}
         ds.tick(self.db, [candidate()], now=1000, cfg=cfg)
-        # At 15 minutes (900s) a memecoin would max-hold; a serious coin holds on.
-        result = ds.tick(self.db, [candidate(price=.00101, change5=0)], now=1905, cfg=cfg)
+        # SERIOUS TP=1%, so price .00101 = +1% would hit TP. Keep price below TP.
+        result = ds.tick(self.db, [candidate(price=.001005, change5=0)], now=1905, cfg=cfg)
         self.assertEqual(result["closed"], 0)
         # But it day-trades on a longer clock: still open at ~1.5h, not force-sold.
-        result = ds.tick(self.db, [candidate(price=.00101, change5=0)], now=1000 + 5400, cfg=cfg)
+        result = ds.tick(self.db, [candidate(price=.001005, change5=0)], now=1000 + 5400, cfg=cfg)
         self.assertEqual(result["closed"], 0)
 
     def test_memecoin_swings_for_20pct_tp(self):
-        # A 20%+ move closes a memecoin take-profit.
+        # A 2%+ move closes a memecoin take-profit (MEME TP=1.5%).
         cfg = {"coins": [{"symbol": "JUP", "mint": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"}]}
         ds.tick(self.db, [candidate()], now=1000, cfg=cfg)
         result = ds.tick(self.db, [candidate(price=.00122, change5=1)], now=1060, cfg=cfg)
@@ -116,32 +117,32 @@ class DynamicShadowScalperTests(unittest.TestCase):
         meme = li.risk_params(MINT, cfg)
         self.assertEqual(serious["mode"], "SERIOUS")
         self.assertEqual(meme["mode"], "MEME")
-        self.assertEqual(serious["take_profit_pct"], 0.05)
-        self.assertEqual(serious["stop_loss_pct"], -0.025)
-        self.assertGreaterEqual(serious["max_hold_seconds"], 6 * 3600)
-        self.assertEqual(meme["take_profit_pct"], 0.20)
-        self.assertEqual(meme["stop_loss_pct"], -0.10)
-        self.assertEqual(meme["trail_arm_pct"], 0.08)
-        self.assertEqual(meme["trail_distance_pct"], 0.04)
-        self.assertEqual(meme["max_hold_seconds"], 900)
+        self.assertEqual(serious["take_profit_pct"], 0.010)
+        self.assertEqual(serious["stop_loss_pct"], -0.010)
+        self.assertGreaterEqual(serious["max_hold_seconds"], 1800)
+        self.assertEqual(meme["take_profit_pct"], 0.015)
+        self.assertEqual(meme["stop_loss_pct"], -0.015)
+        self.assertEqual(meme["trail_arm_pct"], 0.020)
+        self.assertEqual(meme["trail_distance_pct"], 0.010)
+        self.assertEqual(meme["max_hold_seconds"], 1800)
 
     def test_memecoin_trail_ignores_small_noise_then_protects_larger_move(self):
         ds.tick(self.db, [candidate()], now=1000)
         with sqlite3.connect(self.db) as con:
             con.execute(
                 "UPDATE mh_dynamic_scalp_positions SET peak_usd=? WHERE mint=?",
-                (.00105, MINT),
+                (.001015, MINT),  # 1.5% peak < 2% arm → trail not armed
             )
-        # A 5% peak and ordinary pullback must not arm the wider MEME trail.
-        result = ds.tick(self.db, [candidate(price=.00102, change5=0)], now=1060)
+        # Price below TP (1.5%) and trail not armed → no close.
+        result = ds.tick(self.db, [candidate(price=.00101, change5=0)], now=1060)
         self.assertEqual(result["closed"], 0)
         with sqlite3.connect(self.db) as con:
             con.execute(
                 "UPDATE mh_dynamic_scalp_positions SET peak_usd=? WHERE mint=?",
-                (.00110, MINT),
+                (.00105, MINT),  # 5% peak > 2% arm → trail armed
             )
-        # Once up 8%+, a pullback exceeding 4% from peak protects the move.
-        result = ds.tick(self.db, [candidate(price=.00105, change5=0)], now=1120)
+        # Price 0.001008 is below TP but 4% below peak → trail triggers.
+        result = ds.tick(self.db, [candidate(price=.001008, change5=0)], now=1120)
         self.assertEqual(result["reasons"], {"trail_stop": 1})
 
     def test_upstream_rate_limit_degrades_without_opening_risk(self):
@@ -245,11 +246,12 @@ class DynamicShadowScalperTests(unittest.TestCase):
         self.assertAlmostEqual(eq, ds.INITIAL_EQUITY_USD + realized, places=10)
 
     def test_entry_signal_conditions(self):
-        self.assertTrue(ds._entry_signal(candidate(change5=5.0, change1h=2.0, buy=10000, sell=3000)))
-        self.assertFalse(ds._entry_signal(candidate(change5=-1.0, change1h=2.0, buy=10000, sell=3000)))
-        self.assertFalse(ds._entry_signal(candidate(change5=0.5, change1h=2.0, buy=10000, sell=3000)))
-        self.assertFalse(ds._entry_signal(candidate(change5=5.0, change1h=2.0, buy=1000, sell=3000)))
-        self.assertTrue(ds._entry_signal(candidate(change5=2.0, change1h=-1.0, buy=40000, sell=10000)))
+        now = 1000.0
+        self.assertTrue(ds._entry_signal(candidate(change5=5.0, change1h=2.0, buy=10000, sell=3000), now))
+        self.assertFalse(ds._entry_signal(candidate(change5=-1.0, change1h=2.0, buy=10000, sell=3000), now))
+        self.assertFalse(ds._entry_signal(candidate(change5=0.5, change1h=2.0, buy=10000, sell=3000), now))
+        self.assertFalse(ds._entry_signal(candidate(change5=5.0, change1h=2.0, buy=1000, sell=3000), now))
+        self.assertTrue(ds._entry_signal(candidate(change5=2.0, change1h=-1.0, buy=40000, sell=10000), now))
 
 
 if __name__ == "__main__":

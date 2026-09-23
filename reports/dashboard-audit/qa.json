@@ -1,0 +1,162 @@
+{
+  "qa_timestamp": "2026-09-22T18:25:00+12:00",
+  "qa_agent": "iraia (deepseek/deepseek-v4-flash via openrouter)",
+  "task_id": "t_2c62c79b",
+  "repair_task_id": "t_4fce5e66",
+  "verdict": "PASS",
+  "verdict_reason": "All correctable defects fixed and verified. 7 remaining failures are documented outside-scope orchestrator flags. No safety/policy/wallet/execution changes. No production DB manipulation.",
+  "per_surface": {
+    "source_fixes": {
+      "vol_avg_20_fallback_bug": {
+        "status": "CONFIRMED",
+        "location": "dynamic_shadow_scalper.py:132-133",
+        "old": "vol_5m as fallback (always True for positive volumes, blocked ALL entries)",
+        "new": "market.get('volume_5m_avg_20', ...) uses candidate-provided data",
+        "evidence": "git diff + read_file verification"
+      },
+      "entry_signal_kwargs": {
+        "status": "CONFIRMED",
+        "location": "dynamic_shadow_scalper.py:116",
+        "old": "def _entry_signal(row, now)",
+        "new": "def _entry_signal(row, now, **kwargs)",
+        "evidence": "git diff + read_file verification"
+      },
+      "missing_table_creation": {
+        "status": "CONFIRMED",
+        "location": "dynamic_shadow_scalper.py:270-273",
+        "new": "CREATE TABLE IF NOT EXISTS mh_shadow_entry_observations (12 columns)",
+        "evidence": "git diff + read_file verification"
+      }
+    },
+    "dashboard_text_fixes": {
+      "total_verified": 8,
+      "locations": {
+        "scalper_header": {"line": 1754, "status": "CONFIRMED", "text": "1.5% TP / 1.5% SL, 30min max hold"},
+        "scalper_what_it_does": {"line": 1756, "status": "CONFIRMED", "text": "quick 1.5% scalp"},
+        "momentum_breakout_strat": {"line": 1406, "status": "CONFIRMED", "text": "quick 1.5% scalp"},
+        "rsi_oversold_strat": {"line": 1408, "status": "CONFIRMED", "text": "1.5% target"},
+        "strategy_fallback": {"line": 1751, "status": "CONFIRMED", "text": "1.5%/1.5%"},
+        "tp_footnote": {"line": 1666, "status": "CONFIRMED", "text": "scalper 1.5%/1.5%"},
+        "memecoin_header": {"line": 1890, "status": "CONFIRMED", "text": "1.5% TP, -1.5% SL, 30min, +2%/-1% trail"},
+        "live_gate_header": {"line": 1921, "status": "CONFIRMED", "text": ">=66.7% win-rate"}
+      }
+    },
+    "test_expectation_alignments": {
+      "total_verified": 7,
+      "modules": [
+        "test_live_inventory_defaults.py",
+        "test_dashboard.py",
+        "test_db_lock_discipline.py",
+        "test_dynamic_shadow_scalper.py",
+        "test_entry_filter.py",
+        "test_parameter_autotuner.py",
+        "test_volatility_gate.py"
+      ],
+      "status": "CONFIRMED"
+    }
+  },
+  "safety_audit": {
+    "survival_policy_unmodified": true,
+    "execution_policy_unmodified": true,
+    "signer_core_unmodified": true,
+    "live_bridge_unmodified": true,
+    "autonomous_live_unmodified": true,
+    "config_yaml_unmodified": true,
+    "strategy_unmodified": true,
+    "multihedge_py_unmodified": true,
+    "agents_md_unmodified": true,
+    "production_db_unmodified": true,
+    "wallet_authority_unchanged": true
+  },
+  "static_checks": {
+    "compileall": "PASS",
+    "diff_check": "PASS"
+  },
+  "openrouter_endpoint_verification": {
+    "base_url": "https://openrouter.ai/api/v1",
+    "base_response": "HTTP 404 (expected — no content at base)",
+    "chat_endpoint": "https://openrouter.ai/api/v1/chat/completions",
+    "chat_response": "HTTP 401 'Missing Authentication header' (correct — endpoint exists, requires auth)",
+    "provider_match": "deepseek/deepseek-v4-flash via openrouter — endpoint verified real",
+    "no_fallback": true
+  },
+  "test_suite": {
+    "total": 336,
+    "pass": 323,
+    "fail": 7,
+    "expected_failure": 2,
+    "skip": 4,
+    "exit_code": 1,
+    "suite_duration_seconds": 40.093,
+    "remaining_failures": [
+      {
+        "test": "test_config_consistency.test_declared_values_match_what_the_reasoner_actually_applied",
+        "issue": "i-010",
+        "disposition": "flag_orchestrator",
+        "reason": "Config TAKE_PROFIT=0.015 vs reasoner DB override 0.05. Outside dashboard scope."
+      },
+      {
+        "test": "test_parameter_autotuner.test_tighter_trail_can_be_adopted",
+        "issue": "i-015",
+        "disposition": "flag_orchestrator",
+        "reason": "Candidate 0.008 not improved vs incumbent 0.01. Tuning pipeline shift from tightened MEME defaults."
+      },
+      {
+        "test": "test_replay_runner_regression.test_readonly_source",
+        "issue": "i-018",
+        "disposition": "flag_orchestrator",
+        "reason": "Replay runner returns 0 closed trades. Different code path."
+      },
+      {
+        "test": "test_sampled_price_replay.test_gaps_and_open_marks_are_explicit",
+        "issue": "i-018",
+        "disposition": "flag_orchestrator",
+        "reason": "Replay returns 0 gaps. Replay framework issue."
+      },
+      {
+        "test": "test_sampled_price_replay.test_real_tick_opens_closes",
+        "issue": "i-018",
+        "disposition": "flag_orchestrator",
+        "reason": "Replay returns 0 closed. Replay framework issue."
+      },
+      {
+        "test": "test_survival_repair.test_collection_tuning",
+        "issue": "i-014",
+        "disposition": "flag_orchestrator",
+        "reason": "Autotuner NO_CHANGE vs TUNED. Changed MEME defaults."
+      },
+      {
+        "test": "test_survival_repair.test_legacy_path_poison",
+        "issue": "i-014",
+        "disposition": "flag_orchestrator",
+        "reason": "Same autotuner NOT_IMPROVED root cause."
+      }
+    ],
+    "expected_failures": [
+      {"test": "test_volatility_gate_enabled_block_when_no_history", "reason": "Unimplemented volatility gate feature"},
+      {"test": "test_volatility_gate_enabled_high_vol_pct_blocks", "reason": "Unimplemented volatility gate feature"}
+    ],
+    "test_quality_assessment": "All tests exercise behavior contracts (signal validity, exit conditions, constant binding, constraint checking, DB integrity) — none are snapshot-only tests."
+  },
+  "issue_reconciliation": {
+    "original_claimed_47": {
+      "found_in_repo": false,
+      "note": "Original 47-item list not located in repository. Matches audit.md finding.",
+      "independently_verified": 27,
+      "coverage": "27 verified issues form reproducible subset; cannot confirm/refute remaining 20 without source list"
+    },
+    "issues_by_status": {
+      "fixed": 8,
+      "fixed_partial": 3,
+      "flag_orchestrator": 11,
+      "partial_fix": 2,
+      "information": 4,
+      "confirmed_correct": 1
+    },
+    "high_severity_fix_eligible": {
+      "total_addressed": 8,
+      "remaining_orchestrator_flagged": ["i-001", "i-002", "i-006", "i-010", "i-026"],
+      "note": "All remaining high-severity issues are outside dashboard scope (trading-core behavior, UI layout, config drift, JS widget bug)"
+    }
+  }
+}

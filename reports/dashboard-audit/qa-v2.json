@@ -1,0 +1,195 @@
+{
+  "qa_v2": {
+    "task_id": "t_46caf7be",
+    "date": "2026-09-22T20:51:00+12:00",
+    "profile": "iraia",
+    "model": "deepseek/deepseek-v4-flash",
+    "endpoint": "openrouter",
+    "scope": "independent_second_qa_dashboard_fixes",
+    "verdict": "blocked_container_mismatch"
+  },
+  "test_suite": {
+    "full_suite": {
+      "total": 339,
+      "pass": 334,
+      "fail": 1,
+      "skip": 4,
+      "duration_seconds": 44.493,
+      "exit_code": 1,
+      "command": "python3 -m unittest discover -q",
+      "single_failure": {
+        "test": "test_declared_values_match_what_the_reasoner_actually_applied",
+        "file": "test_config_consistency.py",
+        "line": 89,
+        "type": "pre_existing_db_lock",
+        "detail": "config declares TAKE_PROFIT=0.015, runtime applied 0.05. DB lock prevents reading applied overrides.",
+        "regression": false
+      },
+      "expectedFailure_annotations": 0
+    },
+    "focused_tests": {
+      "test_dashboard": {"total": 10, "pass": 10, "fail": 0},
+      "test_live_inventory_defaults": {"total": 3, "pass": 3, "fail": 0},
+      "test_volatility_gate": {"total": 4, "pass": 4, "fail": 0},
+      "test_entry_filter": {"total": 3, "pass": 3, "fail": 0}
+    }
+  },
+  "static_checks": {
+    "compileall": {"exit_code": 0, "result": "PASS"},
+    "git_diff_check": {"exit_code": 0, "result": "PASS"},
+    "command_compileall": "python3 -m compileall -q .",
+    "command_git_diff_check": "git diff --check"
+  },
+  "source_diff_audit": {
+    "unauthorized_trading_changes": false,
+    "files_not_modified": [
+      "live_bridge.py",
+      "execution_policy.py",
+      "signer_core.py",
+      "survival_policy.py",
+      "autonomous_live.py"
+    ],
+    "modified_files": {
+      "mh_dash.py": "dashboard_only: CSS grid spans, text descriptions, EDITING guard, 66.7% threshold",
+      "dynamic_shadow_scalper.py": "replay_related: volume surge fallback, observations table",
+      "ops/sampled_price_replay.py": "replay_related: pricefeed pre-seeding",
+      "test_*.py": "assertions updated, kwargs removed, now= parameter added"
+    }
+  },
+  "test_assertion_audit": {
+    "weakened_assertions": false,
+    "noop_kwargs": false,
+    "hidden_failures_via_expectedFailure": false,
+    "verified_assertions": [
+      {"test": "test_survival_status_exposes_trailing_policy", "field": "MEME.trail_arm_pct", "expected": 0.02, "source": "live_inventory.py:15", "match": true},
+      {"test": "test_survival_status_exposes_trailing_policy", "field": "MEME.trail_distance_pct", "expected": 0.01, "source": "live_inventory.py:16", "match": true},
+      {"test": "test_meme_defaults_match_intended_config", "field": "MEME_TAKE_PROFIT_PCT", "expected": 0.015, "source": "live_inventory.py:13", "match": true},
+      {"test": "test_meme_defaults_match_intended_config", "field": "MEME_STOP_LOSS_PCT", "expected": -0.015, "source": "live_inventory.py:14", "match": true},
+      {"test": "test_meme_defaults_match_intended_config", "field": "MEME_TRAIL_ARM_PCT", "expected": 0.020, "source": "live_inventory.py:15", "match": true},
+      {"test": "test_meme_defaults_match_intended_config", "field": "MEME_TRAIL_DISTANCE_PCT", "expected": 0.010, "source": "live_inventory.py:16", "match": true},
+      {"test": "test_meme_defaults_match_intended_config", "field": "MEME_MAX_HOLD_SECONDS", "expected": 1800, "source": "live_inventory.py:17", "match": true},
+      {"test": "test_serious_defaults_unchanged", "field": "SERIOUS_TAKE_PROFIT_PCT", "expected": 0.010, "source": "live_inventory.py:21", "match": true},
+      {"test": "test_serious_defaults_unchanged", "field": "SERIOUS_STOP_LOSS_PCT", "expected": -0.010, "source": "live_inventory.py:22", "match": true},
+      {"test": "test_serious_defaults_unchanged", "field": "SERIOUS_TRAIL_ARM_PCT", "expected": 0.015, "source": "live_inventory.py:23", "match": true},
+      {"test": "test_serious_defaults_unchanged", "field": "SERIOUS_TRAIL_DISTANCE_PCT", "expected": 0.008, "source": "live_inventory.py:24", "match": true},
+      {"test": "test_serious_defaults_unchanged", "field": "SERIOUS_MAX_HOLD_SECONDS", "expected": 1800, "source": "live_inventory.py:25", "match": true}
+    ]
+  },
+  "container_verification": {
+    "all_processes_running": true,
+    "uptime": "2:18:23",
+    "processes": ["dash", "grid", "loom", "memecoin_trader", "news", "pump_monitor", "reasoner", "whale", "whale_trader"],
+    "api_survival_responds": true,
+    "api_livegate_responds": true,
+    "hash_mismatch": {
+      "container_mh_dash_py": "921328442ef49a02206096db0aa8f3e9ef75317988be931b061cef645f43654d",
+      "workspace_mh_dash_py": "33bf7889be44c14bb838a202f46755d5f5b0c9372ebf11d6bdb48fcb880f0f0d",
+      "match": false
+    }
+  },
+  "browser_verification": {
+    "tabs_all_9_functional": true,
+    "live_gate_threshold_mismatch": {
+      "header_text": "Paper traders need >=20 closed trades at >=66.7% win-rate",
+      "individual_row_text": "need 75%",
+      "status": "container_running_old_code"
+    },
+    "xora_tab_balance": {
+      "displayed": "0 live · 1 paper",
+      "expected_with_fix": "loading",
+      "status": "EDITING_guard_not_deployed"
+    },
+    "scalper_tp_description": {
+      "displayed": "scalps on 1.5% take-profit / 1.5% stop-loss",
+      "correct": true
+    },
+    "overview_tp_footnote": {
+      "displayed": "scalper 1.5%/1.5%, reasoner 1.5%/1.5%",
+      "correct": true
+    },
+    "memecoin_guardrails": {
+      "displayed": "$5 max per trade, 1.5% TP, -1.5% SL, 30min max hold, trailing stop at +2%/-1%",
+      "correct": true
+    },
+    "stale_description_text": {
+      "element": "Exit params MEME description",
+      "current_text": "MEME trailing protection arms only after a meaningful +8% move and permits a 4% pullback from peak",
+      "actual_values": "trail_arm_pct=0.02(2%), trail_distance_pct=0.01(1%)",
+      "status": "pre_existing_documentation_drift",
+      "in_scope_of_current_fix": false
+    }
+  },
+  "model_evidence": {
+    "autonomous_model_pin": "deepseek/deepseek-v4-flash-0731",
+    "workspace_autonomous_live_py_line_29": "deepseek/deepseek-v4-flash-0731",
+    "container_autonomous_live_py": "deepseek/deepseek-v4-flash-0731",
+    "config_yaml_line_35": "deepseek/deepseek-v4-flash-0731",
+    "consistent": true,
+    "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+    "openrouter_api_v1_base_responds": true
+  },
+  "issues_dispositioned": {
+    "fixed_in_workspace_not_deployed": 4,
+    "pre_existing_not_in_scope": 1,
+    "total": 5
+  },
+  "issues_list": [
+    {
+      "id": 1,
+      "type": "container_mismatch",
+      "severity": "blocker",
+      "file": "mh_dash.py",
+      "detail": "Container hash 92132844 != workspace 33bf7889. Dashboard fixes not deployed.",
+      "status": "blocking_release"
+    },
+    {
+      "id": 2,
+      "type": "ui_inconsistency",
+      "severity": "medium",
+      "location": "Live Gate + Overview tabs",
+      "detail": "Header says 66.7%, individual rows say 'need 75%'",
+      "status": "fixed_in_workspace_not_deployed"
+    },
+    {
+      "id": 3,
+      "type": "ui_text",
+      "severity": "low",
+      "location": "Xora-Survival wallet tab button",
+      "detail": "Shows '0 live · 1 paper' instead of 'loading' (EDITING guard fix)",
+      "status": "fixed_in_workspace_not_deployed"
+    },
+    {
+      "id": 4,
+      "type": "pre_existing",
+      "severity": "low",
+      "location": "Xora-Survival exit params description",
+      "detail": "MEME description text references +8% trail arm / 4% trail distance, actual values are 2%/1%",
+      "status": "not_in_fix_scope"
+    },
+    {
+      "id": 5,
+      "type": "test_failure",
+      "severity": "info",
+      "file": "test_config_consistency.py",
+      "detail": "TAKE_PROFIT drift: config 0.015 vs runtime 0.05. DB lock prevents test from reading applied overrides.",
+      "status": "pre_existing_environmental"
+    }
+  ],
+  "reference_commands": [
+    "python3 -m unittest discover -q",
+    "python3 -m compileall -q .",
+    "git diff --check",
+    "git diff HEAD --stat",
+    "docker exec multihedge supervisorctl status",
+    "docker exec multihedge sha256sum /app/mh_dash.py",
+    "sha256sum mh_dash.py",
+    "curl -s http://127.0.0.1:9052/api/survival | python3 -m json.tool | head -20",
+    "curl -s http://127.0.0.1:9052/api/livegate"
+  ],
+  "verdict": {
+    "summary": "Dashboard implementation is correct in workspace but not deployed. Container hash mismatch means running behavior does not match verified source. Single pre-existing test failure (config-consistency DB lock) blocks release per task spec. Request same-card review for orchestrator.",
+    "release_blocked": true,
+    "qa_passed_workspace_code": true,
+    "deploy_required": true
+  }
+}

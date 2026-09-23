@@ -1,0 +1,2227 @@
+[
+ {
+  "Owner": "aion-labs",
+  "Category": "Fast Chat",
+  "Model ID": "aion-labs/aion-2.0"
+ },
+ {
+  "Owner": "aion-labs",
+  "Category": "Fast Chat",
+  "Model ID": "aion-labs/aion-3.0"
+ },
+ {
+  "Owner": "aion-labs",
+  "Category": "Fast Chat",
+  "Model ID": "aion-labs/aion-3.0-mini"
+ },
+ {
+  "Owner": "aion-labs",
+  "Category": "Fast Chat",
+  "Model ID": "aion-labs/aion-rp-llama-3.1-8b"
+ },
+ {
+  "Owner": "amazon",
+  "Category": "Video-To-Text",
+  "Model ID": "amazon/nova-2-lite-v1"
+ },
+ {
+  "Owner": "amazon",
+  "Category": "Multimodal",
+  "Model ID": "amazon/nova-lite-v1"
+ },
+ {
+  "Owner": "amazon",
+  "Category": "Fast Chat",
+  "Model ID": "amazon/nova-micro-v1"
+ },
+ {
+  "Owner": "amazon",
+  "Category": "Multimodal",
+  "Model ID": "amazon/nova-premier-v1"
+ },
+ {
+  "Owner": "amazon",
+  "Category": "Multimodal",
+  "Model ID": "amazon/nova-pro-v1"
+ },
+ {
+  "Owner": "anthracite-org",
+  "Category": "Fast Chat",
+  "Model ID": "anthracite-org/magnum-v4-72b"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Multimodal",
+  "Model ID": "anthropic/claude-3-haiku"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-fable-5"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-fable-5.1"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-fable-5.1:batch"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-fable-5:batch"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Multimodal",
+  "Model ID": "anthropic/claude-haiku-4.5"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Multimodal",
+  "Model ID": "anthropic/claude-haiku-4.5:batch"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-opus-4.1"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-opus-4.1:batch"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-opus-4.5"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-opus-4.5:batch"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-opus-4.6"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-opus-4.6:batch"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-opus-4.7"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-opus-4.7:batch"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Multimodal",
+  "Model ID": "anthropic/claude-opus-4.8"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Multimodal",
+  "Model ID": "anthropic/claude-opus-4.8:batch"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-opus-5"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-opus-5:batch"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-sonnet-4"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-sonnet-4.5"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-sonnet-4.5:batch"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-sonnet-4.6"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-sonnet-4.6:batch"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-sonnet-5"
+ },
+ {
+  "Owner": "anthropic",
+  "Category": "Coding",
+  "Model ID": "anthropic/claude-sonnet-5:batch"
+ },
+ {
+  "Owner": "arcee-ai",
+  "Category": "Fast Chat",
+  "Model ID": "arcee-ai/trinity-large-thinking"
+ },
+ {
+  "Owner": "baidu",
+  "Category": "Multimodal",
+  "Model ID": "baidu/ernie-4.5-vl-424b-a47b"
+ },
+ {
+  "Owner": "bytedance",
+  "Category": "Multimodal",
+  "Model ID": "bytedance/ui-tars-1.5-7b"
+ },
+ {
+  "Owner": "bytedance-seed",
+  "Category": "Video-To-Text",
+  "Model ID": "bytedance-seed/seed-1.6"
+ },
+ {
+  "Owner": "bytedance-seed",
+  "Category": "Video-To-Text",
+  "Model ID": "bytedance-seed/seed-1.6-flash"
+ },
+ {
+  "Owner": "bytedance-seed",
+  "Category": "Coding",
+  "Model ID": "bytedance-seed/seed-2-1-turbo"
+ },
+ {
+  "Owner": "bytedance-seed",
+  "Category": "Coding",
+  "Model ID": "bytedance-seed/seed-2.0-code"
+ },
+ {
+  "Owner": "bytedance-seed",
+  "Category": "Video-To-Text",
+  "Model ID": "bytedance-seed/seed-2.0-lite"
+ },
+ {
+  "Owner": "bytedance-seed",
+  "Category": "Video-To-Text",
+  "Model ID": "bytedance-seed/seed-2.0-mini"
+ },
+ {
+  "Owner": "cognitivecomputations",
+  "Category": "Fast Chat",
+  "Model ID": "cognitivecomputations/dolphin-mistral-24b-venice-edition"
+ },
+ {
+  "Owner": "cohere",
+  "Category": "Coding",
+  "Model ID": "cohere/command-a"
+ },
+ {
+  "Owner": "cohere",
+  "Category": "Fast Chat",
+  "Model ID": "cohere/command-r-08-2024"
+ },
+ {
+  "Owner": "cohere",
+  "Category": "Fast Chat",
+  "Model ID": "cohere/command-r-plus-08-2024"
+ },
+ {
+  "Owner": "cohere",
+  "Category": "Fast Chat",
+  "Model ID": "cohere/command-r7b-12-2024"
+ },
+ {
+  "Owner": "cohere",
+  "Category": "Coding",
+  "Model ID": "cohere/north-mini-code:free"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Coding",
+  "Model ID": "deepseek/deepseek-chat"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Fast Chat",
+  "Model ID": "deepseek/deepseek-chat-v3-0324"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Fast Chat",
+  "Model ID": "deepseek/deepseek-chat-v3.1"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Fast Chat",
+  "Model ID": "deepseek/deepseek-r1"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Fast Chat",
+  "Model ID": "deepseek/deepseek-r1-0528"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Fast Chat",
+  "Model ID": "deepseek/deepseek-r1-distill-llama-70b"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Coding",
+  "Model ID": "deepseek/deepseek-v3.1-terminus"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Fast Chat",
+  "Model ID": "deepseek/deepseek-v3.2"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Fast Chat",
+  "Model ID": "deepseek/deepseek-v3.2-exp"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Fast Chat",
+  "Model ID": "deepseek/deepseek-v4-flash"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Coding",
+  "Model ID": "deepseek/deepseek-v4-flash-0731"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Coding",
+  "Model ID": "deepseek/deepseek-v4-flash-0731:batch"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Multimodal",
+  "Model ID": "deepseek/deepseek-v4-flash-vision-exp"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Multimodal",
+  "Model ID": "deepseek/deepseek-v4-flash-vision-exp:batch"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Coding",
+  "Model ID": "deepseek/deepseek-v4-pro"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Fast Chat",
+  "Model ID": "deepseek/deepseek-v4-pro-0813"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Fast Chat",
+  "Model ID": "deepseek/deepseek-v4-pro-0813:batch"
+ },
+ {
+  "Owner": "deepseek",
+  "Category": "Multimodal",
+  "Model ID": "deepseek/deepseek-v4.1-flash"
+ },
+ {
+  "Owner": "dots-studio",
+  "Category": "Multimodal",
+  "Model ID": "dots-studio/dots-3-note-preview:free"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-2.5-flash"
+ },
+ {
+  "Owner": "google",
+  "Category": "Multimodal",
+  "Model ID": "google/gemini-2.5-flash-image"
+ },
+ {
+  "Owner": "google",
+  "Category": "Video-To-Text",
+  "Model ID": "google/gemini-2.5-flash-lite"
+ },
+ {
+  "Owner": "google",
+  "Category": "Video-To-Text",
+  "Model ID": "google/gemini-2.5-flash-lite:batch"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-2.5-flash:batch"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-2.5-pro"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-2.5-pro-preview"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-2.5-pro:batch"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-3-flash-preview"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-3-flash-preview:batch"
+ },
+ {
+  "Owner": "google",
+  "Category": "Multimodal",
+  "Model ID": "google/gemini-3-pro-image"
+ },
+ {
+  "Owner": "google",
+  "Category": "Multimodal",
+  "Model ID": "google/gemini-3-pro-image-preview"
+ },
+ {
+  "Owner": "google",
+  "Category": "Multimodal",
+  "Model ID": "google/gemini-3.1-flash-image"
+ },
+ {
+  "Owner": "google",
+  "Category": "Multimodal",
+  "Model ID": "google/gemini-3.1-flash-image-preview"
+ },
+ {
+  "Owner": "google",
+  "Category": "Video-To-Text",
+  "Model ID": "google/gemini-3.1-flash-lite"
+ },
+ {
+  "Owner": "google",
+  "Category": "Multimodal",
+  "Model ID": "google/gemini-3.1-flash-lite-image"
+ },
+ {
+  "Owner": "google",
+  "Category": "Video-To-Text",
+  "Model ID": "google/gemini-3.1-flash-lite-preview"
+ },
+ {
+  "Owner": "google",
+  "Category": "Video-To-Text",
+  "Model ID": "google/gemini-3.1-flash-lite:batch"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-3.1-pro-preview"
+ },
+ {
+  "Owner": "google",
+  "Category": "Video-To-Text",
+  "Model ID": "google/gemini-3.1-pro-preview-customtools"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-3.1-pro-preview:batch"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-3.5-flash"
+ },
+ {
+  "Owner": "google",
+  "Category": "Video-To-Text",
+  "Model ID": "google/gemini-3.5-flash-lite"
+ },
+ {
+  "Owner": "google",
+  "Category": "Video-To-Text",
+  "Model ID": "google/gemini-3.5-flash-lite:batch"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-3.5-flash:batch"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-3.6-flash"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-3.6-flash:batch"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-3.7-flash"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-3.7-flash:batch"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-3.8-flash"
+ },
+ {
+  "Owner": "google",
+  "Category": "Coding",
+  "Model ID": "google/gemini-3.8-flash:batch"
+ },
+ {
+  "Owner": "google",
+  "Category": "Fast Chat",
+  "Model ID": "google/gemma-2-27b-it"
+ },
+ {
+  "Owner": "google",
+  "Category": "Multimodal",
+  "Model ID": "google/gemma-3-12b-it"
+ },
+ {
+  "Owner": "google",
+  "Category": "Multimodal",
+  "Model ID": "google/gemma-3-27b-it"
+ },
+ {
+  "Owner": "google",
+  "Category": "Multimodal",
+  "Model ID": "google/gemma-3-4b-it"
+ },
+ {
+  "Owner": "google",
+  "Category": "Video-To-Text",
+  "Model ID": "google/gemma-4-26b-a4b-it"
+ },
+ {
+  "Owner": "google",
+  "Category": "Video-To-Text",
+  "Model ID": "google/gemma-4-26b-a4b-it:free"
+ },
+ {
+  "Owner": "google",
+  "Category": "Video-To-Text",
+  "Model ID": "google/gemma-4-31b-it"
+ },
+ {
+  "Owner": "google",
+  "Category": "Video-To-Text",
+  "Model ID": "google/gemma-4-31b-it:free"
+ },
+ {
+  "Owner": "google",
+  "Category": "Multimodal",
+  "Model ID": "google/lyria-3-clip-preview"
+ },
+ {
+  "Owner": "google",
+  "Category": "Multimodal",
+  "Model ID": "google/lyria-3-pro-preview"
+ },
+ {
+  "Owner": "gryphe",
+  "Category": "Fast Chat",
+  "Model ID": "gryphe/mythomax-l2-13b"
+ },
+ {
+  "Owner": "ibm-granite",
+  "Category": "Fast Chat",
+  "Model ID": "ibm-granite/granite-4.0-h-micro"
+ },
+ {
+  "Owner": "ibm-granite",
+  "Category": "Fast Chat",
+  "Model ID": "ibm-granite/granite-4.2-8b"
+ },
+ {
+  "Owner": "inception",
+  "Category": "Fast Chat",
+  "Model ID": "inception/mercury-2"
+ },
+ {
+  "Owner": "inception",
+  "Category": "Fast Chat",
+  "Model ID": "inception/mercury-2.5"
+ },
+ {
+  "Owner": "inclusionai",
+  "Category": "Fast Chat",
+  "Model ID": "inclusionai/ling-3.0-flash"
+ },
+ {
+  "Owner": "inclusionai",
+  "Category": "Fast Chat",
+  "Model ID": "inclusionai/ling-3.0-flash-fin"
+ },
+ {
+  "Owner": "inclusionai",
+  "Category": "Fast Chat",
+  "Model ID": "inclusionai/ling-3.0-flash-fin:free"
+ },
+ {
+  "Owner": "inclusionai",
+  "Category": "Fast Chat",
+  "Model ID": "inclusionai/ling-3.0-flash-sante:free"
+ },
+ {
+  "Owner": "inclusionai",
+  "Category": "Video-To-Text",
+  "Model ID": "inclusionai/ling-3.0-flash-vl"
+ },
+ {
+  "Owner": "inclusionai",
+  "Category": "Video-To-Text",
+  "Model ID": "inclusionai/ling-3.0-flash-vl:free"
+ },
+ {
+  "Owner": "inference-net",
+  "Category": "Fast Chat",
+  "Model ID": "inference-net/schematron-v2-small"
+ },
+ {
+  "Owner": "inference-net",
+  "Category": "Fast Chat",
+  "Model ID": "inference-net/schematron-v2-turbo"
+ },
+ {
+  "Owner": "kwaipilot",
+  "Category": "Coding",
+  "Model ID": "kwaipilot/kat-coder-pro-v2"
+ },
+ {
+  "Owner": "kwaipilot",
+  "Category": "Coding",
+  "Model ID": "kwaipilot/kat-coder-pro-v2.5"
+ },
+ {
+  "Owner": "liquid",
+  "Category": "Coding",
+  "Model ID": "liquid/lfm-2.5-2.6b:free"
+ },
+ {
+  "Owner": "mancer",
+  "Category": "Fast Chat",
+  "Model ID": "mancer/weaver"
+ },
+ {
+  "Owner": "meituan",
+  "Category": "Coding",
+  "Model ID": "meituan/longcat-2.0"
+ },
+ {
+  "Owner": "meta",
+  "Category": "Multimodal",
+  "Model ID": "meta/muse-glimmer-30b"
+ },
+ {
+  "Owner": "meta",
+  "Category": "Multimodal",
+  "Model ID": "meta/muse-glimmer-30b:batch"
+ },
+ {
+  "Owner": "meta",
+  "Category": "Video-To-Text",
+  "Model ID": "meta/muse-spark-1.1"
+ },
+ {
+  "Owner": "meta",
+  "Category": "Video-To-Text",
+  "Model ID": "meta/muse-spark-1.2"
+ },
+ {
+  "Owner": "meta",
+  "Category": "Video-To-Text",
+  "Model ID": "meta/muse-spark-1.2-contributor"
+ },
+ {
+  "Owner": "meta",
+  "Category": "Coding",
+  "Model ID": "meta/muse-spark-1.3"
+ },
+ {
+  "Owner": "meta",
+  "Category": "Coding",
+  "Model ID": "meta/muse-spark-1.3-contributor"
+ },
+ {
+  "Owner": "meta-llama",
+  "Category": "Fast Chat",
+  "Model ID": "meta-llama/llama-3.1-70b-instruct"
+ },
+ {
+  "Owner": "meta-llama",
+  "Category": "Fast Chat",
+  "Model ID": "meta-llama/llama-3.1-8b-instruct"
+ },
+ {
+  "Owner": "meta-llama",
+  "Category": "Fast Chat",
+  "Model ID": "meta-llama/llama-3.2-1b-instruct"
+ },
+ {
+  "Owner": "meta-llama",
+  "Category": "Fast Chat",
+  "Model ID": "meta-llama/llama-3.2-3b-instruct"
+ },
+ {
+  "Owner": "meta-llama",
+  "Category": "Fast Chat",
+  "Model ID": "meta-llama/llama-3.3-70b-instruct"
+ },
+ {
+  "Owner": "meta-llama",
+  "Category": "Multimodal",
+  "Model ID": "meta-llama/llama-4-maverick"
+ },
+ {
+  "Owner": "meta-llama",
+  "Category": "Multimodal",
+  "Model ID": "meta-llama/llama-4-scout"
+ },
+ {
+  "Owner": "meta-llama",
+  "Category": "Multimodal",
+  "Model ID": "meta-llama/llama-guard-4-12b"
+ },
+ {
+  "Owner": "microsoft",
+  "Category": "Fast Chat",
+  "Model ID": "microsoft/phi-4"
+ },
+ {
+  "Owner": "microsoft",
+  "Category": "Fast Chat",
+  "Model ID": "microsoft/wizardlm-2-8x22b"
+ },
+ {
+  "Owner": "minimax",
+  "Category": "Multimodal",
+  "Model ID": "minimax/minimax-01"
+ },
+ {
+  "Owner": "minimax",
+  "Category": "Fast Chat",
+  "Model ID": "minimax/minimax-m1"
+ },
+ {
+  "Owner": "minimax",
+  "Category": "Coding",
+  "Model ID": "minimax/minimax-m2"
+ },
+ {
+  "Owner": "minimax",
+  "Category": "Fast Chat",
+  "Model ID": "minimax/minimax-m2-her"
+ },
+ {
+  "Owner": "minimax",
+  "Category": "Coding",
+  "Model ID": "minimax/minimax-m2.1"
+ },
+ {
+  "Owner": "minimax",
+  "Category": "Coding",
+  "Model ID": "minimax/minimax-m2.5"
+ },
+ {
+  "Owner": "minimax",
+  "Category": "Fast Chat",
+  "Model ID": "minimax/minimax-m2.7"
+ },
+ {
+  "Owner": "minimax",
+  "Category": "Coding",
+  "Model ID": "minimax/minimax-m3"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Coding",
+  "Model ID": "mistralai/codestral-2508"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Coding",
+  "Model ID": "mistralai/codestral-2508:batch"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Coding",
+  "Model ID": "mistralai/devstral-2512"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/ministral-14b-2512"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/ministral-3b-2512"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/ministral-8b-2512"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/ministral-8b-2512:batch"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/mistral-large"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/mistral-large-2407"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/mistral-large-2512:batch"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/mistral-medium-3"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Coding",
+  "Model ID": "mistralai/mistral-medium-3-5"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Coding",
+  "Model ID": "mistralai/mistral-medium-3-5:batch"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/mistral-medium-3.1"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/mistral-medium-3.1:batch"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Fast Chat",
+  "Model ID": "mistralai/mistral-nemo"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/mistral-saba"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Fast Chat",
+  "Model ID": "mistralai/mistral-small-24b-instruct-2501"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/mistral-small-2603"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/mistral-small-2603:batch"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/mistral-small-3.1-24b-instruct"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/mistral-small-3.2-24b-instruct"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Coding",
+  "Model ID": "mistralai/mixtral-8x22b-instruct"
+ },
+ {
+  "Owner": "mistralai",
+  "Category": "Multimodal",
+  "Model ID": "mistralai/voxtral-small-24b-2507"
+ },
+ {
+  "Owner": "moonshotai",
+  "Category": "Fast Chat",
+  "Model ID": "moonshotai/kimi-k2"
+ },
+ {
+  "Owner": "moonshotai",
+  "Category": "Fast Chat",
+  "Model ID": "moonshotai/kimi-k2-0905"
+ },
+ {
+  "Owner": "moonshotai",
+  "Category": "Fast Chat",
+  "Model ID": "moonshotai/kimi-k2-thinking"
+ },
+ {
+  "Owner": "moonshotai",
+  "Category": "Coding",
+  "Model ID": "moonshotai/kimi-k2.5"
+ },
+ {
+  "Owner": "moonshotai",
+  "Category": "Coding",
+  "Model ID": "moonshotai/kimi-k2.6"
+ },
+ {
+  "Owner": "moonshotai",
+  "Category": "Coding",
+  "Model ID": "moonshotai/kimi-k2.7-code"
+ },
+ {
+  "Owner": "moonshotai",
+  "Category": "Coding",
+  "Model ID": "moonshotai/kimi-k3"
+ },
+ {
+  "Owner": "morph",
+  "Category": "Fast Chat",
+  "Model ID": "morph/morph-v3-fast"
+ },
+ {
+  "Owner": "morph",
+  "Category": "Fast Chat",
+  "Model ID": "morph/morph-v3-large"
+ },
+ {
+  "Owner": "nex-agi",
+  "Category": "Coding",
+  "Model ID": "nex-agi/nex-n2.5-mini"
+ },
+ {
+  "Owner": "nex-agi",
+  "Category": "Coding",
+  "Model ID": "nex-agi/nex-n2.5-mini:free"
+ },
+ {
+  "Owner": "nex-agi",
+  "Category": "Coding",
+  "Model ID": "nex-agi/nex-n2.5-pro"
+ },
+ {
+  "Owner": "nex-agi",
+  "Category": "Coding",
+  "Model ID": "nex-agi/nex-n2.5-pro:free"
+ },
+ {
+  "Owner": "nousresearch",
+  "Category": "Fast Chat",
+  "Model ID": "nousresearch/hermes-3-llama-3.1-405b"
+ },
+ {
+  "Owner": "nousresearch",
+  "Category": "Fast Chat",
+  "Model ID": "nousresearch/hermes-3-llama-3.1-70b"
+ },
+ {
+  "Owner": "nousresearch",
+  "Category": "Fast Chat",
+  "Model ID": "nousresearch/hermes-4-405b"
+ },
+ {
+  "Owner": "nvidia",
+  "Category": "Fast Chat",
+  "Model ID": "nvidia/nemotron-3-nano-30b-a3b"
+ },
+ {
+  "Owner": "nvidia",
+  "Category": "Video-To-Text",
+  "Model ID": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+ },
+ {
+  "Owner": "nvidia",
+  "Category": "Fast Chat",
+  "Model ID": "nvidia/nemotron-3-super-120b-a12b"
+ },
+ {
+  "Owner": "nvidia",
+  "Category": "Fast Chat",
+  "Model ID": "nvidia/nemotron-3-super-120b-a12b:free"
+ },
+ {
+  "Owner": "nvidia",
+  "Category": "Fast Chat",
+  "Model ID": "nvidia/nemotron-3-ultra-550b-a55b"
+ },
+ {
+  "Owner": "nvidia",
+  "Category": "Fast Chat",
+  "Model ID": "nvidia/nemotron-3-ultra-550b-a55b:free"
+ },
+ {
+  "Owner": "nvidia",
+  "Category": "Multimodal",
+  "Model ID": "nvidia/nemotron-3.5-content-safety"
+ },
+ {
+  "Owner": "nvidia",
+  "Category": "Multimodal",
+  "Model ID": "nvidia/nemotron-3.5-content-safety:free"
+ },
+ {
+  "Owner": "nvidia",
+  "Category": "Fast Chat",
+  "Model ID": "nvidia/nemotron-3.5-lightning"
+ },
+ {
+  "Owner": "nvidia",
+  "Category": "Fast Chat",
+  "Model ID": "nvidia/nemotron-3.5-lightning:free"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Fast Chat",
+  "Model ID": "openai/gpt-3.5-turbo"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Fast Chat",
+  "Model ID": "openai/gpt-3.5-turbo-0613"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Fast Chat",
+  "Model ID": "openai/gpt-3.5-turbo-16k"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Fast Chat",
+  "Model ID": "openai/gpt-3.5-turbo-instruct"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Fast Chat",
+  "Model ID": "openai/gpt-3.5-turbo:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Fast Chat",
+  "Model ID": "openai/gpt-4"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-4-turbo"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-4-turbo:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-4.1"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-4.1-mini"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-4.1-mini:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-4.1-nano"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-4.1-nano:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-4.1:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-4o"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-4o-2024-05-13"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-4o-2024-08-06"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-4o-2024-11-20"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-4o-mini"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-4o-mini-2024-07-18"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-4o-mini:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-4o:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5-image"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5-image-mini"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5-mini"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5-mini:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5-nano"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5-nano:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5-pro"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5-pro:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.1"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-5.1-codex"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-5.1-codex-max"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-5.1-codex-mini"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.1:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.2"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.2-chat"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-5.2-codex"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-5.2-pro"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-5.2-pro:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.2:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-5.3-codex"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.4"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-5.4-image-2"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-5.4-mini"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-5.4-mini:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.4-nano"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.4-nano:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.4-pro"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.4-pro:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.4:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.5"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.5-pro"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.5-pro:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.5:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.6-luna"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.6-luna-pro"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.6-luna-pro:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.6-luna:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-5.6-sol"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.6-sol-pro"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.6-sol-pro:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-5.6-sol:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-5.6-terra"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.6-terra-pro"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5.6-terra-pro:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-5.6-terra:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-5:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-6-astra"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-6-astra-pro"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-6-astra-pro:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/gpt-6-astra:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-audio"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-audio-mini"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/gpt-chat-latest"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Fast Chat",
+  "Model ID": "openai/gpt-oss-120b"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Fast Chat",
+  "Model ID": "openai/gpt-oss-20b"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Fast Chat",
+  "Model ID": "openai/gpt-oss-safeguard-20b"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/o1"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/o1-pro"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/o3"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/o3-mini"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/o3-mini-high"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/o3-mini:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/o3-pro"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Coding",
+  "Model ID": "openai/o3:batch"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/o4-mini"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/o4-mini-high"
+ },
+ {
+  "Owner": "openai",
+  "Category": "Multimodal",
+  "Model ID": "openai/o4-mini:batch"
+ },
+ {
+  "Owner": "openrouter",
+  "Category": "Video-To-Text",
+  "Model ID": "openrouter/auto"
+ },
+ {
+  "Owner": "openrouter",
+  "Category": "Video-To-Text",
+  "Model ID": "openrouter/auto-beta"
+ },
+ {
+  "Owner": "openrouter",
+  "Category": "Fast Chat",
+  "Model ID": "openrouter/bodybuilder"
+ },
+ {
+  "Owner": "openrouter",
+  "Category": "Multimodal",
+  "Model ID": "openrouter/free"
+ },
+ {
+  "Owner": "openrouter",
+  "Category": "Fast Chat",
+  "Model ID": "openrouter/fusion"
+ },
+ {
+  "Owner": "openrouter",
+  "Category": "Coding",
+  "Model ID": "openrouter/pareto-code"
+ },
+ {
+  "Owner": "perceptron",
+  "Category": "Video-To-Text",
+  "Model ID": "perceptron/perceptron-mk1"
+ },
+ {
+  "Owner": "perplexity",
+  "Category": "Multimodal",
+  "Model ID": "perplexity/sonar"
+ },
+ {
+  "Owner": "perplexity",
+  "Category": "Fast Chat",
+  "Model ID": "perplexity/sonar-deep-research"
+ },
+ {
+  "Owner": "perplexity",
+  "Category": "Multimodal",
+  "Model ID": "perplexity/sonar-pro"
+ },
+ {
+  "Owner": "perplexity",
+  "Category": "Multimodal",
+  "Model ID": "perplexity/sonar-pro-search"
+ },
+ {
+  "Owner": "perplexity",
+  "Category": "Multimodal",
+  "Model ID": "perplexity/sonar-reasoning-pro"
+ },
+ {
+  "Owner": "poolside",
+  "Category": "Coding",
+  "Model ID": "poolside/laguna-s-2.1"
+ },
+ {
+  "Owner": "poolside",
+  "Category": "Coding",
+  "Model ID": "poolside/laguna-s-2.1:free"
+ },
+ {
+  "Owner": "poolside",
+  "Category": "Coding",
+  "Model ID": "poolside/laguna-xs-2.1"
+ },
+ {
+  "Owner": "poolside",
+  "Category": "Coding",
+  "Model ID": "poolside/laguna-xs-2.1:free"
+ },
+ {
+  "Owner": "prism-ml",
+  "Category": "Coding",
+  "Model ID": "prism-ml/ternary-bonsai-2-27b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen-2.5-72b-instruct"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen-2.5-7b-instruct"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen-2.5-coder-32b-instruct"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen-plus"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen-plus-2025-07-28"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Multimodal",
+  "Model ID": "qwen/qwen2.5-vl-72b-instruct"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen3-14b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen3-235b-a22b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen3-235b-a22b-2507"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen3-235b-a22b-thinking-2507"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen3-30b-a3b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen3-30b-a3b-instruct-2507"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen3-30b-a3b-thinking-2507"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen3-32b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen3-8b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen3-coder"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen3-coder-30b-a3b-instruct"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen3-coder-flash"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen3-coder-next"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen3-coder-plus"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen3-max"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen3-max-thinking"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen3-next-80b-a3b-instruct"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen3-next-80b-a3b-thinking"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Multimodal",
+  "Model ID": "qwen/qwen3-vl-235b-a22b-instruct"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Multimodal",
+  "Model ID": "qwen/qwen3-vl-235b-a22b-thinking"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Multimodal",
+  "Model ID": "qwen/qwen3-vl-30b-a3b-instruct"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Multimodal",
+  "Model ID": "qwen/qwen3-vl-30b-a3b-thinking"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Multimodal",
+  "Model ID": "qwen/qwen3-vl-32b-instruct"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Multimodal",
+  "Model ID": "qwen/qwen3-vl-8b-instruct"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Multimodal",
+  "Model ID": "qwen/qwen3-vl-8b-thinking"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Video-To-Text",
+  "Model ID": "qwen/qwen3.5-122b-a10b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Video-To-Text",
+  "Model ID": "qwen/qwen3.5-27b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Video-To-Text",
+  "Model ID": "qwen/qwen3.5-35b-a3b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Video-To-Text",
+  "Model ID": "qwen/qwen3.5-397b-a17b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen3.5-9b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Video-To-Text",
+  "Model ID": "qwen/qwen3.5-flash-02-23"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Video-To-Text",
+  "Model ID": "qwen/qwen3.5-plus-02-15"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Video-To-Text",
+  "Model ID": "qwen/qwen3.5-plus-20260420"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Video-To-Text",
+  "Model ID": "qwen/qwen3.6-27b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Video-To-Text",
+  "Model ID": "qwen/qwen3.6-35b-a3b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Video-To-Text",
+  "Model ID": "qwen/qwen3.6-flash"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen3.6-max-preview"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Video-To-Text",
+  "Model ID": "qwen/qwen3.6-plus"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen3.7-flash"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen3.7-max"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Multimodal",
+  "Model ID": "qwen/qwen3.7-plus"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Fast Chat",
+  "Model ID": "qwen/qwen3.8-2.4t-a95b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen3.8-27b"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen3.8-27b:free"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Coding",
+  "Model ID": "qwen/qwen3.8-flash"
+ },
+ {
+  "Owner": "qwen",
+  "Category": "Video-To-Text",
+  "Model ID": "qwen/qwen3.8-max-0902"
+ },
+ {
+  "Owner": "rekaai",
+  "Category": "Video-To-Text",
+  "Model ID": "rekaai/reka-edge"
+ },
+ {
+  "Owner": "rekaai",
+  "Category": "Coding",
+  "Model ID": "rekaai/reka-flash-3"
+ },
+ {
+  "Owner": "relace",
+  "Category": "Fast Chat",
+  "Model ID": "relace/relace-apply-3"
+ },
+ {
+  "Owner": "relace",
+  "Category": "Fast Chat",
+  "Model ID": "relace/relace-search"
+ },
+ {
+  "Owner": "sakana",
+  "Category": "Multimodal",
+  "Model ID": "sakana/fugu-max"
+ },
+ {
+  "Owner": "sakana",
+  "Category": "Multimodal",
+  "Model ID": "sakana/fugu-ultra"
+ },
+ {
+  "Owner": "sakana",
+  "Category": "Multimodal",
+  "Model ID": "sakana/fugu-ultra-v2"
+ },
+ {
+  "Owner": "sakana",
+  "Category": "Multimodal",
+  "Model ID": "sakana/sakana-namazu"
+ },
+ {
+  "Owner": "sao10k",
+  "Category": "Fast Chat",
+  "Model ID": "sao10k/l3-lunaris-8b"
+ },
+ {
+  "Owner": "sao10k",
+  "Category": "Fast Chat",
+  "Model ID": "sao10k/l3.1-euryale-70b"
+ },
+ {
+  "Owner": "sao10k",
+  "Category": "Fast Chat",
+  "Model ID": "sao10k/l3.3-euryale-70b"
+ },
+ {
+  "Owner": "stepfun",
+  "Category": "Fast Chat",
+  "Model ID": "stepfun/step-3.5-flash"
+ },
+ {
+  "Owner": "stepfun",
+  "Category": "Video-To-Text",
+  "Model ID": "stepfun/step-3.7-flash"
+ },
+ {
+  "Owner": "tencent",
+  "Category": "Fast Chat",
+  "Model ID": "tencent/hunyuan-a13b-instruct"
+ },
+ {
+  "Owner": "tencent",
+  "Category": "Fast Chat",
+  "Model ID": "tencent/hy-mt2-1.8b"
+ },
+ {
+  "Owner": "tencent",
+  "Category": "Fast Chat",
+  "Model ID": "tencent/hy-mt2-30b-a3b"
+ },
+ {
+  "Owner": "tencent",
+  "Category": "Fast Chat",
+  "Model ID": "tencent/hy-mt2-7b"
+ },
+ {
+  "Owner": "tencent",
+  "Category": "Fast Chat",
+  "Model ID": "tencent/hy3"
+ },
+ {
+  "Owner": "tencent",
+  "Category": "Fast Chat",
+  "Model ID": "tencent/hy3-preview"
+ },
+ {
+  "Owner": "tencent",
+  "Category": "Coding",
+  "Model ID": "tencent/hy4-preview"
+ },
+ {
+  "Owner": "thedrummer",
+  "Category": "Fast Chat",
+  "Model ID": "thedrummer/cydonia-24b-v4.1"
+ },
+ {
+  "Owner": "thedrummer",
+  "Category": "Fast Chat",
+  "Model ID": "thedrummer/skyfall-36b-v2"
+ },
+ {
+  "Owner": "thedrummer",
+  "Category": "Fast Chat",
+  "Model ID": "thedrummer/unslopnemo-12b"
+ },
+ {
+  "Owner": "thinkingmachines",
+  "Category": "Coding",
+  "Model ID": "thinkingmachines/inkling"
+ },
+ {
+  "Owner": "thinkingmachines",
+  "Category": "Multimodal",
+  "Model ID": "thinkingmachines/inkling-small"
+ },
+ {
+  "Owner": "thinkingmachines",
+  "Category": "Multimodal",
+  "Model ID": "thinkingmachines/inkling-small:free"
+ },
+ {
+  "Owner": "thinkingmachines",
+  "Category": "Coding",
+  "Model ID": "thinkingmachines/inkling:free"
+ },
+ {
+  "Owner": "unbiased",
+  "Category": "Coding",
+  "Model ID": "unbiased/pareto"
+ },
+ {
+  "Owner": "undi95",
+  "Category": "Fast Chat",
+  "Model ID": "undi95/remm-slerp-l2-13b"
+ },
+ {
+  "Owner": "upstage",
+  "Category": "Fast Chat",
+  "Model ID": "upstage/solar-pro-3"
+ },
+ {
+  "Owner": "upstage",
+  "Category": "Fast Chat",
+  "Model ID": "upstage/solar-pro4"
+ },
+ {
+  "Owner": "writer",
+  "Category": "Fast Chat",
+  "Model ID": "writer/palmyra-x5"
+ },
+ {
+  "Owner": "x-ai",
+  "Category": "Multimodal",
+  "Model ID": "x-ai/grok-4.20"
+ },
+ {
+  "Owner": "x-ai",
+  "Category": "Multimodal",
+  "Model ID": "x-ai/grok-4.20-multi-agent"
+ },
+ {
+  "Owner": "x-ai",
+  "Category": "Multimodal",
+  "Model ID": "x-ai/grok-4.3"
+ },
+ {
+  "Owner": "x-ai",
+  "Category": "Multimodal",
+  "Model ID": "x-ai/grok-4.3:batch"
+ },
+ {
+  "Owner": "x-ai",
+  "Category": "Coding",
+  "Model ID": "x-ai/grok-4.5"
+ },
+ {
+  "Owner": "x-ai",
+  "Category": "Coding",
+  "Model ID": "x-ai/grok-4.6"
+ },
+ {
+  "Owner": "x-ai",
+  "Category": "Coding",
+  "Model ID": "x-ai/grok-4.7"
+ },
+ {
+  "Owner": "x-ai",
+  "Category": "Coding",
+  "Model ID": "x-ai/grok-build-0.1"
+ },
+ {
+  "Owner": "xiaomi",
+  "Category": "Video-To-Text",
+  "Model ID": "xiaomi/mimo-v2.5"
+ },
+ {
+  "Owner": "xiaomi",
+  "Category": "Coding",
+  "Model ID": "xiaomi/mimo-v2.5-pro"
+ },
+ {
+  "Owner": "xiaomi",
+  "Category": "Video-To-Text",
+  "Model ID": "xiaomi/mimo-v2.6-flash"
+ },
+ {
+  "Owner": "xiaomi",
+  "Category": "Video-To-Text",
+  "Model ID": "xiaomi/mimo-v2.6-pro"
+ },
+ {
+  "Owner": "xiaomi",
+  "Category": "Video-To-Text",
+  "Model ID": "xiaomi/mimo-v2.6-pro-ultraspeed"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Fast Chat",
+  "Model ID": "z-ai/glm-4.5"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Fast Chat",
+  "Model ID": "z-ai/glm-4.5-air"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Multimodal",
+  "Model ID": "z-ai/glm-4.5v"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Fast Chat",
+  "Model ID": "z-ai/glm-4.6"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Video-To-Text",
+  "Model ID": "z-ai/glm-4.6v"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Coding",
+  "Model ID": "z-ai/glm-4.7"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Coding",
+  "Model ID": "z-ai/glm-4.7-flash"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Coding",
+  "Model ID": "z-ai/glm-5"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Fast Chat",
+  "Model ID": "z-ai/glm-5-turbo"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Coding",
+  "Model ID": "z-ai/glm-5.1"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Coding",
+  "Model ID": "z-ai/glm-5.2"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Coding",
+  "Model ID": "z-ai/glm-5.2:batch"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Coding",
+  "Model ID": "z-ai/glm-5.2:free"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Coding",
+  "Model ID": "z-ai/glm-5.3"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Coding",
+  "Model ID": "z-ai/glm-5.3-flash"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Coding",
+  "Model ID": "z-ai/glm-5.3-flash:batch"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Video-To-Text",
+  "Model ID": "z-ai/glm-5.3-flashx"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Coding",
+  "Model ID": "z-ai/glm-5.3:batch"
+ },
+ {
+  "Owner": "z-ai",
+  "Category": "Coding",
+  "Model ID": "z-ai/glm-5v-turbo"
+ },
+ {
+  "Owner": "~anthropic",
+  "Category": "Multimodal",
+  "Model ID": "~anthropic/claude-fable-latest"
+ },
+ {
+  "Owner": "~anthropic",
+  "Category": "Multimodal",
+  "Model ID": "~anthropic/claude-haiku-latest"
+ },
+ {
+  "Owner": "~anthropic",
+  "Category": "Multimodal",
+  "Model ID": "~anthropic/claude-opus-latest"
+ },
+ {
+  "Owner": "~anthropic",
+  "Category": "Multimodal",
+  "Model ID": "~anthropic/claude-sonnet-latest"
+ },
+ {
+  "Owner": "~deepseek",
+  "Category": "Multimodal",
+  "Model ID": "~deepseek/deepseek-flash-latest"
+ },
+ {
+  "Owner": "~deepseek",
+  "Category": "Fast Chat",
+  "Model ID": "~deepseek/deepseek-pro-latest"
+ },
+ {
+  "Owner": "~deepseek",
+  "Category": "Fast Chat",
+  "Model ID": "~deepseek/deepseek-v4-flash-latest"
+ },
+ {
+  "Owner": "~google",
+  "Category": "Video-To-Text",
+  "Model ID": "~google/gemini-flash-latest"
+ },
+ {
+  "Owner": "~google",
+  "Category": "Video-To-Text",
+  "Model ID": "~google/gemini-pro-latest"
+ },
+ {
+  "Owner": "~moonshotai",
+  "Category": "Video-To-Text",
+  "Model ID": "~moonshotai/kimi-latest"
+ },
+ {
+  "Owner": "~openai",
+  "Category": "Multimodal",
+  "Model ID": "~openai/gpt-astra-latest"
+ },
+ {
+  "Owner": "~openai",
+  "Category": "Multimodal",
+  "Model ID": "~openai/gpt-luna-latest"
+ },
+ {
+  "Owner": "~openai",
+  "Category": "Multimodal",
+  "Model ID": "~openai/gpt-mini-latest"
+ },
+ {
+  "Owner": "~openai",
+  "Category": "Multimodal",
+  "Model ID": "~openai/gpt-sol-latest"
+ },
+ {
+  "Owner": "~openai",
+  "Category": "Multimodal",
+  "Model ID": "~openai/gpt-terra-latest"
+ },
+ {
+  "Owner": "~x-ai",
+  "Category": "Multimodal",
+  "Model ID": "~x-ai/grok-latest"
+ },
+ {
+  "Owner": "~z-ai",
+  "Category": "Video-To-Text",
+  "Model ID": "~z-ai/glm-flash-latest"
+ },
+ {
+  "Owner": "~z-ai",
+  "Category": "Fast Chat",
+  "Model ID": "~z-ai/glm-latest"
+ }
+]

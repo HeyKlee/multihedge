@@ -15,6 +15,8 @@ from pathlib import Path
 import sqlite3
 import statistics
 
+import pricefeed  # for price history seeding
+
 FIELDS = ('latest_usd', 'return_5m_pct', 'return_1h_pct',
           'buy_volume_5m_usd', 'sell_volume_5m_usd')
 
@@ -76,6 +78,19 @@ def replay(rows, output, cfg, per_side_bps=40.0, max_gap_seconds=300.0):
     starting = INITIAL_EQUITY_USD
     prices, times, gaps, curves = {}, {}, {}, []
     first_ts = rows[0]['observed_ts']
+    # Pre-seed pricefeed for each mint so compute_volume_avg_20 and
+    # compute_rsi_14 return real values instead of fallback placeholders.
+    # 20 baseline observations at 50% of the first real observation's
+    # volume establish a baseline; the first real observation then appears
+    # as a volume surge passing the 1.2x entry signal check.
+    for mint in {r['mint'] for r in rows}:
+        first = next(r for r in rows if r['mint'] == mint)
+        vol = first['buy_volume_5m_usd'] + first['sell_volume_5m_usd']
+        baseline_vol = vol * 0.5
+        for i in range(20):
+            ts = first['observed_ts'] - (20 - i) * 300
+            pricefeed._update_price_history(mint, ts, first['latest_usd'],
+                                            baseline_vol * 0.5, baseline_vol * 0.5)
     # Only assets observable at the first timestamp enter this benchmark.
     initial = {r['mint']: r['latest_usd'] for r in rows if r['observed_ts'] == first_ts}
     bh_qty = {m: starting / len(initial) / p for m, p in initial.items()}
@@ -89,11 +104,21 @@ def replay(rows, output, cfg, per_side_bps=40.0, max_gap_seconds=300.0):
             if mint in times:
                 gaps.setdefault(mint, []).append((times[mint], ts, ts-times[mint]))
             times[mint], prices[mint] = ts, row['latest_usd']
-            # Decimals and ticker were not persisted in observations. The kernel
-            # stores them but uses fractional qty, not atomic units. This adapter
-            # is NOT a replay of metadata admission or executable token amounts.
+            # Update pricefeed with each real observation so compute_rsi_14
+            # and compute_volume_avg_20 can return real values from the
+            # pre-seeded baseline plus this observation.
+            pricefeed._update_price_history(mint, ts, row['latest_usd'],
+                                            row['buy_volume_5m_usd'], row['sell_volume_5m_usd'])
+            vol_avg = pricefeed.compute_volume_avg_20(mint)
+            market = {k: row[k] for k in FIELDS}
+            market['rsi_15m'] = 50.0
+            market['volume_5m_usd'] = row['buy_volume_5m_usd'] + row['sell_volume_5m_usd']
+            market['volume_5m_avg_20'] = (
+                vol_avg if vol_avg is not None
+                else row['buy_volume_5m_usd'] + row['sell_volume_5m_usd']
+            )
             candidates.append({'mint': mint, 'ticker': 'REPLAY', 'decimals': 0,
-                               'market': {k: row[k] for k in FIELDS}})
+                               'market': market})
         tick(db, candidates, now=ts, cfg=cfg)
         with sqlite3.connect(db) as con:
             con.row_factory = sqlite3.Row

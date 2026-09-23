@@ -9,14 +9,14 @@
     "Data gaps in Binance klines are silently skipped; no interpolation.",
     "Paper-only \u2014 not a live P&L forecast."
   ],
-  "closes_used": 23136,
-  "ending_equity_usd": 0.0098,
-  "gross_loss_usd": 25.2653,
-  "gross_profit_usd": 15.4998,
-  "losses": 1954,
-  "max_drawdown_pct": 99.9597,
-  "n_trades": 3438,
-  "payoff_ratio": 0.8078,
+  "closes_used": 23160,
+  "ending_equity_usd": 0.0097,
+  "gross_loss_usd": 25.2654,
+  "gross_profit_usd": 15.4999,
+  "losses": 1957,
+  "max_drawdown_pct": 99.9599,
+  "n_trades": 3444,
+  "payoff_ratio": 0.8074,
   "per_side_bps": 40.0,
   "position_fraction": 0.3,
   "profit_factor": 0.6135,
@@ -24,8 +24,8 @@
   "sharpe_per_trade": -4.1539,
   "sortino_per_trade": -4.8337,
   "starting_equity_usd": 24.0,
-  "total_net_pnl_usd": -9.7655,
-  "total_return_pct": -99.9592,
+  "total_net_pnl_usd": -9.7656,
+  "total_return_pct": -99.9598,
   "trades": [
     {
       "cost": 0.027215630169741694,
@@ -37844,8 +37844,74 @@
       "qty": 0.00977108258197083,
       "side": "SELL",
       "ts": null
+    },
+    {
+      "cost": 1.1463286681363017e-05,
+      "gross": 0.0028658216703407544,
+      "index": 23138,
+      "net": 0.0028543583836593916,
+      "pnl": -7.06825014140139e-05,
+      "price": 0.2952,
+      "qty": 0.009708067988959195,
+      "side": "SELL",
+      "ts": null
+    },
+    {
+      "cost": 1.1656627711333226e-05,
+      "gross": 0.0029141569278333065,
+      "index": 23142,
+      "net": 0.0029025003001219734,
+      "pnl": 2.089395533163771e-06,
+      "price": 0.2968,
+      "qty": 0.009818588031783378,
+      "side": "SELL",
+      "ts": null
+    },
+    {
+      "cost": 1.1617758447644364e-05,
+      "gross": 0.002904439611911091,
+      "index": 23146,
+      "net": 0.0028928218534634465,
+      "pnl": -4.732869425165889e-06,
+      "price": 0.2953,
+      "qty": 0.009835555746397192,
+      "side": "SELL",
+      "ts": null
+    },
+    {
+      "cost": 1.1515649097015924e-05,
+      "gross": 0.002878912274253981,
+      "index": 23151,
+      "net": 0.002867396625156965,
+      "pnl": -2.5266850679941336e-05,
+      "price": 0.2931,
+      "qty": 0.009822286844947051,
+      "side": "SELL",
+      "ts": null
+    },
+    {
+      "cost": 1.1653935595070513e-05,
+      "gross": 0.002913483898767628,
+      "index": 23155,
+      "net": 0.0029018299631725576,
+      "pnl": 2.0187418489821425e-05,
+      "price": 0.2928,
+      "qty": 0.009950423151528784,
+      "side": "SELL",
+      "ts": null
+    },
+    {
+      "cost": 1.1648065008392806e-05,
+      "gross": 0.0029120162520982016,
+      "index": 23159,
+      "net": 0.002900368187089809,
+      "pnl": 1.615161281593412e-05,
+      "price": 0.2933,
+      "qty": 0.009928456365830896,
+      "side": "SELL",
+      "ts": null
     }
   ],
-  "win_rate": 43.16,
-  "wins": 1484
+  "win_rate": 43.18,
+  "wins": 1487
 }

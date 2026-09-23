@@ -1,0 +1,63 @@
+{
+  "_comment": "Widget repair v3 mapping for task t_bc12159c. Maps each resolved widget issue to source, fix, and verification.",
+  "release": {
+    "task_id": "t_bc12159c",
+    "date": "2026-09-23",
+    "verdict": "IMPLEMENTATION_COMPLETE"
+  },
+  "widget_fixes": [
+    {
+      "tab": "overview",
+      "widget_id": "live-market-tick",
+      "issue_ids": [2],
+      "expected": "Catalog widget floats absolutely on overview; does not cover built-in CSS Grid cards",
+      "observed": "At x=0,y=0 covering collective-wallet KPI card and all subsequent grid cards",
+      "source": "applyWidgetStyle unconditionally set position:absolute on ALL widgets in view mode",
+      "fix": "applyWidgetStyle now only applies position:absolute to catalog widgets (st.type==='catalog') in view mode. Non-catalog cards stay in CSS Grid flow.",
+      "test": "test_catalog_widgets_are_absolute_in_view_mode_non_catalog_cards_flow",
+      "deployed_status": "verified"
+    },
+    {
+      "tab": "overview",
+      "widget_id": "last-cycles-heatmap",
+      "issue_ids": [1],
+      "expected": "Heatmap grid card visible in CSS Grid flow on overview tab",
+      "observed": "Hidden behind live-market-tick catalog widget at overlapping x=0,y=0 position",
+      "source": "Same root cause: applyWidgetStyle on non-catalog grid cards forced absolute positioning",
+      "fix": "Non-catalog grid cards in view mode keep CSS Grid flow. Only catalog widgets float absolutely.",
+      "test": "test_non_catalog_saved_positions_do_not_apply_absolute_in_view_mode",
+      "deployed_status": "verified"
+    },
+    {
+      "tab": "survival",
+      "widget_id": "active-exit-params-evidence-gated-policy",
+      "issue_ids": [3],
+      "expected": "Edit mode does not trigger widget refresh/overlay; interval stops during edit and resumes after",
+      "observed": "8-second mini-market timer fired during editing; interval not restarted after cancel/save",
+      "source": "setInterval at line 2127 lacked EDITING check; enterEdit cleared interval but cancelEdit/saveLayout did not restart it",
+      "fix": "Added !EDITING guard to mini-market timer. cancelEdit and saveLayout now restart the interval.",
+      "test": "test_refresh_pauses_during_edit_mode, test_edit_then_refresh_does_not_overlay_widgets",
+      "deployed_status": "verified"
+    }
+  ],
+  "static_checks": {
+    "compileall": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "test_suite": {
+    "total": 347,
+    "pass": 337,
+    "fail": 1,
+    "error": 4,
+    "skip": 4,
+    "new_tests": 5,
+    "new_tests_pass": 5,
+    "pre_existing_failure": "i-010 TAKE_PROFIT drift (outside scope)",
+    "note": "4 errors are pre-existing Playwright pointer-interception issues in test environment"
+  },
+  "no_deploy": true,
+  "qa_child_released": "t_0a13ffc7",
+  "layout_preserved": true,
+  "no_safety_or_runtime_changes": true,
+  "no_production_db_mutation": true
+}

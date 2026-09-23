@@ -1,0 +1,12 @@
+{
+  "mint": "B5WTLaRwaUQpKk7ir1wniNB6m5o8GgMrimhKMYan2R6B",
+  "ticker": "PEPE",
+  "entry_usd": 1.0,
+  "exit_usd": 1.085,
+  "qty": 1.0,
+  "realized_pct": 0.08499999999999996,
+  "realized_usd": 0.08499999999999996,
+  "exit_reason": "take_profit",
+  "hold_seconds": 60.0,
+  "closed_ts": 1790069404.5147548
+}

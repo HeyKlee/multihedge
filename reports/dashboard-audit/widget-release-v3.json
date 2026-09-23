@@ -1,0 +1,123 @@
+{
+  "_comment": "Widget Release v3 for task t_a4f3373b — deployment and rendered production verification",
+  "task_id": "t_a4f3373b",
+  "parent_qa_task": "t_0a13ffc7",
+  "date": "2026-09-23",
+  "verdict": "PASS",
+  "commit": "79d3b2bd57f406e5e779671ef85f670e1efa08db",
+  "mh_dash_hash_container": "ec4fa13cda44cffdf37043682eb34faa",
+  "mh_dash_hash_qa_reported": "ec4fa13cda44cffdf37043682eb34faa",
+  "hash_match": true,
+  "container_image": {
+    "tag": "deploy-multihedge:latest",
+    "id_short": "7a24922711ae",
+    "id_full": "sha256:7a24922711ae042c04ce6b6ef8cf87197d4e8e2d259054416d7d163f472e1091"
+  },
+  "deployment": {
+    "command": "docker compose -f deploy/docker-compose.yml up -d multihedge",
+    "remove_orphans_not_used": true,
+    "autohedge_untouched": true,
+    "only_multihedge_recreated": true,
+    "result": "Container recreated and started"
+  },
+  "supervisor_processes": {
+    "total": 9,
+    "running": 9,
+    "programs": {
+      "loom": "RUNNING",
+      "news": "RUNNING",
+      "reasoner": "RUNNING",
+      "dash": "RUNNING",
+      "grid": "RUNNING",
+      "whale": "RUNNING",
+      "whale_trader": "RUNNING",
+      "pump_monitor": "RUNNING",
+      "memecoin_trader": "RUNNING"
+    }
+  },
+  "api_verification": [
+    {"endpoint": "/", "http_code": 200, "status": "PASS"},
+    {"endpoint": "/api/survival", "http_code": 200, "status": "PASS"},
+    {"endpoint": "/api/livegate", "http_code": 200, "status": "PASS"},
+    {"endpoint": "/api/positions", "http_code": 200, "status": "PASS"},
+    {"endpoint": "/api/summary", "http_code": 200, "status": "PASS"},
+    {"endpoint": "/api/trades", "http_code": 200, "status": "PASS"},
+    {"endpoint": "/api/market", "http_code": 200, "status": "PASS"}
+  ],
+  "widget_fixes_verified": [
+    {
+      "widget_issue_id": 1,
+      "name": "last-cycles-heatmap obscured by Live Market Tick",
+      "fix": "catalog-only absolute positioning in view mode",
+      "verification_method": "Browser DOM inspection in production — getComputedStyle on 15 widget cards",
+      "observed": "All 15 non-catalog widgets: position=relative, left=0px, top=0px in view mode",
+      "verified": true
+    },
+    {
+      "widget_issue_id": 2,
+      "name": "live-market-tick covers other widgets",
+      "fix": "applyWidgetStyle only position:absolute for type==='catalog' in view mode",
+      "verification_method": "Browser DOM inspection — no absolute positioning on non-catalog grid cards",
+      "observed": "live-market-tick and all non-catalog cards in CSS Grid flow (position=relative)",
+      "verified": true
+    },
+    {
+      "widget_issue_id": 3,
+      "name": "120s refresh while editing overlays widgets",
+      "fix": "EDITING guard on mini-market timer + interval restart on cancelEdit/saveLayout",
+      "verification_method": "Programmatic enterEdit/saveLayout cycle via browser console",
+      "observed": {
+        "on_load": "window._refreshInt truthy, EDITING=false",
+        "enter_edit": "EDITING=true, free-edit on body, _refreshInt null (cleared)",
+        "during_edit": "run() returns early due to EDITING guard",
+        "after_save": "EDITING=false, free-edit removed, _refreshInt restarted"
+      },
+      "verified": true
+    }
+  ],
+  "edit_mode_verification": {
+    "enter_edit_works": true,
+    "widgets_absolute_in_edit_mode": true,
+    "refresh_interval_cleared_during_edit": true,
+    "run_skipped_during_edit": true,
+    "save_restores_view_mode": true,
+    "widgets_relative_in_view_mode_after_save": true,
+    "refresh_interval_restarted_after_edit": true
+  },
+  "saved_layout_verification": {
+    "layout_saved_to_mhPrefs": true,
+    "layout_keys": ["overview", "survival"],
+    "layout_persists_on_reload": true,
+    "widgets_relative_after_reload": true
+  },
+  "responsive_css": {
+    "breakpoints": ["1300px", "1050px", "760px"],
+    "grid_layout": "repeat(auto-fit,minmax(300px,1fr))",
+    "note": "Widget fix does not alter responsive behavior — CSS Grid auto-wraps on narrower viewports"
+  },
+  "display_text_updates_verified": [
+    {"item": "Live gate threshold", "expected": "66.7%", "observed": "need 66.7%"},
+    {"item": "Scalper TP description", "expected": "1.5%", "observed": "1.5% scalp target"},
+    {"item": "Memecoin params", "expected": "1.5% TP / 1.5% SL", "observed": "Updated description"},
+    {"item": "Trail description uses API values", "expected": "Dynamic %s", "observed": "2.0% / 1.0% from API"},
+    {"item": "Xora-Survival wallet text", "expected": "loading state", "observed": "0 live · 1 paper"}
+  ],
+  "safety_invariants": {
+    "no_trading_params_edited": true,
+    "no_wallet_keys_edited": true,
+    "no_signer_config_edited": true,
+    "no_evidence_gates_edited": true,
+    "no_authority_edited": true,
+    "no_production_db_mutation": true,
+    "no_remove_orphans": true,
+    "autohedge_untouched": true,
+    "paper_vs_live_provenance_preserved": true
+  },
+  "no_source_code_edits_by_this_task": true,
+  "remaining_limitations": [
+    "4 pre-existing Playwright pointer-interception test errors (identical across all runs)",
+    "Whale/Memecoin/Grid tabs: empty API responses (no active data — not a layout defect)",
+    "Saved layouts use localStorage — clearing browser storage resets custom layout",
+    "Display text changes are cosmetic front-end strings only, not evidence-gated thresholds"
+  ]
+}

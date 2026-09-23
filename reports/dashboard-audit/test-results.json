@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-09-22T18:18:00+12:00",
+  "tests_total": 336,
+  "tests_run": 330,
+  "pass": 323,
+  "fail": 7,
+  "error": 0,
+  "expected_failure": 2,
+  "skip": 4,
+  "exit_code": 1,
+  "remaining_failures": [
+    {
+      "module": "test_config_consistency",
+      "test": "test_declared_values_match_what_the_reasoner_actually_applied",
+      "issue_id": "i-010",
+      "reason": "Config declares TAKE_PROFIT=0.015 but runtime applies 0.05 (reasoner DB override). Trading-core drift outside dashboard scope.",
+      "disposition": "flag_orchestrator"
+    },
+    {
+      "module": "test_parameter_autotuner",
+      "test": "test_tighter_trail_can_be_adopted",
+      "issue_id": "i-015",
+      "reason": "Candidate trail distance 0.008 does not beat incumbent 0.01 in autotuner evaluation (NOT_IMPROVED vs TUNED). Changed MEME defaults affect tuning pipeline.",
+      "disposition": "flag_orchestrator"
+    },
+    {
+      "module": "test_replay_runner_regression",
+      "test": "test_readonly_source_and_distinct_runs_preserve_existing_output",
+      "issue_id": "i-018",
+      "reason": "Replay runner returns 0 closed trades. Uses different code path (sampled_price_replay.py) with its own entry/close logic.",
+      "disposition": "flag_orchestrator"
+    },
+    {
+      "module": "test_sampled_price_replay",
+      "test": "test_gaps_and_open_marks_are_explicit",
+      "issue_id": "i-018",
+      "reason": "Replay returns 0 gap-flagged closed trades. Related to replay framework logic.",
+      "disposition": "flag_orchestrator"
+    },
+    {
+      "module": "test_sampled_price_replay",
+      "test": "test_real_tick_opens_closes_and_accounts_for_costs",
+      "issue_id": "i-018",
+      "reason": "Replay returns 0 closed trades. Replay framework needs investigation.",
+      "disposition": "flag_orchestrator"
+    },
+    {
+      "module": "test_survival_repair",
+      "test": "test_collection_tuning_and_paper_application_work_end_to_end",
+      "issue_id": "i-014",
+      "reason": "Autotuner returns NO_CHANGE instead of TUNED (NOT_IMPROVED). Changed MEME defaults affect tuning pipeline. Same root cause as i-015.",
+      "disposition": "flag_orchestrator"
+    },
+    {
+      "module": "test_survival_repair",
+      "test": "test_legacy_path_does_not_permanently_poison_new_policy_cohort",
+      "issue_id": "i-014",
+      "reason": "Autotuner returns NO_CHANGE instead of TUNED (NOT_IMPROVED). Same root cause as above.",
+      "disposition": "flag_orchestrator"
+    }
+  ],
+  "expected_failures": [
+    {
+      "module": "test_volatility_gate",
+      "test": "test_volatility_gate_enabled_block_when_no_history",
+      "reason": "Requires volatility gate feature implementation",
+      "disposition": "unimplemented_feature"
+    },
+    {
+      "module": "test_volatility_gate",
+      "test": "test_volatility_gate_enabled_high_vol_pct_blocks",
+      "reason": "Requires volatility gate feature implementation",
+      "disposition": "unimplemented_feature"
+    }
+  ],
+  "skipped": [
+    "test_openai_api (4 tests in test_openai_api.py - requires API key)"
+  ],
+  "baseline_comparison": {
+    "baseline_failures": 27,
+    "baseline_errors": 11,
+    "baseline_skipped": 4,
+    "current_failures": 7,
+    "current_errors": 0,
+    "current_expected_failures": 2,
+    "current_skipped": 4,
+    "net_improvement": "27 failures + 11 errors -> 7 failures + 0 errors + 2 expected failures (31 issues eliminated)"
+  }
+}

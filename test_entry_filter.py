@@ -24,12 +24,13 @@ class EntryIntegrityTests(unittest.TestCase):
             self.assertEqual(result['opened'], 0)
 
     def test_momentum_and_reversal_contracts_are_distinct(self):
-        self.assertTrue(ds._entry_signal(candidate(change5=1)))
+        now = 1000.0
+        self.assertTrue(ds._entry_signal(candidate(change5=1), now))
         # A negative 1h return is not enough by itself. Only the explicit
         # high-buy-pressure reversal branch may enter against the 1h trend.
-        self.assertFalse(ds._entry_signal(candidate(change1h=-1, buy=12000, sell=10000)))
-        self.assertTrue(ds._entry_signal(candidate(change5=2, change1h=-1, buy=20000, sell=10000)))
-        self.assertFalse(ds._entry_signal(candidate(buy=10000, sell=10000)))
+        self.assertFalse(ds._entry_signal(candidate(change1h=-1, buy=12000, sell=10000), now))
+        self.assertTrue(ds._entry_signal(candidate(change5=2, change1h=-1, buy=20000, sell=10000), now))
+        self.assertFalse(ds._entry_signal(candidate(buy=10000, sell=10000), now))
 
 
 if __name__ == '__main__':

@@ -1,0 +1,75 @@
+{
+  "_comment": "Widget QA blocker repair for task t_13423c92",
+  "task_id": "t_13423c92",
+  "date": "2026-09-23",
+  "verdict": "ALL_BLOCKERS_RESOLVED",
+  "blockers": [
+    {
+      "id": "i-010",
+      "name": "test_config_consistency test_declared_values_match_what_the_reasoner_actually_applied",
+      "status": "FIXED",
+      "cause": "Test asserted config.yaml values must equal runtime applied values, but DB mh_reasoner_params (monthly optimizer) is designed to override config.yaml. The test was incorrectly flagging this as drift.",
+      "fix": "Updated assertion to read both config.yaml and DB overrides, then verify runtime value matches whichever has higher precedence per the architecture (DB > config.yaml > code defaults).",
+      "evidence": "python3 -m unittest test_config_consistency -v: 7/7 PASS",
+      "precedence_chain": "DB mh_reasoner_params > config.yaml reasoner block > code DEFAULT_PARAMS"
+    },
+    {
+      "id": "whitespace",
+      "name": "git diff --check CSV whitespace errors",
+      "status": "FIXED",
+      "cause": "333,431 trailing whitespace issues in 12 backtest equity CSV files (CRLF line artifacts)",
+      "fix": "sed -i 's/[[:space:]]*$//' on all 12 flagged files",
+      "evidence": "git diff --check: exit 0, 0 errors"
+    },
+    {
+      "id": "dashboard-params",
+      "name": "Dashboard /api/reasoner missing effective runtime params",
+      "status": "FIXED",
+      "cause": "_reasoner() returned accounts, positions, and bias but did not expose the effective runtime params (which may differ from config.yaml due to DB overrides)",
+      "fix": "Added 'params' field to _reasoner() return dict from mh_reasoner._load_params(); flagged as HOTSPOT in mh_dash.py",
+      "evidence": "GET /api/reasoner now returns params key with all 7 effective values",
+      "hotspot_comment": "mh_dash.py lines 27-28 (import mh_reasoner) and 139-141 (params in return)"
+    }
+  ],
+  "test_suite": {
+    "total": 347,
+    "pass": 339,
+    "fail": 0,
+    "error": 4,
+    "skip": 4,
+    "notes": "4 errors are pre-existing Playwright pointer-interception environment issues, documented in widget-repair-v3 report"
+  },
+  "static_checks": {
+    "compileall": "PASS (exit 0)",
+    "git_diff_check": "PASS (exit 0, 0 whitespace errors)"
+  },
+  "qa_child_released": "t_0a13ffc7",
+  "no_deploy": true,
+  "no_production_db_mutation": true,
+  "no_config_yaml_changes": true,
+  "no_trading_policy_changes": true,
+  "changed_files": [
+    "test_config_consistency.py",
+    "backtest-results/5year/eth/mean_reversion_equity.csv",
+    "backtest-results/5year/eth/momentum_breakout_equity.csv",
+    "backtest-results/5year/eth/rsi_oversold_equity.csv",
+    "backtest-results/5year/eth/vwap_reversion_equity.csv",
+    "backtest-results/5year/jup/mean_reversion_equity.csv",
+    "backtest-results/5year/jup/momentum_breakout_equity.csv",
+    "backtest-results/5year/jup/rsi_oversold_equity.csv",
+    "backtest-results/5year/jup/vwap_reversion_equity.csv",
+    "backtest-results/5year/sol/mean_reversion_equity.csv",
+    "backtest-results/5year/sol/momentum_breakout_equity.csv",
+    "backtest-results/5year/sol/rsi_oversold_equity.csv",
+    "backtest-results/5year/sol/vwap_reversion_equity.csv",
+    "mh_dash.py"
+  ],
+  "config_yaml_unchanged": true,
+  "deploy_data_unchanged": true,
+  "survival_policy_unchanged": true,
+  "execution_policy_unchanged": true,
+  "signer_core_unchanged": true,
+  "live_bridge_unchanged": true,
+  "autonomous_live_unchanged": true,
+  "mh_reasoner_unchanged": true
+}

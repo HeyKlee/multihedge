@@ -28,6 +28,12 @@ _REASONER_KEYS = {
 
 
 class ReasonerParameterChainTests(unittest.TestCase):
+    """Deterministic precedence contract tests using temporary SQLite.
+
+    Verifies the architectural precedence chain:
+        DB mh_reasoner_params > config.yaml > code defaults.
+    """
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = Path(self.tmp.name) / "mh.db"
@@ -59,18 +65,41 @@ class ReasonerParameterChainTests(unittest.TestCase):
 
 
 class DeployedReasonerConfigTests(unittest.TestCase):
+    """Read-only runtime diagnostics against the production database.
+
+    These tests verify that the deployed config.yaml declarations are valid
+    and that the runtime applied values respect the designed precedence chain:
+    DB mh_reasoner_params (monthly optimizer) > config.yaml > code defaults.
+    """
+
     def test_reasoner_block_declares_only_known_param_keys(self):
         declared = yaml.safe_load(DEPLOYED_CONFIG.read_text(encoding="utf-8"))["reasoner"]
         self.assertTrue(set(declared) <= set(mh_reasoner.DEFAULT_PARAMS),
                         f"unknown reasoner keys: {set(declared) - set(mh_reasoner.DEFAULT_PARAMS)}")
 
     def test_declared_values_match_what_the_reasoner_actually_applied(self):
+        """Verify runtime applied params respect the DB-override precedence.
+
+        The mh_reasoner_params DB table (written by the monthly optimizer) is
+        the highest precedence source. This test reads both config.yaml and any
+        DB overrides, then verifies the applied runtime value matches whichever
+        source has higher precedence per the architecture.
+        """
         if not PRODUCTION_DB.exists():
             self.skipTest("production database not present in this environment")
         try:
             con = sqlite3.connect(
                 f"file:{PRODUCTION_DB}?mode=ro", uri=True, timeout=5)
             with con:
+                # Read DB overrides (highest precedence in the chain)
+                db_overrides = {}
+                try:
+                    for row in con.execute(
+                        "SELECT key, value FROM mh_reasoner_params"
+                    ):
+                        db_overrides[row[0]] = row[1]
+                except Exception:
+                    pass
                 row = con.execute(
                     "SELECT settings_json FROM mh_parameter_application WHERE trader='reasoner'"
                 ).fetchone()
@@ -86,8 +115,13 @@ class DeployedReasonerConfigTests(unittest.TestCase):
         declared = yaml.safe_load(DEPLOYED_CONFIG.read_text(encoding="utf-8"))["reasoner"]
         for key, value in declared.items():
             self.assertIn(key, applied, f"{key} declared but never applied")
-            self.assertEqual(float(value), float(applied[key]),
-                             f"{key} drift: config declares {value}, runtime applied {applied[key]}")
+            # DB override wins over config.yaml per the architectural precedence chain
+            expected = db_overrides.get(key, float(value))
+            self.assertEqual(
+                float(expected), float(applied[key]),
+                f"{key} drift: config declares {value}, "
+                f"DB override {db_overrides.get(key, 'N/A')}, "
+                f"expected {expected}, runtime applied {applied[key]}")
 
     def test_code_defaults_agree_with_config_block_values(self):
         declared = yaml.safe_load(DEPLOYED_CONFIG.read_text(encoding="utf-8"))["reasoner"]

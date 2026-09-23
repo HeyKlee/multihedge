@@ -1,0 +1,109 @@
+{
+  "timestamp": "2026-09-22T18:55:00+12:00",
+  "repair_version": "v2",
+  "agent": "thecryptobot (deepseek/deepseek-v4-flash via openrouter)",
+  "exit_code": 1,
+  "duration_seconds": 54.075,
+  "total_tests": 336,
+  "pass": 324,
+  "fail": 8,
+  "error": 0,
+  "expected_failure": 0,
+  "skip": 4,
+  "summary": "FAILED (failures=8, skipped=4)",
+  "changes_from_v1": {
+    "new_failures": 1,
+    "removed_expected_failures": 2,
+    "net_exposed_issues": 8
+  },
+  "failures": [
+    {
+      "test": "test_declared_values_match_what_the_reasoner_actually_applied",
+      "module": "test_config_consistency",
+      "class": "DeployedReasonerConfigTests",
+      "issue_id": "i-010",
+      "disposition": "flag_orchestrator",
+      "detail": "Config declares TAKE_PROFIT=0.015, reasoner DB applies 0.05. Trading-core config/runtime drift."
+    },
+    {
+      "test": "test_busy_wait_is_bounded_in_both_connection_helpers",
+      "module": "test_db_lock_discipline",
+      "class": "BoundedWaitTests",
+      "issue_id": "new (restored policy assertion)",
+      "disposition": "flag_orchestrator",
+      "detail": "live_inventory.BUSY_TIMEOUT_SECONDS=30.0 exceeds 15s bounded-wait policy. live_inventory.py:203."
+    },
+    {
+      "test": "test_tighter_trail_can_be_adopted",
+      "module": "test_parameter_autotuner",
+      "class": "AutotunerTests",
+      "issue_id": "i-015",
+      "disposition": "flag_orchestrator",
+      "detail": "Candidate 0.008 does not beat incumbent 0.01 (NOT_IMPROVED). Changed MEME defaults affect tuning."
+    },
+    {
+      "test": "test_readonly_source_and_distinct_runs_preserve_existing_output",
+      "module": "test_replay_runner_regression",
+      "class": "RunnerRegressionTests",
+      "issue_id": "i-018",
+      "disposition": "flag_orchestrator",
+      "detail": "Replay runner returns 0 closed trades. sampled_price_replay.py code path."
+    },
+    {
+      "test": "test_gaps_and_open_marks_are_explicit",
+      "module": "test_sampled_price_replay",
+      "class": "SampledReplayTests",
+      "issue_id": "i-018",
+      "disposition": "flag_orchestrator",
+      "detail": "Replay returns 0 gaps. Replay framework issue."
+    },
+    {
+      "test": "test_real_tick_opens_closes_and_accounts_for_costs",
+      "module": "test_sampled_price_replay",
+      "class": "SampledReplayTests",
+      "issue_id": "i-018",
+      "disposition": "flag_orchestrator",
+      "detail": "Replay returns 0 closed trades. Replay framework issue."
+    },
+    {
+      "test": "test_collection_tuning_and_paper_application_work_end_to_end",
+      "module": "test_survival_repair",
+      "class": "CohortRepairTests",
+      "issue_id": "i-014",
+      "disposition": "flag_orchestrator",
+      "detail": "Autotuner NO_CHANGE vs TUNED. Tightened MEME defaults shift tuning outcome."
+    },
+    {
+      "test": "test_legacy_path_does_not_permanently_poison_new_policy_cohort",
+      "module": "test_survival_repair",
+      "class": "CohortRepairTests",
+      "issue_id": "i-014",
+      "disposition": "flag_orchestrator",
+      "detail": "Autotuner NO_CHANGE vs TUNED. Same root cause as above."
+    }
+  ],
+  "volatility_gate_tests": {
+    "status": "PASS",
+    "count": 4,
+    "hidden_expected_failures_removed": 2,
+    "notes": "Tests now exercise real _entry_signal behavior without @expectedFailure or silent kwargs"
+  },
+  "static_checks": {
+    "compileall": "PASS (exit 0)",
+    "git_diff_check": "PASS (exit 0)"
+  },
+  "browser_checks": {
+    "overview": "PASS",
+    "scalper": "PASS (all text fixes verified)",
+    "live_gate": "PASS (header 66.7% verified)",
+    "settings_panel": "PASS (layout editor, save, cancel functional)",
+    "memecoin": "CONFIRMED (header fix confirmed in source; browser rendering verified)"
+  },
+  "container_state": {
+    "running": true,
+    "code_hash_match": true,
+    "image": "sha256:3fdc2aaecd105b92ad07daa8dfa1a7bddc52e158bf26d875f2893557fd20e760",
+    "image_started": "2026-09-22T06:30:46Z",
+    "note": "Deployed by blocked release worker (t_2a3a7550). No deploy from this task."
+  }
+}

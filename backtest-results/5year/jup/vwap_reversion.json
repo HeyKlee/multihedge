@@ -9,23 +9,23 @@
     "Data gaps in Binance klines are silently skipped; no interpolation.",
     "Paper-only \u2014 not a live P&L forecast."
   ],
-  "closes_used": 23136,
-  "ending_equity_usd": 0.5582,
-  "gross_loss_usd": 32.4079,
-  "gross_profit_usd": 21.6619,
-  "losses": 723,
-  "max_drawdown_pct": 97.7202,
-  "n_trades": 1636,
-  "payoff_ratio": 0.5293,
+  "closes_used": 23160,
+  "ending_equity_usd": 0.5608,
+  "gross_loss_usd": 32.4082,
+  "gross_profit_usd": 21.6668,
+  "losses": 724,
+  "max_drawdown_pct": 97.7308,
+  "n_trades": 1639,
+  "payoff_ratio": 0.529,
   "per_side_bps": 40.0,
   "position_fraction": 0.3,
-  "profit_factor": 0.6684,
+  "profit_factor": 0.6686,
   "round_trip_bps": 80.0,
-  "sharpe_per_trade": -3.0867,
-  "sortino_per_trade": -3.5852,
+  "sharpe_per_trade": -3.0853,
+  "sortino_per_trade": -3.5837,
   "starting_equity_usd": 24.0,
-  "total_net_pnl_usd": -10.746,
-  "total_return_pct": -97.674,
+  "total_net_pnl_usd": -10.7415,
+  "total_return_pct": -97.6633,
   "trades": [
     {
       "cost": 0.029951312649164678,
@@ -18022,8 +18022,41 @@
       "qty": 0.6147814029190157,
       "side": "SELL",
       "ts": null
+    },
+    {
+      "cost": 0.0006685314000132112,
+      "gross": 0.1671328500033028,
+      "index": 23152,
+      "net": 0.16646431860328958,
+      "pnl": -0.0003363693927194711,
+      "price": 0.3019,
+      "qty": 0.5536033454895753,
+      "side": "SELL",
+      "ts": null
+    },
+    {
+      "cost": 0.0006846278446515232,
+      "gross": 0.17115696116288082,
+      "index": 23156,
+      "net": 0.17047233331822928,
+      "pnl": 0.003972313322360005,
+      "price": 0.2977,
+      "qty": 0.5749310082730292,
+      "side": "SELL",
+      "ts": null
+    },
+    {
+      "cost": 0.0006764059245657587,
+      "gross": 0.1691014811414397,
+      "index": 23159,
+      "net": 0.16842507521687394,
+      "pnl": 0.0009379280242785559,
+      "price": 0.2933,
+      "qty": 0.5765478388729618,
+      "side": "SELL",
+      "ts": null
     }
   ],
-  "win_rate": 55.81,
-  "wins": 913
+  "win_rate": 55.83,
+  "wins": 915
 }

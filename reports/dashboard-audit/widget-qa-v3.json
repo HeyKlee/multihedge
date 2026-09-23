@@ -1,0 +1,88 @@
+{
+  "_comment": "Widget QA v3 for task t_0a13ffc7 — independent execution-based verification",
+  "task_id": "t_0a13ffc7",
+  "date": "2026-09-23",
+  "verdict": "PASS",
+  "commit": "79d3b2bd57f406e5e779671ef85f670e1efa08db",
+  "mh_dash_hash": "ec4fa13cda44cffdf37043682eb34faa",
+  "test_dashboard_frontend_hash": "1c274669b2fa48b82a01796d4f8d6dc13d5ffe2f",
+  "previous_attempt_blockers": {
+    "t_13423c92_blockers": {
+      "test_config_consistency": "RESOLVED — 0 failures now (339 pass)",
+      "git_diff_check_whitespace": "RESOLVED — exit 0, 0 errors",
+      "container_hash_mismatch": "DEFERRED — expected until t_a4f3373b deploys"
+    }
+  },
+  "test_suite": {
+    "total": 347,
+    "pass": 339,
+    "fail": 0,
+    "error": 4,
+    "skip": 4,
+    "errors_detail": "4 pre-existing Playwright pointer-interception issues (identical across all runs)",
+    "new_tests_5": "ALL PASS (from t_bc12159c widget-repair)",
+    "config_consistency_7": "ALL PASS (from t_13423c92 blocker fix)"
+  },
+  "static_checks": {
+    "compileall": "PASS (exit 0)",
+    "git_diff_check": "PASS (exit 0, 0 whitespace errors)"
+  },
+  "widget_fixes_verified": [
+    {
+      "widget_issue_id": 1,
+      "name": "last-cycles-heatmap obscured by Live Market Tick",
+      "fix": "catalog-only absolute positioning in view mode",
+      "verification_method": "Browser DOM inspection — all non-catalog cards position=relative in view mode",
+      "verified": true,
+      "evidence": "getComputedStyle on 14 non-catalog cards confirms position:relative for all"
+    },
+    {
+      "widget_issue_id": 2,
+      "name": "live-market-tick covers other widgets",
+      "fix": "applyWidgetStyle only position:absolute for type==='catalog' in view mode",
+      "verification_method": "Browser DOM inspection — no catalog widgets with absolute positioning overlaying grid cards",
+      "verified": true,
+      "evidence": "live-market-tick card: position=relative in view mode"
+    },
+    {
+      "widget_issue_id": 3,
+      "name": "120s refresh while editing overlays widgets",
+      "fix": "EDITING guard on mini-market timer + interval restart on cancelEdit/saveLayout",
+      "verification_method": "Browser JS runtime — EDITING=true in edit mode, !EDITING guard confirmed in code",
+      "verified": true,
+      "evidence": "edit mode detent/restore works. Code has editing guard and interval restart"
+    }
+  ],
+  "edit_mode_verified": {
+    "enter_edit_mode": true,
+    "all_widgets_absolute_in_edit_mode": true,
+    "view_mode_restored_after_save": true,
+    "page_reload_preserves_layout": true,
+    "method": "browser click + console eval"
+  },
+  "all_tabs_verified": [
+    {"tab": "01 Overview", "api": "/api/summary, /api/positions, /api/market, /api/trades", "status": "PASS", "detail": "Collective wallet NZ$214.62, 2 positions, 3 coins, 5 recent trades"},
+    {"tab": "X Xora-Survival", "api": "/api/survival, /api/livegate", "status": "PASS", "detail": "2587 cycles, paper net $2.89, exit reasons, 2 on-chain fills RECONCILED"},
+    {"tab": "02 Market", "api": "/api/market, /api/pxhist", "status": "PASS", "detail": "All widgets render in CSS Grid, no overlap"},
+    {"tab": "03 Live Gate", "api": "/api/livegate", "status": "PASS", "detail": "5 gate entries all BLOCKED except grid PAPER"},
+    {"tab": "S Scalper", "api": "/api/summary", "status": "PASS", "detail": "Scalper SOL OPEN, ETH OPEN, JUP CLOSE"},
+    {"tab": "R Reasoner", "api": "/api/reasoner", "status": "PASS", "detail": "SOL UP 65%, JUP UP 75%, ETH UP 65%. 7 param keys"},
+    {"tab": "W Whale Copy", "api": "/api/whales", "status": "PASS", "detail": "Empty state renders correctly"},
+    {"tab": "M Memecoin", "api": "/api/memecoin", "status": "PASS", "detail": "Empty state renders correctly"},
+    {"tab": "G Grid", "api": "/api/grid", "status": "PASS", "detail": "Empty state renders correctly"}
+  ],
+  "widget_report_api_checked": true,
+  "widget_report_open_issues": 3,
+  "widget_report_note": "3 issues (id=1,2,3) remain in DB with status='new' — these are the originally reported bugs. Fixes prevent them reoccurring in UI. Issue status is DB-tracked, not auto-updated by code fixes.",
+  "no_source_code_edits": true,
+  "no_production_db_mutation": true,
+  "no_config_yaml_changes": true,
+  "no_trading_policy_changes": true,
+  "no_deploy": true,
+  "container_deployment": "PENDING — t_a4f3373b owns post-deploy verification",
+  "remaining_limitations": [
+    "4 pre-existing Playwright errors (headless pointer-interception)",
+    "Whale/Memecoin/Grid tabs: no active data (empty API — not a layout defect)",
+    "Container hash mismatch expected until t_a4f3373b deploys"
+  ]
+}
