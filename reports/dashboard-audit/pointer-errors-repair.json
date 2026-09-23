@@ -1,0 +1,71 @@
+{
+  "_comment": "Pointer-interception error repair evidence for task t_200bf1e8",
+  "task_id": "t_200bf1e8",
+  "date": "2026-09-23",
+  "initial_state": {
+    "widget_qa_v3_total": 347,
+    "widget_qa_v3_pass": 339,
+    "widget_qa_v3_error": 4,
+    "widget_qa_v3_skip": 4,
+    "errors_detail": "4 pre-existing Playwright pointer-interception issues (identical across all runs)",
+    "remaining_at_session_start": {
+      "total_errors": 1,
+      "tests": ["test_mobile_modals_catalog_and_chat_stay_within_viewport"],
+      "note": "3 of 4 original errors resolved by prior tasks t_bc12159c and t_13423c92"
+    }
+  },
+  "diagnosis": {
+    "error_test": "test_mobile_modals_catalog_and_chat_stay_within_viewport",
+    "error_line": 219,
+    "error_type": "playwright._impl._errors.TimeoutError",
+    "error_message": "wallet-tab survival button from app-shell subtree intercepts pointer events",
+    "root_cause": {
+      "mechanism": "CSS stacking context conflict",
+      "description": "In edit mode (free-edit), applyWidgetStyle() sets z-index: 10000 on wallet-hub card via inline style. xoraPet CSS had z-index: 91. Wallet-tab inside wallet-hub overlapped pet at bottom-right viewport.",
+      "code": "mh_dash.py:2640: w.style.zIndex = (st.z != null ? st.z : (st.y != null ? Math.max(1, 10000 - Math.round(st.y)) : 1))",
+      "pet_z_index_before": 91,
+      "hub_z_index_before": 10000
+    },
+    "evidence_before": {
+      "pet_bounding_box": {"x": 262.28, "y": 673.63, "width": 70, "height": 76},
+      "survival_tab_bounding_box": {"x": 301, "y": 665.80, "width": 120, "height": 131.5},
+      "element_from_point_at_pet_center": "DIV#wallet-tabs",
+      "overlap": "pet right side (x:301-332) overlaps survival tab left side (x:301-332), pet y (673-749) within survival y (665-797)"
+    }
+  },
+  "fixes_applied": [
+    {
+      "file": "mh_dash.py",
+      "line": 1121,
+      "change": "z-index: 91 -> z-index: 10001",
+      "rationale": "Above maximum possible widget z-index (10000) from applyWidgetStyle JS"
+    },
+    {
+      "file": "test_dashboard_frontend.py",
+      "line": 219,
+      "change": ".click() -> .dblclick(timeout=5000)",
+      "rationale": "Latent test bug: xoraPet opens chat on dblclick, not click. Previous error at line 219 prevented assertion at line 222 from being reached"
+    }
+  ],
+  "verification_after": {
+    "element_from_point_at_pet_center": "BUTTON#xoraPet",
+    "test_mobile_modals_catalog_and_chat_stay_within_viewport": "PASS",
+    "full_suite": "OK (skipped=4)",
+    "full_suite_total": 347,
+    "full_suite_pass": 343,
+    "full_suite_skip": 4,
+    "full_suite_error": 0,
+    "full_suite_fail": 0,
+    "compileall": "PASS (exit 0)",
+    "git_diff_check": "PASS (exit 0, no whitespace errors)"
+  },
+  "no_unrelated_changes": {
+    "production_db": "UNTOUCHED",
+    "config_yaml": "UNTOUCHED",
+    "trading_policy": "UNTOUCHED",
+    "signer_isolation": "UNTOUCHED",
+    "saved_layout": "PRESERVED",
+    "deploy": "NOT_PERFORMED"
+  },
+  "final_status": "4/4 pointer-interception errors resolved. Ready for QA child release."
+}

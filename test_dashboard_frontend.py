@@ -214,7 +214,9 @@ class DashboardFrontendTests(unittest.TestCase):
         catalog = self.page.locator("#widgetCatalog").bounding_box()
         self.assertLessEqual(catalog["width"], width)
         self.page.locator("#widgetCatalogClose").click()
-        self.page.locator("#xoraPet").dblclick(timeout=3000, force=True)
+        # Disable pet idle roam JS loop so Playwright considers the element stable
+        self.page.evaluate("() => { if(window.petStopIdleRoam) petStopIdleRoam(); }")
+        self.page.locator("#xoraPet").dblclick(timeout=5000)
         self.assert_no_mobile_overflow(width)
         chat = self.page.locator("#chatPanel").bounding_box()
         self.assertLessEqual(chat["width"], width)
@@ -271,13 +273,15 @@ class DashboardFrontendTests(unittest.TestCase):
         self.assertEqual(bubble.evaluate("el=>getComputedStyle(el).position"), "fixed")
         self.assertLessEqual(bubble.bounding_box()["right"] if False else bubble.bounding_box()["x"] + bubble.bounding_box()["width"], 1280)
         self.assertFalse(self.page.locator("#chatPanel").is_visible())
-        pet.dblclick(timeout=3000, force=True)
+        # Disable pet idle roam JS loop so Playwright considers the element stable
+        self.page.evaluate("() => { if(window.petStopIdleRoam) petStopIdleRoam(); }")
+        pet.dblclick(timeout=3000)
         self.assertTrue(self.page.locator("#chatPanel").is_visible())
         self.assertIn("Xora", self.page.locator(".chat-header span").inner_text())
         # Double-clicking again closes the panel
-        pet.dblclick(timeout=3000, force=True)
+        pet.dblclick(timeout=3000)
         self.assertFalse(self.page.locator("#chatPanel").is_visible())
-        pet.dblclick(timeout=3000, force=True)
+        pet.dblclick(timeout=3000)
         self.assertTrue(self.page.locator("#chatPanel").is_visible())
 
     def test_pet_can_be_dragged_and_bounces_off_walls(self):
@@ -516,7 +520,7 @@ class DashboardFrontendTests(unittest.TestCase):
         self.page.evaluate("""()=>{
           const ws={};
           const fw=window.freeWidgets?freeWidgets():[];
-          fw.forEach(({w},i)=>{ws[w.dataset.widgetId]={x:40+i*140,y:30,w:320,h:160};});
+          fw.forEach(({w},i)=>{ws[w.dataset.widgetId]={type:'catalog',x:40+i*140,y:30,w:320,h:160};});
           window._draftLayout=ws;
         }""")
         self.page.locator("#settingsBtn").click()
