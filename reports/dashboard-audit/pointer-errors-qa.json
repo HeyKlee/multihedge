@@ -1,0 +1,82 @@
+{
+  "_comment": "Independent QA evidence for task t_49287be3 — pointer-interception fix verification",
+  "task_id": "t_49287be3",
+  "parent_task": "t_200bf1e8",
+  "date": "2026-09-23",
+  "qa_agent": "iraia (deepseek/deepseek-v4-flash via openrouter)",
+  "verdict": "CONDITIONAL_PASS",
+  "verdict_summary": "z-index fix (91->10001) verified correct in source. Pointer-interception error resolved. Test suite has 33% flaky rate on dblclick due to pre-existing CSS petBob animation. Deploy required.",
+  "fixes_verified": {
+    "mh_dash_z_index": {
+      "expected": "z-index:10001",
+      "found": "z-index:10001",
+      "line": 1121,
+      "status": "VERIFIED_CORRECT"
+    },
+    "test_dblclick": {
+      "expected": ".dblclick(timeout=5000)",
+      "found": ".dblclick(timeout=5000)",
+      "line": 219,
+      "old": ".click()",
+      "status": "VERIFIED_CORRECT"
+    }
+  },
+  "source_hashes": {
+    "mh_dash_py": "31cd50f742a5f59e79002814516cdf858c066c0db9dbe581b1b5759d49f64fbf",
+    "test_dashboard_frontend_py": "06609bc650b5e068fc73c52acf9543abad73e1eb4e2ee1fd6a3e65685b8cfdb6"
+  },
+  "container_hash": {
+    "mh_dash_py_deployed": "62b4880a0c085c8589384e76e3e2d43e2e27ad67027a46d83ccd94575d7c5539",
+    "deploy_status": "NOT_DEPLOYED — source differs from container"
+  },
+  "static_checks": {
+    "compileall": "PASS (exit 0)",
+    "git_diff_check": "PASS (exit 0)"
+  },
+  "test_suite": {
+    "total": 347,
+    "pass_on_clean_run": 343,
+    "fail": 0,
+    "error_flaky": 1,
+    "skip": 4,
+    "flaky_rate_pct": 33,
+    "flaky_test": "test_mobile_modals_catalog_and_chat_stay_within_viewport",
+    "flaky_cause": "CSS animation petBob (3.2s ease-in-out infinite) makes element perpetually 'not stable' for Playwright stability check",
+    "flaky_note": "Pre-existing issue — was latent before fix because pointer-interception always blocked line 219 first"
+  },
+  "skipped_tests": [
+    {"test": "test_chain_config", "reason": "Solana dependencies unavailable: No module named 'solders'"},
+    {"test": "test_pet_speech_updates_when_hovering_widget", "reason": "no card elements in mock view"},
+    {"test": "test_solana_signer_backend", "reason": "Solana dependencies unavailable: No module named 'solders'"},
+    {"test": "test_widget_parsing", "reason": "diagnostic script, not an automated test"}
+  ],
+  "browser_verification": {
+    "deployed_z_index": 91,
+    "element_from_point": "BUTTON#xoraPet (no interception in desktop viewport)",
+    "absolute_cards_in_view_mode": "none",
+    "widget_issues_1_2_3": "all fixed in deployed container",
+    "supervisor_processes": "9/9 RUNNING",
+    "api_endpoints": "valid responses"
+  },
+  "actionable_findings": [
+    {
+      "finding": "DEPLOY_REQUIRED",
+      "detail": "Container mh_dash.py has z-index:91. Source has z-index:10001. Deploy mh_dash.py to make fix effective in production.",
+      "severity": "high"
+    },
+    {
+      "finding": "FLAKY_TEST",
+      "detail": "test_mobile_modals_catalog_and_chat_stay_within_viewport fails 1/3 runs on dblclick. Root cause: petBob CSS animation makes element 'not stable'. Fix: pause animationPlayState before dblclick.",
+      "severity": "medium"
+    }
+  ],
+  "safety_invariants": {
+    "production_db": "UNTOUCHED",
+    "kelly_layout": "PRESERVED",
+    "config_yaml": "UNTOUCHED",
+    "trading_policy": "UNTOUCHED",
+    "signer_isolation": "UNTOUCHED",
+    "no_remove_orphans": "CONFIRMED",
+    "autohedge": "UNTOUCHED"
+  }
+}
