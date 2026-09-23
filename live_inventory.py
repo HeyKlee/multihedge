@@ -7,21 +7,24 @@ from pathlib import Path
 
 # Memecoin scalp (fast): match the observed +0.34% mean 1h forward return
 # and 55.7% positive label rate. 1.5% TP / 1.5% SL gives trades room to
-# realize the signal while containing downside. Trail arm at 2% captures
-# stronger moves. Max hold 1800s (30 min) keeps evidence accumulating.
+# realize the signal while containing downside. Trail arm at 0.5% captures
+# the observed average peak (~1%) and protects it from riding back to SL;
+# a trade peaking at +1% arms the trail and stops at ~+0.7% instead of
+# falling to -1.5% SL unprotected. Max hold 1800s (30 min) keeps evidence
+# accumulating.
 # These values stay fixed until the evidence gate opens at 30 closed trades.
 MEME_TAKE_PROFIT_PCT = 0.015
 MEME_STOP_LOSS_PCT = -0.015
-MEME_TRAIL_ARM_PCT = 0.020
-MEME_TRAIL_DISTANCE_PCT = 0.010
+MEME_TRAIL_ARM_PCT = 0.005
+MEME_TRAIL_DISTANCE_PCT = 0.003
 MEME_MAX_HOLD_SECONDS = 1800
 
 # Serious / backed coins (present in the config `coins` list, e.g. JUP, ETH):
 # day-traded, allowed to swing over hours instead of a 15-minute scalp.
 SERIOUS_TAKE_PROFIT_PCT = 0.010
 SERIOUS_STOP_LOSS_PCT = -0.010
-SERIOUS_TRAIL_ARM_PCT = 0.015
-SERIOUS_TRAIL_DISTANCE_PCT = 0.008
+SERIOUS_TRAIL_ARM_PCT = 0.005
+SERIOUS_TRAIL_DISTANCE_PCT = 0.003
 SERIOUS_MAX_HOLD_SECONDS = 1800
 
 # Legacy names kept so existing imports/tests see the memecoin defaults.
