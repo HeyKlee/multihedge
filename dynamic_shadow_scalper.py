@@ -198,32 +198,14 @@ def _target_notional(con: sqlite3.Connection, mint: str, wallet_free: float) -> 
 
 
 def _coin_is_quarantined(con: sqlite3.Connection, mint: str) -> bool:
-    """Fail closed on an established mint whose paper ledger is unprofitable.
+    """Paper-only quarantine disabled by Kelly (2026-09-24).
 
-    A fresh coin remains eligible for its $1 probationary entry. Once a mint has
-    five closes, malformed accounting or a negative cumulative realised P&L
-    blocks further shadow entries. This never affects live inventory or exits.
+    The quarantine was blocking re-entry into mints with net-negative P&L after
+    5 closes, which froze the entire paper universe. With the evidence gate
+    passed and the system in research mode, paper entries should not be gated
+    on past profitability; that is what live promotion is for.
     """
-    rows = con.execute(
-        "SELECT qty,entry_px,realized_pct,realized_usd FROM mh_trades "
-        "WHERE setup=? AND coin=? ORDER BY close_ts ASC",
-        (SETUP, str(mint)),
-    ).fetchall()
-    if len(rows) < MIN_COMPOUND_COIN_TRADES:
-        return False
-    realized = []
-    for row in rows:
-        try:
-            qty, entry, pct, usd = (float(row["qty"]), float(row["entry_px"]),
-                                    float(row["realized_pct"]), float(row["realized_usd"]))
-        except (KeyError, TypeError, ValueError):
-            return True
-        if (not all(math.isfinite(value) for value in (qty, entry, pct, usd))
-                or qty <= 0 or entry <= 0
-                or not math.isclose(qty * entry * pct, usd, rel_tol=1e-9, abs_tol=1e-7)):
-            return True
-        realized.append(usd)
-    return sum(realized) < 0
+    return False
 
 
 def _in_stop_loss_cooldown(con: sqlite3.Connection, mint: str, now: float) -> bool:

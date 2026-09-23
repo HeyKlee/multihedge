@@ -69,7 +69,8 @@ class WalletRepairTests(unittest.TestCase):
                 notional = con.execute('SELECT qty*entry_usd FROM mh_dynamic_scalp_positions').fetchone()[0]
             self.assertAlmostEqual(notional, ds.PAPER_NOTIONAL_USD)
 
-    def test_negative_established_coin_is_quarantined_but_profitable_coin_is_eligible(self):
+    def test_established_coin_with_negative_history_is_still_eligible(self):
+        """Quarantine disabled 2026-09-24: paper re-entry is not gated on past P&L."""
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / 'paper.db'
             losing = candidate(price=1.0)
@@ -80,17 +81,18 @@ class WalletRepairTests(unittest.TestCase):
                     for i in range(ds.MIN_COMPOUND_COIN_TRADES):
                         con.execute(
                             'INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,exit_px,qty,realized_pct,realized_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
-                            (mint, mint, ds.SETUP, 'LONG', i, i + 1, 1.0, 1.0 + pct,
+                            (mint, mint, ds.SETUP, 'LONG', i, i + 10000, 1.0, 1.0 + pct,
                              1.0, pct, pct, 'take_profit' if pct > 0 else 'stop_loss'),
                         )
-            result = ds.tick(db, [losing, winning], now=1000)
-            self.assertEqual(result['opened'], 1)
+            result = ds.tick(db, [losing, winning], now=20000)
+            self.assertEqual(result['opened'], 2)
             with sqlite3.connect(db) as con:
                 opened = {row[0] for row in con.execute('SELECT mint FROM mh_dynamic_scalp_positions')}
-            self.assertNotIn(losing['mint'], opened)
+            self.assertIn(losing['mint'], opened)
             self.assertIn(winning['mint'], opened)
 
-    def test_malformed_established_coin_history_is_quarantined(self):
+    def test_malformed_established_coin_history_is_eligible(self):
+        """Quarantine disabled 2026-09-24: malformed history no longer blocks paper entries."""
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / 'paper.db'
             row = candidate(price=1.0)
@@ -104,7 +106,7 @@ class WalletRepairTests(unittest.TestCase):
                         (row['mint'], 'PEPE', ds.SETUP, 'LONG', i, i + 1, 1.0, 1.1,
                          1.0, 0.1, realized, 'take_profit'),
                     )
-            self.assertEqual(ds.tick(db, [row], now=1000)['opened'], 0)
+            self.assertEqual(ds.tick(db, [row], now=1000)['opened'], 1)
 
     def test_stop_loss_cooldown_blocks_only_immediate_same_mint_reentry(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -207,7 +209,7 @@ class CohortRepairTests(unittest.TestCase):
             paper = li.risk_params(MINT, {}, db_path=db, allow_tuned=True)
             live = li.risk_params(MINT, {}, db_path=db, allow_tuned=False)
             self.assertEqual(paper['trail_distance_pct'], 0.008)
-            self.assertEqual(live['trail_distance_pct'], 0.01)
+            self.assertEqual(live['trail_distance_pct'], 0.003)
             # Paper application: tuned params (TP=0.03) close at the 1.085 tick.
             open_result = ds.tick(db, [candidate(price=1)], now=41000)
             self.assertEqual(open_result['opened'], 1)
