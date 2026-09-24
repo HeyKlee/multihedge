@@ -18,9 +18,9 @@ class LiveInventoryDefaultsTest(unittest.TestCase):
     """Verify MEME and SERIOUS defaults match config.yaml intent."""
 
     def test_meme_defaults_match_intended_config(self):
-        """MEME defaults should be 1.5% TP, 1.5% SL, 0.5% trail arm, 0.3% trail dist, 30min max hold."""
+        """MEME defaults should be 1.5% TP, 1.0% SL, 0.5% trail arm, 0.3% trail dist, 30min max hold."""
         self.assertAlmostEqual(MEME_TAKE_PROFIT_PCT, 0.015, places=4)
-        self.assertAlmostEqual(MEME_STOP_LOSS_PCT, -0.015, places=4)
+        self.assertAlmostEqual(MEME_STOP_LOSS_PCT, -0.010, places=4)
         self.assertAlmostEqual(MEME_TRAIL_ARM_PCT, 0.005, places=4)
         self.assertAlmostEqual(MEME_TRAIL_DISTANCE_PCT, 0.003, places=4)
         self.assertEqual(MEME_MAX_HOLD_SECONDS, 1800)

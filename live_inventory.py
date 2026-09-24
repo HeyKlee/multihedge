@@ -14,7 +14,7 @@ from pathlib import Path
 # accumulating.
 # These values stay fixed until the evidence gate opens at 30 closed trades.
 MEME_TAKE_PROFIT_PCT = 0.015
-MEME_STOP_LOSS_PCT = -0.015
+MEME_STOP_LOSS_PCT = -0.010
 MEME_TRAIL_ARM_PCT = 0.005
 MEME_TRAIL_DISTANCE_PCT = 0.003
 MEME_MAX_HOLD_SECONDS = 1800
