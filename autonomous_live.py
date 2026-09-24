@@ -472,7 +472,7 @@ def strategy_evidence(cfg: dict, *, now: float | None = None) -> dict:
     max_age = int(autonomous_config(cfg).get("evidence_max_age_seconds", 86400))
     if max_age <= 0:
         raise DecisionDenied("invalid evidence freshness window")
-    uri = f"file:{db_path.resolve()}?mode=ro"
+    uri = f"file:{db_path.resolve()}?mode=ro&immutable=1"
     with sqlite3.connect(uri, uri=True) as con:
         rows = con.execute(
             "SELECT coin,symbol,setup,realized_pct,realized_usd FROM mh_trades "
@@ -568,7 +568,7 @@ def market_context(cfg: dict, balances: dict) -> dict:
         "MULTIHEDGE_EVIDENCE_DB", str(Path(__file__).parent / "deploy/data/multihedge.db")
     ))
     context = {"balances": balances, "assets": {}}
-    uri = f"file:{db_path.resolve()}?mode=ro"
+    uri = f"file:{db_path.resolve()}?mode=ro&immutable=1"
     with sqlite3.connect(uri, uri=True) as con:
         for coin in tradeable_universe(cfg):
             if isinstance(coin.get("market"), dict):
