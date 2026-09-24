@@ -24,7 +24,7 @@ from execution_policy import TradeIntent
 
 USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 NATIVE_SOL_MINT = "So11111111111111111111111111111111111111112"
-WALLET_PUBKEY = "CqsTCGDXQBeGUAPXHtGDFZ3cU1pqMWiuf9B6hxAZqaxw"
+WALLET_PUBKEY = os.getenv("WALLET_PUBKEY", "")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 AUTONOMOUS_MODEL = "deepseek/deepseek-v4-flash-0731"
 DECISION_FIELDS = frozenset(
