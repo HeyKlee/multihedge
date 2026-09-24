@@ -1,0 +1,14 @@
+{
+  "evaluation": {
+    "SERIOUS": {
+      "closed": 13,
+      "path_ready": 12,
+      "required": 30,
+      "state": "INSUFFICIENT_HISTORY"
+    }
+  },
+  "evaluation_logged": true,
+  "round_trip_cost_pct": 0.008,
+  "state": "NO_CHANGE",
+  "tuned": {}
+}
