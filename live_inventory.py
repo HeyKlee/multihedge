@@ -262,8 +262,10 @@ def _connect_ro(path: Path):
 
     Default _connect opens in read-write mode and SQLite tries to create journal
     files, which fails in --read-only containers. URI mode ?mode=ro avoids this.
+    immutable=1 tells SQLite the file is static so it skips WAL/journal checks
+    that require write access to the directory.
     """
-    uri = f"file:{Path(path).resolve()}?mode=ro"
+    uri = f"file:{Path(path).resolve()}?mode=ro&immutable=1"
     con = sqlite3.connect(uri, uri=True, timeout=BUSY_TIMEOUT_SECONDS)
     con.row_factory = sqlite3.Row
     return con
