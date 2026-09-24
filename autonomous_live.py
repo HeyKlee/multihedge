@@ -305,6 +305,110 @@ def deepseek_decision(cfg: dict, market_context: dict) -> dict:
     return validate_decision(_resolve_label(extract_json(content), label_to_symbol), cfg)
 
 
+JEV_MODEL = "typesafe/jev-1.13"
+JEV_DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
+
+
+def jev_decision(cfg: dict, market_context: dict) -> dict:
+    """Make trading decisions using Jev (TypeSafe decision model via OpenRouter).
+
+    Sends structured state + typed questions. Jev returns calibrated
+    probabilities - no text parsing needed. Falls back to deepseek_decision
+    if Jev is unavailable.
+    """
+    validate_market_context(market_context, cfg)
+    key = os.getenv("OPENROUTER_API_KEY")
+    if not key:
+        raise DecisionDenied("OpenRouter credential unavailable")
+    universe, label_to_symbol = _asset_labels(cfg)
+    assets = market_context.get("assets", {})
+
+    # Build state: holdings + market context
+    state_assets = []
+    for coin in sorted(universe, key=lambda x: x.get("symbol", "")):
+        sym = coin.get("symbol", "")
+        data = assets.get(sym, {})
+        entry = {
+            "id": coin.get("id", sym),
+            "price_usd": data.get("latest_usd", 0),
+            "change_5m_pct": data.get("change_5m_pct", data.get("return_5m_pct", 0)),
+            "change_1h_pct": data.get("change_1h_pct", data.get("return_1h_pct", 0)),
+            "volume_5m_usd": data.get("volume_5m_usd", 0),
+            "forward_win_rate_pct": market_context.get("forward_wr", 55.6),
+            "forward_mean_return_pct": market_context.get("forward_mean", 0.34),
+        }
+        state_assets.append(entry)
+
+    state = {
+        "portfolio_equity_usd": market_context.get("balances", {}).get("USDC", 0),
+        "assets": state_assets,
+        "timestamp": int(market_context.get("timestamp", 0)),
+    }
+
+    questions = {}
+    for coin in universe:
+        sym = coin.get("symbol", "")
+        qid = sym.replace("-", "_").replace(".", "_")[:30]
+        questions[qid] = {
+            "type": "choice",
+            "instructions": "Choose the best action for " + sym + ":",
+            "criteria": {
+                "BUY": "Momentum, volume, and directional signals are positive. Expect near-term upward move.",
+                "HOLD": "Signals are mixed, weak, or unclear. No actionable edge right now.",
+                "SELL": "Signals are negative or deteriorating. If held, exit the position.",
+            },
+        }
+
+    response = httpx.post(
+        JEV_DECISIONS_URL,
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        json={"model": JEV_MODEL, "state": state, "questions": questions},
+        timeout=45,
+    )
+    if response.status_code == 401:
+        raise DecisionDenied("OpenRouter auth failed (Jev)")
+    if response.status_code != 200:
+        raise DecisionDenied(f"Jev HTTP {response.status_code}")
+
+    body = response.json()
+    answers = body.get("answers", {})
+
+    # Pick the best action: highest-confidence BUY or SELL above threshold
+    min_conf = float(autonomous_config(cfg).get("min_confidence", 0.70))
+    best_action = None
+    best_conf = 0.0
+    best_symbol = None
+
+    for coin in universe:
+        sym = coin.get("symbol", "")
+        qid = sym.replace("-", "_").replace(".", "_")[:30]
+        ans = answers.get(qid, {})
+        if ans.get("type") != "choice":
+            continue
+        choice = ans.get("choice", "HOLD")
+        conf = ans.get("confidence", 0.0)
+        if choice in ("BUY", "SELL") and conf >= min_conf and conf > best_conf:
+            best_action = choice
+            best_conf = conf
+            best_symbol = sym
+
+    if best_action is None:
+        return {"action": "HOLD", "symbol": list(label_to_symbol.values())[0] if label_to_symbol else "UNKNOWN",
+                "confidence": 0.0, "expected_reward_nzd": 0, "expected_loss_nzd": 0}
+
+    # Compute expected reward/loss from forward label data
+    notional_usd = float(cfg.get("paper", {}).get("notional_usd", 1.0))
+    fwd_mean = float(market_context.get("forward_mean", 0.0034))
+    expected_reward = round(notional_usd * abs(fwd_mean) * 3, 4)  # 3x mean move
+    expected_loss = round(notional_usd * abs(fwd_mean) * 1.5, 4)  # 1.5x mean move
+    if expected_reward < expected_loss * 2:
+        expected_reward = expected_loss * 2
+
+    raw = {"action": best_action, "symbol": best_symbol, "confidence": best_conf,
+           "expected_reward_nzd": expected_reward, "expected_loss_nzd": expected_loss}
+    return validate_decision(_resolve_label(raw, label_to_symbol), cfg)
+
+
 def append_cycle_log(path: Path, result: dict, now: float) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -545,6 +649,17 @@ def queue_intent(cfg: dict, intent: TradeIntent) -> dict:
             "duplicate": False}
 
 
+def _jev_or_fallback(cfg: dict, market_context: dict) -> dict:
+    """Try Jev first; fall back to deepseek if Jev fails."""
+    try:
+        return jev_decision(cfg, market_context)
+    except DecisionDenied as exc:
+        # Log fallback reason and try deepseek
+        import sys as _sys
+        print(json.dumps({"state": "JEV_FALLBACK", "reason": str(exc)}), file=_sys.stderr)
+        return deepseek_decision(cfg, market_context)
+
+
 def main() -> int:
     import yaml
     from live_inventory import list_holdings
@@ -581,8 +696,9 @@ def main() -> int:
         Path(os.getenv("MULTIHEDGE_FORCED_EXIT", "/tmp/multihedge_forced_exit.json")),
         registered,
     )
+    model_call = (lambda *_: forced) if forced else _jev_or_fallback
     result = run_cycle(
-        cfg, model_call=(lambda *_: forced) if forced else deepseek_decision,
+        cfg, model_call=model_call,
         balance_reader=lambda _: balances,
         evidence_reader=strategy_evidence, executor=queue_intent,
         log_path=Path(os.getenv(
