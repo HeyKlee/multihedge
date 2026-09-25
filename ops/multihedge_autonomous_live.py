@@ -114,6 +114,28 @@ def main():
         marker.write_text(str(bucket), encoding="utf-8")
         os.chmod(marker, 0o600)
 
+        # Snapshot the evidence DB from inside the writer container. The host
+        # file only reflects its last WAL checkpoint, so a reader mounting it
+        # directly sees minute-old prices and trips the freshness gate
+        # (model_or_validation_failure). A consistent snapshot taken through
+        # the container sees the live WAL state without any shared-sidecar risk.
+        snapshot = DATA / "agent_evidence_snapshot.db"
+        snap = run([
+            "docker", "exec", "--user", runtime_user, "multihedge", "python3", "-c",
+            "import sqlite3;src=sqlite3.connect('file:/app/multihedge.db?mode=ro',uri=True);"
+            "dst=sqlite3.connect('/tmp/evidence_snapshot.db');src.backup(dst);dst.close();src.close()",
+        ])
+        if snap.returncode != 0:
+            print(json.dumps({"state": "HOLD", "reason": "evidence_snapshot_failed",
+                              "exit_code": snap.returncode, "stderr": tail(snap.stderr)}))
+            return 1
+        copy = run(["docker", "cp", "multihedge:/tmp/evidence_snapshot.db", str(snapshot)])
+        if copy.returncode != 0 or not snapshot.exists():
+            print(json.dumps({"state": "HOLD", "reason": "evidence_snapshot_failed",
+                              "exit_code": copy.returncode, "stderr": tail(copy.stderr)}))
+            return 1
+        os.chmod(snapshot, 0o600)
+
         agent = run([
             "docker", "run", "--rm", "--read-only", "--user", runtime_user,
             "--cap-drop=ALL", "--security-opt=no-new-privileges",
@@ -122,7 +144,8 @@ def main():
             "-e", "MULTIHEDGE_LIVE_QUEUE=/queue",
             "-e", "MULTIHEDGE_AUTONOMOUS_LOG=/logs/cycles.jsonl",
             "-e", "MULTIHEDGE_FORCED_EXIT=/logs/forced_exit.json",
-            "-v", f"{DATA / 'multihedge.db'}:/data/multihedge.db:ro",
+            "-e", "MULTIHEDGE_JEV_CALL_LOG=/logs/jev_calls.jsonl",
+            "-v", f"{snapshot}:/data/multihedge.db:ro",
             "-v", f"{queue}:/queue:rw", "-v", f"{logs}:/logs:rw",
             IMAGE, "python", "/app/autonomous_live.py",
         ])
@@ -151,8 +174,18 @@ def main():
                               "agent": agent_result, "exit_code": signer.returncode,
                               "stderr": tail(signer.stderr)}))
             return 1
+        # Best effort: score any JEV calls whose horizon has now elapsed. A
+        # scorecard failure must never block the trading cycle itself.
+        scorecard = None
+        try:
+            scored = run(["python3", str(ROOT / "ops" / "jev_scorecard.py")])
+            scorecard = last_json(scored.stdout) if scored and scored.stdout else None
+        except Exception as exc:
+            scorecard = {"state": "SCORECARD_ERROR", "error": str(exc)[:200]}
+
         print(json.dumps({"state": "AUTONOMOUS_CYCLE_COMPLETE", "shadow": shadow_result,
-                          "agent": agent_result, "signer": signer_result}, sort_keys=True))
+                          "agent": agent_result, "signer": signer_result,
+                          "scorecard": scorecard}, sort_keys=True))
         return 0
 
 

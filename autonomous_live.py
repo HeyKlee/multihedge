@@ -307,6 +307,25 @@ def deepseek_decision(cfg: dict, market_context: dict) -> dict:
 
 JEV_MODEL = "typesafe/jev-1.13"
 JEV_DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
+JEV_CALL_LOG = os.getenv("MULTIHEDGE_JEV_CALL_LOG", "")
+JEV_HORIZON_S = int(os.getenv("MULTIHEDGE_JEV_HORIZON_S", "300"))
+
+
+def append_jev_calls(path, records: list) -> None:
+    """Persist every call so its forward outcome can be scored later.
+
+    Without this there is no way to answer whether the model is right: only the
+    chosen trade survives into cycles.jsonl, and calls it rejected as HOLD leave
+    no trace to check against the price that followed.
+    """
+    if not path or not records:
+        return
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        for record in records:
+            handle.write(json.dumps(record, sort_keys=True, separators=(",", ":"),
+                                    allow_nan=False) + "\n")
 
 
 def jev_decision(cfg: dict, market_context: dict) -> dict:
@@ -373,11 +392,12 @@ def jev_decision(cfg: dict, market_context: dict) -> dict:
     body = response.json()
     answers = body.get("answers", {})
 
-    # Pick the best action: highest-confidence BUY or SELL above threshold
+    # Pick the best action: highest-probability BUY or SELL above threshold
     min_conf = float(autonomous_config(cfg).get("min_confidence", 0.70))
     best_action = None
-    best_conf = 0.0
+    best_prob = 0.0
     best_symbol = None
+    calls = []
 
     for coin in universe:
         sym = coin.get("symbol", "")
@@ -386,11 +406,32 @@ def jev_decision(cfg: dict, market_context: dict) -> dict:
         if ans.get("type") != "choice":
             continue
         choice = ans.get("choice", "HOLD")
-        conf = ans.get("confidence", 0.0)
-        if choice in ("BUY", "SELL") and conf >= min_conf and conf > best_conf:
+        # probabilities[choice] is the calibrated decision probability and is
+        # authoritative. The scalar `confidence` field only tracks how sure the
+        # model is in its own pick and reads systematically lower, so gating on
+        # it silently drops calls the model was actually confident about.
+        probabilities = ans.get("probabilities") or {}
+        if choice in probabilities:
+            prob = _finite_number(probabilities.get(choice), "probability", 0, 1)
+        else:
+            prob = _finite_number(ans.get("confidence", 0.0), "confidence", 0, 1)
+        calls.append({
+            "ts": int(market_context.get("timestamp", 0)),
+            "symbol": sym,
+            "choice": choice,
+            "probability": prob,
+            "confidence": ans.get("confidence"),
+            "probabilities": probabilities,
+            "price_usd": assets.get(sym, {}).get("latest_usd"),
+            "horizon_s": JEV_HORIZON_S,
+            "model": JEV_MODEL,
+        })
+        if choice in ("BUY", "SELL") and prob >= min_conf and prob > best_prob:
             best_action = choice
-            best_conf = conf
+            best_prob = prob
             best_symbol = sym
+
+    append_jev_calls(JEV_CALL_LOG, calls)
 
     if best_action is None:
         return {"action": "HOLD", "symbol": list(label_to_symbol.values())[0] if label_to_symbol else "UNKNOWN",
@@ -404,7 +445,7 @@ def jev_decision(cfg: dict, market_context: dict) -> dict:
     if expected_reward < expected_loss * 2:
         expected_reward = expected_loss * 2
 
-    raw = {"action": best_action, "symbol": best_symbol, "confidence": best_conf,
+    raw = {"action": best_action, "symbol": best_symbol, "confidence": best_prob,
            "expected_reward_nzd": expected_reward, "expected_loss_nzd": expected_loss}
     return validate_decision(_resolve_label(raw, label_to_symbol), cfg)
 

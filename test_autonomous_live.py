@@ -406,5 +406,77 @@ class AutonomousLiveTests(unittest.TestCase):
             worker.validate_autonomous_order_id(CFG, intent, 7200)
 
 
+class JevDecisionGateTests(unittest.TestCase):
+    """The gate must read the calibrated decision probability, not the scalar
+    confidence field, and every call must be recorded for later scoring."""
+
+    def _context(self):
+        return {
+            "timestamp": 1800,
+            "balances": {"USDC": 33.0, "SOL": .04, "JUP": 0, "ETH": 0},
+            "forward_mean": 0.01,
+            "forward_wr": 55.5,
+            "assets": {
+                "JUP": {"latest_usd": .2, "latest_ts": 1800, "samples": 3},
+                "ETH": {"latest_usd": 2000.0, "latest_ts": 1800, "samples": 3},
+            },
+        }
+
+    def _answers(self):
+        return {
+            "JUP": {"type": "choice", "choice": "HOLD", "confidence": 0.56,
+                    "probabilities": {"BUY": 0.28, "HOLD": 0.70, "SELL": 0.02}},
+            "ETH": {"type": "choice", "choice": "BUY", "confidence": 0.51,
+                    "probabilities": {"BUY": 0.83, "HOLD": 0.16, "SELL": 0.01}},
+        }
+
+    def _decision(self, answers, env_extra=None):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {"answers": answers}
+        env = {"OPENROUTER_API_KEY": "test-key"}
+        env.update(env_extra or {})
+        with patch.dict("os.environ", env), \
+                patch.object(al.httpx, "post", return_value=response), \
+                patch.object(al, "validate_market_context", Mock()):
+            return al.jev_decision(CFG, self._context())
+
+    def test_gate_reads_calibrated_probability_not_scalar_confidence(self):
+        decision = self._decision(self._answers())
+        self.assertEqual(decision["action"], "BUY")
+        self.assertEqual(decision["symbol"], "ETH")
+        self.assertAlmostEqual(decision["confidence"], 0.83)
+
+    def test_low_probability_still_blocks_despite_high_scalar_confidence(self):
+        answers = {"ETH": {"type": "choice", "choice": "BUY", "confidence": 0.95,
+                           "probabilities": {"BUY": 0.60, "HOLD": 0.39, "SELL": 0.01}}}
+        decision = self._decision(answers)
+        self.assertEqual(decision["action"], "HOLD")
+
+    def test_missing_probabilities_falls_back_to_scalar_confidence(self):
+        answers = {"ETH": {"type": "choice", "choice": "BUY", "confidence": 0.81}}
+        decision = self._decision(answers)
+        self.assertEqual(decision["action"], "BUY")
+        self.assertAlmostEqual(decision["confidence"], 0.81)
+
+    def test_every_call_is_logged_with_probability_and_reference_price(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / "jev_calls.jsonl"
+            with patch.object(al, "JEV_CALL_LOG", str(log)):
+                self._decision(self._answers())
+            rows = [json.loads(line) for line in log.read_text().splitlines() if line.strip()]
+        by_symbol = {row["symbol"]: row for row in rows}
+        self.assertEqual(set(by_symbol), {"JUP", "ETH"})
+        self.assertEqual(by_symbol["JUP"]["choice"], "HOLD")
+        self.assertAlmostEqual(by_symbol["ETH"]["probability"], 0.83)
+        self.assertEqual(by_symbol["ETH"]["price_usd"], 2000.0)
+        self.assertEqual(by_symbol["ETH"]["ts"], 1800)
+        self.assertEqual(by_symbol["ETH"]["model"], al.JEV_MODEL)
+
+    def test_call_logging_is_optional_and_never_breaks_the_cycle(self):
+        decision = self._decision(self._answers())
+        self.assertEqual(decision["symbol"], "ETH")
+
+
 if __name__ == "__main__":
     unittest.main()
