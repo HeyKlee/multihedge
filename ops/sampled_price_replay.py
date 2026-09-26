@@ -119,7 +119,15 @@ def replay(rows, output, cfg, per_side_bps=40.0, max_gap_seconds=300.0):
             )
             candidates.append({'mint': mint, 'ticker': 'REPLAY', 'decimals': 0,
                                'market': market})
-        tick(db, candidates, now=ts, cfg=cfg)
+        # This harness models its own friction explicitly (per_side_bps, applied
+        # to entry+exit notional) so it can report gross and net side by side.
+        # The kernel now charges a round trip of its own, so tell it to charge
+        # nothing here; otherwise the cost is counted twice and the sensitivity
+        # study silently understates results.
+        kernel_cfg = dict(cfg or {})
+        kernel_cfg['paper'] = {**(cfg or {}).get('paper', {}),
+                               'quote_bps': 0, 'slippage_bps': 0}
+        tick(db, candidates, now=ts, cfg=kernel_cfg)
         with sqlite3.connect(db) as con:
             con.row_factory = sqlite3.Row
             trades = [dict(r) for r in con.execute('SELECT * FROM mh_trades ORDER BY close_ts,id')]

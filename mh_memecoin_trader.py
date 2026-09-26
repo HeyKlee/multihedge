@@ -103,11 +103,16 @@ def _open_position(symbol, entry_px, sig_id):
 
 
 def _close_position(pos, exit_px, reason):
-    pct = (exit_px - pos["entry"]) / pos["entry"]
-    realized = pos["qty"] * pos["entry"] * pct
+    import paper
+    gross_pct = (exit_px - pos["entry"]) / pos["entry"]
+    # Charge the same round-trip friction the live path pays.
+    cfg = paper.cost_config()
+    pct, realized, cost_usd = paper.net_realized(
+        pos["qty"], pos["entry"], gross_pct, cfg=cfg)
 
     con = _connect()
     con.execute("BEGIN IMMEDIATE")
+    paper.ensure_cost_column(con)
     if not con.execute("SELECT 1 FROM mh_memecoin_positions WHERE id=?",(pos["id"],)).fetchone():
         con.close()
         return
@@ -121,12 +126,12 @@ def _close_position(pos, exit_px, reason):
     tag = reason
     con.execute(
         "INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,"
-        "entry_px,exit_px,qty,realized_pct,realized_usd,exit_reason) "
-        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+        "entry_px,exit_px,qty,realized_pct,realized_usd,cost_usd,exit_reason) "
+        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (
             pos["symbol"], pos["symbol"], "memecoin_trader", "LONG",
             pos["ts"], time.time(),
-            pos["entry"], exit_px, pos["qty"], pct, realized, tag,
+            pos["entry"], exit_px, pos["qty"], pct, realized, cost_usd, tag,
         ),
     )
     con.execute("DELETE FROM mh_memecoin_positions WHERE id=?", (pos["id"],))

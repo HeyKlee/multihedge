@@ -10,6 +10,7 @@ import os
 import time
 
 import pricefeed  # for RSI/volume computation
+import paper     # shared round-trip cost model (single source of truth)
 
 TRADE_RECORDS_DIR = Path(__file__).parent / "trade_records"
 
@@ -247,6 +248,8 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
     with _connect(db_path) as con:
         # Keep wallet, closes and allocations in one transaction on the explicit DB.
         con.execute("BEGIN IMMEDIATE")
+        # This path writes cost_usd, so a pre-existing ledger must be migrated.
+        paper.ensure_cost_column(con)
         con.execute("CREATE TABLE IF NOT EXISTS mh_accounts (trader TEXT PRIMARY KEY, "
                     "equity_usd REAL NOT NULL, started_usd REAL NOT NULL)")
         con.execute("CREATE TABLE IF NOT EXISTS mh_shadow_entry_observations ("
@@ -297,10 +300,12 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
                     (peak, trough, position["mint"]),
                 )
                 continue
-            realized_pct = price / entry - 1
-            # Compute actual realized P&L from quantity, not from fixed notional
+            gross_pct = price / entry - 1
+            # Compute actual realized P&L from quantity, not from fixed notional,
+            # and charge the same round-trip friction the live path pays.
             entry_qty = float(position["qty"])
-            realized_usd = entry_qty * entry * realized_pct
+            realized_pct, realized_usd, cost_usd = paper.net_realized(
+                entry_qty, entry, gross_pct, cfg=cfg)
             # Credit realized P&L to the dynamic_scalper wallet for compounding
             con.execute(
                 "UPDATE mh_accounts SET equity_usd=equity_usd+? WHERE trader=?",
@@ -308,10 +313,10 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
             )
             con.execute(
                 "INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,"
-                "exit_px,qty,realized_pct,realized_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                "exit_px,qty,realized_pct,realized_usd,cost_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (position["mint"], position["ticker"], SETUP, "LONG",
                  position["opened_ts"], now, entry, price,
-                 position["qty"], realized_pct, realized_usd, reason),
+                 position["qty"], realized_pct, realized_usd, cost_usd, reason),
             )
             con.execute(
                 "INSERT INTO mh_scalp_excursions(mint,ticker,mode,entry_usd,peak_usd,"

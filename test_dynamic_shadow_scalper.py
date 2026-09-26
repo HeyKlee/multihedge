@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import dynamic_shadow_scalper as ds
+import paper  # shared round-trip cost model
 import solana_token_universe as stu
 
 MINT = "B5WTLaRwaUQpKk7ir1wniNB6m5o8GgMrimhKMYan2R6B"
@@ -207,8 +208,12 @@ class DynamicShadowScalperTests(unittest.TestCase):
             pct, usd, qty, entry_px, exit_px = con.execute(
                 "SELECT realized_pct,realized_usd,qty,entry_px,exit_px FROM mh_trades"
             ).fetchone()
-        # The dollar figure is now actual P&L from quantity, not fixed notional.
-        self.assertAlmostEqual(usd, qty * (exit_px - entry_px), places=12)
+        # The dollar figure is actual P&L from quantity, not fixed notional,
+        # MINUS the round-trip cost the live path pays.
+        cost = paper.round_trip_cost_pct(paper.cost_config())
+        gross = qty * (exit_px - entry_px)
+        self.assertAlmostEqual(usd, gross - qty * entry_px * cost, places=12)
+        self.assertAlmostEqual(pct, (exit_px - entry_px) / entry_px - cost, places=12)
 
     def test_missing_jupiter_key_leaves_pending_exit_untouched(self):
         pending = Path(self.tmp.name) / "forced_exit.json"

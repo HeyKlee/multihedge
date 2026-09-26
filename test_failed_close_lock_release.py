@@ -56,10 +56,15 @@ class FailedCloseLockReleaseTests(unittest.TestCase):
                 with patch.object(paper.strat, 'record_trade'):
                     call()
                     call()
+                # Equity is credited NET: qty 0.1 on a $100 entry is $10
+                # notional, and the configured round trip is deducted.
+                cost = paper.round_trip_cost_pct(paper.cost_config())
                 with sqlite3.connect(db) as probe:
                     self.assertEqual(probe.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0], 0)
                     self.assertEqual(probe.execute('SELECT COUNT(*) FROM mh_trades').fetchone()[0], 1)
-                    self.assertEqual(probe.execute('SELECT SUM(equity_usd) FROM mh_accounts').fetchone()[0], 49)
+                    self.assertAlmostEqual(
+                        probe.execute('SELECT SUM(equity_usd) FROM mh_accounts').fetchone()[0],
+                        48 + 1 - 10 * cost, places=9)
 
     def test_scalper_failed_commit_releases_lock_and_preserves_retry(self):
         self.check_close(paper)

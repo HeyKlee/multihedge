@@ -263,20 +263,22 @@ def _close(symbol, pos, px, reason):
         pos = dict(current)
         side = pos["side"]
         if side == "LONG":
-            realized = pos["qty"] * (px - pos["entry"])
+            gross_pct = (px - pos["entry"]) / pos["entry"]
         else:
-            realized = pos["qty"] * (pos["entry"] - px)
+            gross_pct = (pos["entry"] - px) / pos["entry"]
+        # Charge the same round-trip friction the live path pays; a sub-cost
+        # gain must not book as a winner.
+        pct, realized, cost_usd = paper.net_realized(
+            pos["qty"], pos["entry"], gross_pct, cfg=paper.cost_config())
         # P&L returns to THIS COIN's own wallet (releases its committed capital)
         con.execute("UPDATE mh_accounts SET equity_usd=equity_usd+? WHERE trader=?",
                     (realized, paper.TRADER_REASONER))
-        pct = (px - pos["entry"]) / pos["entry"] if side == "LONG" else \
-              (pos["entry"] - px) / pos["entry"]
         # record into the shared mh_trades (source=reasoner-<coin>)
         con.execute(
             "INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,exit_px,"
-            "qty,realized_pct,realized_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            "qty,realized_pct,realized_usd,cost_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (symbol, symbol, "reasoner", side, pos["ts"], time.time(), pos["entry"], px,
-             pos["qty"], pct, realized, reason))
+             pos["qty"], pct, realized, cost_usd, reason))
         con.execute("DELETE FROM mh_reasoner_positions WHERE id=?", (pos["id"],))
         con.commit()
     finally:

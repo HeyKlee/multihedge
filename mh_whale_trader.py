@@ -153,13 +153,18 @@ def _open(symbol, side, px, bias):
 
 def _close(symbol, pos, px, reason):
     side = pos["side"]
-    pct = (px - pos["entry"]) / pos["entry"] if side == "LONG" else \
-          (pos["entry"] - px) / pos["entry"]
-    realized = pos["qty"] * pos["entry"] * pct
+    gross_pct = (px - pos["entry"]) / pos["entry"] if side == "LONG" else \
+        (pos["entry"] - px) / pos["entry"]
+    # Charge the same round-trip friction the live path pays; a sub-cost gain
+    # must not book as a winner.
+    cfg = paper.cost_config()
+    pct, realized, cost_usd = paper.net_realized(
+        pos["qty"], pos["entry"], gross_pct, cfg=cfg)
 
     con = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=30)
     con.row_factory = sqlite3.Row
     con.execute("BEGIN IMMEDIATE")
+    paper.ensure_cost_column(con)
     if not con.execute("SELECT 1 FROM mh_whale_positions WHERE id=?",(pos["id"],)).fetchone():
         con.close()
         return
@@ -171,10 +176,10 @@ def _close(symbol, pos, px, reason):
     tag = reason
     con.execute(
         "INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,"
-        "entry_px,exit_px,qty,realized_pct,realized_usd,exit_reason) "
-        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+        "entry_px,exit_px,qty,realized_pct,realized_usd,cost_usd,exit_reason) "
+        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (symbol, symbol, SETUP_TAG, side, pos["ts"], time.time(),
-         pos["entry"], px, pos["qty"], pct, realized, tag))
+         pos["entry"], px, pos["qty"], pct, realized, cost_usd, tag))
     con.execute("DELETE FROM mh_whale_positions WHERE id=?", (pos["id"],))
     con.commit()
     con.close()

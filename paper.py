@@ -39,12 +39,99 @@ import strategy as strat
 import pricefeed  # noqa: F401
 
 DB_PATH = Path(__file__).parent / "multihedge.db"
+CFG_PATH = Path(__file__).parent / "config.yaml"
+_COST_CFG_CACHE = {"mtime": None, "cfg": None}
+
+
+def cost_config():
+    """Return the runtime config for cost purposes, reloading on mtime change.
+
+    Every close path needs the same friction numbers, and duplicating YAML
+    loading in five modules would let them drift. A malformed or unreadable
+    config raises here and the caller fails closed rather than trading free.
+    """
+    import yaml
+    try:
+        mtime = CFG_PATH.stat().st_mtime
+    except OSError as e:
+        raise ValueError(f"cannot read {CFG_PATH}: {e}") from e
+    if _COST_CFG_CACHE["mtime"] != mtime:
+        try:
+            _COST_CFG_CACHE["cfg"] = yaml.safe_load(
+                CFG_PATH.read_text(encoding="utf-8")) or {}
+        except Exception as e:
+            raise ValueError(f"cannot parse {CFG_PATH}: {e}") from e
+        _COST_CFG_CACHE["mtime"] = mtime
+    return _COST_CFG_CACHE["cfg"] or {}
 DEFAULT_EQUITY = 24.0           # per-trader default (~NZ$40 / US$24 each)
 MAX_HOLD_S = 3600          # 1 hour virtual max-hold per trade
 TP_PCT = 0.025             # take profit +2.5%
 SL_PCT = -0.015            # stop loss -1.5%
 TRAIL_ARM_PCT = 0.012      # arm a trailing stop once up +1.2%
 TRAIL_DIST_PCT = 0.006     # trail 0.6% behind the peak once armed
+
+# ------------------------------ round-trip cost model -----------------------
+# Paper must pay the same friction the live path pays, otherwise every paper
+# statistic is optimistic and the evidence gate is calibrated on fiction.
+# A round trip is TWO swap legs (buy, then sell), so bps are doubled.
+DEFAULT_QUOTE_BPS = 40
+DEFAULT_SLIPPAGE_BPS = 50
+# Never treat absent config as free trading; missing keys fall back to the
+# documented conservative defaults above rather than zero.
+COST_KEYS = ("quote_bps", "slippage_bps")
+
+
+def round_trip_cost_pct(cfg=None):
+    """Return the round-trip trading cost as a positive fraction of notional.
+
+    Two swap legs are charged because a position is opened and later closed.
+    Fails closed: a negative, non-finite, or nonsensical configuration raises
+    rather than silently pricing friction at zero.
+    """
+    p = {}
+    if cfg:
+        p = cfg.get("paper") or {}
+    defaults = {"quote_bps": DEFAULT_QUOTE_BPS, "slippage_bps": DEFAULT_SLIPPAGE_BPS}
+    total_bps = 0.0
+    for key in COST_KEYS:
+        # An ABSENT key means "use the conservative default". A key that is
+        # present but None is a malformed config and must not be silently
+        # upgraded into the default, or a truncated config would look healthy.
+        raw = p.get(key, defaults[key]) if key in p else defaults[key]
+        # bool is an int subclass; reject it rather than price friction at 1 bps
+        if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+            raise ValueError(f"paper.{key} must be a finite number, got {raw!r}")
+        val = float(raw)
+        if not math.isfinite(val):
+            raise ValueError(f"paper.{key} must be finite, got {raw!r}")
+        if val < 0:
+            raise ValueError(f"paper.{key} must not be negative, got {raw!r}")
+        total_bps += val
+    cost = (total_bps * 2.0) / 10_000.0
+    if cost >= 1.0:
+        raise ValueError(f"round-trip cost must be below 100%, got {cost!r}")
+    return cost
+
+
+def net_realized(qty, entry, gross_pct, cfg=None):
+    """Return (net_pct, net_usd, cost_usd) after deducting the round trip.
+
+    Gross price movement is what the strategy produced; cost is what the venue
+    takes. Both are kept so a trade can be audited either way, but the wallet
+    and the ledger are credited the NET figure only.
+    """
+    for name, val in (("qty", qty), ("entry", entry), ("gross_pct", gross_pct)):
+        if isinstance(val, bool) or not isinstance(val, (int, float)):
+            raise ValueError(f"{name} must be a finite number, got {val!r}")
+        if not math.isfinite(float(val)):
+            raise ValueError(f"{name} must be finite, got {val!r}")
+    if qty <= 0 or entry <= 0:
+        raise ValueError("qty and entry must be positive")
+    cost_pct = round_trip_cost_pct(cfg)
+    notional = float(qty) * float(entry)
+    net_pct = float(gross_pct) - cost_pct
+    return net_pct, notional * net_pct, notional * cost_pct
+
 
 TRADER_SCALPER = "scalper"
 TRADER_REASONER = "reasoner"
@@ -81,9 +168,16 @@ CREATE TABLE IF NOT EXISTS mh_trades (
   qty REAL NOT NULL,
   realized_pct REAL NOT NULL,
   realized_usd REAL NOT NULL,
+  cost_usd REAL NOT NULL DEFAULT 0,
   exit_reason TEXT NOT NULL
 )
 """
+# Additive, idempotent migration. Existing rows keep cost_usd = 0, which is
+# truthful: they were booked gross. Historical rows are never rewritten, so a
+# backtest spanning the change must not silently mix the two conventions.
+MIGRATE_TRADES_COST = (
+    "ALTER TABLE mh_trades ADD COLUMN cost_usd REAL NOT NULL DEFAULT 0"
+)
 SCHEMA_ACCOUNTS = """
 CREATE TABLE IF NOT EXISTS mh_accounts (
   trader TEXT PRIMARY KEY,
@@ -109,8 +203,29 @@ def _connect():
     con.execute(SCHEMA_TRADES)
     con.execute(SCHEMA_ACCOUNTS)
     con.execute(SCHEMA_RISK)
+    _ensure_cost_column(con)
     con.commit()
     return con
+
+
+def _ensure_cost_column(con):
+    """Idempotently add mh_trades.cost_usd to a pre-existing table.
+
+    Indexes by position rather than by name: callers open this connection
+    without a sqlite3.Row factory, so r["name"] would raise.
+    """
+    cols = {r[1] for r in con.execute("PRAGMA table_info(mh_trades)")}
+    if "cost_usd" not in cols:
+        con.execute(MIGRATE_TRADES_COST)
+
+
+def ensure_cost_column(con):
+    """Public migration hook for modules that open their own connection.
+
+    Each close path writes cost_usd, so a table created before this change
+    must be upgraded in place. Idempotent, so calling it every tick is safe.
+    """
+    _ensure_cost_column(con)
 
 
 # ------------------------------ per-trader wallets ---------------------------
@@ -214,9 +329,20 @@ def update_peak(pos_id, peak_px, trail_armed):
     con.close()
 
 
-def close_position(pos, exit_px, reason):
+def close_position(pos, exit_px, reason, cfg=None):
+    """Close a scalper position, crediting NET (post-cost) P&L to the wallet.
+
+    Cost is deducted here rather than at display time so that equity, the
+    ledger, the kill switch and every downstream statistic all agree. If the
+    cost configuration is malformed this raises and leaves the position open:
+    a blocked close must never be recorded as a completed trade.
+    """
     if not math.isfinite(exit_px) or exit_px <= 0:
         raise ValueError("exit price must be finite and positive")
+    # Validate cost BEFORE taking the write lock so a bad config cannot leave a
+    # half-applied transaction behind.
+    net_pct_pre, _, _ = net_realized(1.0, 1.0, 0.0, cfg=cfg)
+    del net_pct_pre
     con = _connect()
     try:
         con.execute("BEGIN IMMEDIATE")
@@ -230,15 +356,15 @@ def close_position(pos, exit_px, reason):
         if entry <= 0:
             return None
         if side == "LONG":
-            pct = (exit_px - entry) / entry
+            gross_pct = (exit_px - entry) / entry
         else:
-            pct = (entry - exit_px) / entry
-        realized_usd = qty * entry * pct
+            gross_pct = (entry - exit_px) / entry
+        pct, realized_usd, cost_usd = net_realized(qty, entry, gross_pct, cfg=cfg)
         con.execute(
             "INSERT INTO mh_trades(coin,symbol,setup,side,open_ts,close_ts,entry_px,exit_px,"
-            "qty,realized_pct,realized_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            "qty,realized_pct,realized_usd,cost_usd,exit_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (pos["coin"], pos.get("symbol"), pos["setup"], side, pos["open_ts"],
-             time.time(), entry, exit_px, qty, pct, realized_usd, reason))
+             time.time(), entry, exit_px, qty, pct, realized_usd, cost_usd, reason))
         # P&L flows back into THE SCALPER's own wallet (mh_positions are scalper-only)
         con.execute("UPDATE mh_accounts SET equity_usd=equity_usd+? WHERE trader=?",
                     (realized_usd, TRADER_SCALPER))

@@ -16,12 +16,16 @@ class BackendAuditTests(unittest.TestCase):
     def tearDown(self):
         for p in reversed(self.patches): p.stop()
         self.tmp.cleanup()
-    def test_scalper_pnl_is_token_quantity_times_price_change(self):
+    def test_scalper_pnl_is_token_quantity_times_price_change_minus_cost(self):
+        # Gross is qty * price change (0.1 * 10 = $1.00). Paper must book NET,
+        # so the round-trip cost is deducted. 0.1*100 = $10 notional at 1.8%.
+        cfg={'paper':{'quote_bps':40,'slippage_bps':50}}
+        cost=paper.round_trip_cost_pct(cfg)
         paper.open_position('SOL', 100, .1, 'LONG', 'mean_reversion')
         pos=paper.open_positions()[0]
-        result=paper.close_position(pos, 110, 'take_profit')
-        self.assertAlmostEqual(result['usd'], 1)
-        self.assertAlmostEqual(paper.equity('scalper'), 25)
+        result=paper.close_position(pos, 110, 'take_profit', cfg=cfg)
+        self.assertAlmostEqual(result['usd'], 1 - 10*cost)
+        self.assertAlmostEqual(paper.equity('scalper'), 24 + 1 - 10*cost)
     def test_close_replay_does_not_double_credit(self):
         paper.open_position('SOL', 100, .1, 'LONG', 'mean_reversion')
         pos=paper.open_positions()[0]

@@ -30,14 +30,18 @@ class WhaleTests(unittest.TestCase):
  def test_whale_close_dollars_reason_and_idempotency(self):
   with sqlite3.connect(self.db) as c:c.execute("INSERT INTO mh_whale_positions VALUES(1,'SOL','LONG',.1,100,?,7,100)",(time.time(),))
   pos={'id':1,'symbol':'SOL','side':'LONG','qty':.1,'entry':100,'ts':time.time(),'entry_signal':7}
+  cost=paper.round_trip_cost_pct(paper.cost_config())
+  # Gross is .1*10 = $1.00 on $10 notional; the round trip is deducted.
   trader._close('SOL',pos,110,'take_profit');trader._close('SOL',pos,110,'take_profit')
-  self.assertAlmostEqual(paper.equity('whale_trader'),25)
+  self.assertAlmostEqual(paper.equity('whale_trader'),24+1-10*cost)
   with sqlite3.connect(self.db) as c:self.assertEqual(c.execute('SELECT exit_reason FROM mh_trades').fetchone()[0],'take_profit')
  def test_memecoin_close_dollars_reason_and_idempotency(self):
   with sqlite3.connect(self.db) as c:c.execute("INSERT INTO mh_memecoin_positions(id,symbol,side,qty,entry,ts,entry_signal,peak) VALUES(1,'TOKEN','LONG',10,.1,?,7,.1)",(time.time(),))
   pos={'id':1,'symbol':'TOKEN','side':'LONG','qty':10,'entry':.1,'ts':time.time(),'entry_signal':7}
+  cost=paper.round_trip_cost_pct(paper.cost_config())
+  # Gross is 10*0.05 = $0.50 on $1 notional; the round trip is deducted.
   meme._close_position(pos,.15,'take_profit');meme._close_position(pos,.15,'take_profit')
-  self.assertAlmostEqual(paper.equity('memecoin_trader'),24.5)
+  self.assertAlmostEqual(paper.equity('memecoin_trader'),24+0.5-1*cost)
  def test_signal_mint_and_dedupe_survive_pipeline(self):
   import sqlite3
   con=sqlite3.connect(self.db)

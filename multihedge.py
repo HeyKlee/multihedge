@@ -130,7 +130,7 @@ def run_tick(cfg):
                     armed = 1
             paper.update_peak(pos["id"], peak, armed or 0)
             if reason:
-                r = paper.close_position(pos, px, reason)
+                r = paper.close_position(pos, px, reason, cfg=cfg)
                 if r is None:
                     continue
                 closed_here += 1
