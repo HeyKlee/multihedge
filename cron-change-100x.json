@@ -1,0 +1,1 @@
+{"change":"autotuner every 14m instead of daily (100x); autonomous live kept at 1m","source":"/home/kelly/.hermes/cron/jobs.json","job_id":"e2299c0cf15e","old_schedule":"0 6 * * *","new_schedule":"*/14 * * * *"}
