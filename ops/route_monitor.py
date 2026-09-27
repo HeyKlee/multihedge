@@ -43,6 +43,10 @@ import urllib.request
 
 DB = "/app/multihedge.db"
 USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+# USDC is the settlement asset and has exactly 6 decimals. Quoted amounts arrive in
+# native atomic units per mint, so any USD-per-token ratio must normalise the token
+# leg back to this scale before dividing.
+USDC_DECIMALS = 6
 JUP_QUOTE = "https://api.jup.ag/swap/v1/quote"
 JUP_PRICE = "https://api.jup.ag/price/v3"
 SIZES = (1.0, 2.0, 5.0, 10.0)
@@ -316,7 +320,14 @@ def leg_px(mint, side, usd, dec):
     except NoRoute as exc:
         return None, f"no_route:{exc}"
     try:
-        return (ina / outa) if side == "buy" else (outa / ina), "ok"
+        # Both legs must yield USD-per-token. `ina` is USDC-atomic (6dp) while the
+        # token leg is in `dec` decimals, so a raw ratio carries 10**(dec-6) of extra
+        # scale and reads every 9-decimal memecoin 1000x too cheap. Normalise the
+        # token amount to USDC scale before dividing.
+        scale = 10 ** (dec - USDC_DECIMALS)
+        if side == "buy":
+            return (ina / (outa / scale)), "ok"
+        return (outa / (ina / scale)), "ok"
     except ZeroDivisionError:
         return None, "no_route:zero_amount"
 
