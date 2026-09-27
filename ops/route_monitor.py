@@ -51,7 +51,9 @@ TIMEOUT = 12
 # Unauthenticated Jupiter throttles at roughly one request per 2 seconds.
 # Measured success rate on a single mint: 0.2s pause 1/10, 1.5s 4/10,
 # 3.0s 9/10. The 0.2s original produced a phantom 'no route' reading.
-PAUSE_S = 3.0
+# With JUPITER_API_KEY the ceiling is much better: 0.2s 6/15, 0.5s 5/15,
+# 1.0s 13/15, 2.0s 15/15 (zero 429s). 1.5s keeps headroom for retries.
+PAUSE_S = 1.5
 BACKOFF_BASE = 1.5
 BACKOFF_JITTER = 0.8
 MAX_RETRIES = 4
@@ -108,6 +110,30 @@ class FetchFailed(Exception):
     """Transport failure. Says nothing about liquidity either."""
 
 
+def _jup_key():
+    """Load JUPITER_API_KEY without ever printing it.
+
+    The container's entrypoint sources /app/.env, so the key IS normally in the
+    environment. But a plain `docker exec` does not inherit that, and the key also
+    lives in a bind-mounted agent.env. Read the file directly as a fallback so
+    the monitor authenticates regardless of how it was launched.
+    """
+    key = os.getenv("JUPITER_API_KEY")
+    if key:
+        return key
+    for path in ("/app/.env", "/app/agent.env", "/app/deploy/data/agent.env"):
+        try:
+            with open(path) as fh:
+                for line in fh:
+                    if line.startswith("JUPITER_API_KEY="):
+                        val = line.strip().split("=", 1)[1].strip().strip('"').strip("'")
+                        if val:
+                            return val
+        except OSError:
+            continue
+    return None
+
+
 def _get(url, timeout=TIMEOUT, retries=4):
     """GET JSON with bounded exponential backoff.
 
@@ -115,7 +141,7 @@ def _get(url, timeout=TIMEOUT, retries=4):
     absent liquidity is what made the first sample of this monitor report a
     fake routing ceiling at $2 and above. Retry, then raise a distinct error.
     """
-    key = os.getenv("JUPITER_API_KEY")
+    key = _jup_key()
     headers = {"User-Agent": "Mozilla/5.0"}
     if key:
         headers["x-api-key"] = key
@@ -325,6 +351,7 @@ def main(argv=None):
     now = time.time()
     rows = []
     print(f"sampling {len(mints)} mints at sizes {sizes}, {args.pause}s pause")
+    print(f"authenticated: {'yes' if _jup_key() else 'NO (throttle-limited)'}")
     print("read-only against the strategy; writes only to mh_route_observations\n")
 
     for i, mint in enumerate(mints, 1):
