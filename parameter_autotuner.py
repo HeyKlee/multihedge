@@ -44,14 +44,14 @@ HOLDOUT_FRACTION = 0.25             # chronological tail held out for validation
 IMPROVEMENT_MARGIN = 0.02           # candidate must beat incumbent expectancy by 2%
 BIG_HOLD_S = 14 * 3600              # "day trade" hold floor for SERIOUS (14h)
 
-# Candidate grids (proportion / seconds). Aligned with the 1.5% default
-# TP/SL and +0.34% mean 1h forward return. Search range allows the tuner
-# to find improvements in either direction from the default.
-MEME_TP_GRID = (0.01, 0.015, 0.02, 0.03)
+# Candidate grids (proportion / seconds). Expanded to capture
+# larger take-profits and longer holds for better edge recovery,
+# with tighter trailing stops to protect winners faster.
+MEME_TP_GRID = (0.01, 0.02, 0.05, 0.1)
 MEME_SL_GRID = (-0.01, -0.015, -0.02)
-MEME_HOLD_GRID = (900, 1800, 3600)
-MEME_TRAIL_ARM_GRID = (0.015, 0.02, 0.03)
-MEME_TRAIL_DIST_GRID = (0.008, 0.01, 0.015)
+MEME_HOLD_GRID = (900, 1800, 3600, 14400)
+MEME_TRAIL_ARM_GRID = (0.03, 0.04, 0.06)
+MEME_TRAIL_DIST_GRID = (0.005, 0.008, 0.012)
 
 SERIOUS_TP_GRID = (0.04, 0.05, 0.06)
 SERIOUS_SL_GRID = (-0.03, -0.025, -0.02)
