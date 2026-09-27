@@ -37,80 +37,20 @@ from pathlib import Path
 
 import strategy as strat
 import pricefeed  # noqa: F401
+from execution_costs import (
+    load_config as cost_config,
+    round_trip_cost_pct,
+    DEFAULT_QUOTE_BPS,
+    DEFAULT_SLIPPAGE_BPS,
+)
 
 DB_PATH = Path(__file__).parent / "multihedge.db"
-CFG_PATH = Path(__file__).parent / "config.yaml"
-_COST_CFG_CACHE = {"mtime": None, "cfg": None}
-
-
-def cost_config():
-    """Return the runtime config for cost purposes, reloading on mtime change.
-
-    Every close path needs the same friction numbers, and duplicating YAML
-    loading in five modules would let them drift. A malformed or unreadable
-    config raises here and the caller fails closed rather than trading free.
-    """
-    import yaml
-    try:
-        mtime = CFG_PATH.stat().st_mtime
-    except OSError as e:
-        raise ValueError(f"cannot read {CFG_PATH}: {e}") from e
-    if _COST_CFG_CACHE["mtime"] != mtime:
-        try:
-            _COST_CFG_CACHE["cfg"] = yaml.safe_load(
-                CFG_PATH.read_text(encoding="utf-8")) or {}
-        except Exception as e:
-            raise ValueError(f"cannot parse {CFG_PATH}: {e}") from e
-        _COST_CFG_CACHE["mtime"] = mtime
-    return _COST_CFG_CACHE["cfg"] or {}
 DEFAULT_EQUITY = 24.0           # per-trader default (~NZ$40 / US$24 each)
 MAX_HOLD_S = 3600          # 1 hour virtual max-hold per trade
 TP_PCT = 0.025             # take profit +2.5%
 SL_PCT = -0.015            # stop loss -1.5%
 TRAIL_ARM_PCT = 0.012      # arm a trailing stop once up +1.2%
 TRAIL_DIST_PCT = 0.006     # trail 0.6% behind the peak once armed
-
-# ------------------------------ round-trip cost model -----------------------
-# Paper must pay the same friction the live path pays, otherwise every paper
-# statistic is optimistic and the evidence gate is calibrated on fiction.
-# A round trip is TWO swap legs (buy, then sell), so bps are doubled.
-DEFAULT_QUOTE_BPS = 40
-DEFAULT_SLIPPAGE_BPS = 50
-# Never treat absent config as free trading; missing keys fall back to the
-# documented conservative defaults above rather than zero.
-COST_KEYS = ("quote_bps", "slippage_bps")
-
-
-def round_trip_cost_pct(cfg=None):
-    """Return the round-trip trading cost as a positive fraction of notional.
-
-    Two swap legs are charged because a position is opened and later closed.
-    Fails closed: a negative, non-finite, or nonsensical configuration raises
-    rather than silently pricing friction at zero.
-    """
-    p = {}
-    if cfg:
-        p = cfg.get("paper") or {}
-    defaults = {"quote_bps": DEFAULT_QUOTE_BPS, "slippage_bps": DEFAULT_SLIPPAGE_BPS}
-    total_bps = 0.0
-    for key in COST_KEYS:
-        # An ABSENT key means "use the conservative default". A key that is
-        # present but None is a malformed config and must not be silently
-        # upgraded into the default, or a truncated config would look healthy.
-        raw = p.get(key, defaults[key]) if key in p else defaults[key]
-        # bool is an int subclass; reject it rather than price friction at 1 bps
-        if isinstance(raw, bool) or not isinstance(raw, (int, float)):
-            raise ValueError(f"paper.{key} must be a finite number, got {raw!r}")
-        val = float(raw)
-        if not math.isfinite(val):
-            raise ValueError(f"paper.{key} must be finite, got {raw!r}")
-        if val < 0:
-            raise ValueError(f"paper.{key} must not be negative, got {raw!r}")
-        total_bps += val
-    cost = (total_bps * 2.0) / 10_000.0
-    if cost >= 1.0:
-        raise ValueError(f"round-trip cost must be below 100%, got {cost!r}")
-    return cost
 
 
 def net_realized(qty, entry, gross_pct, cfg=None):

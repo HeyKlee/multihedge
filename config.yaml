@@ -17,6 +17,7 @@ paper:
   min_trade_value_usd: 1.0
   fill_mode: jupiter_quote
   quote_bps: 40
+  slippage_bps: 50
   trade_cadence_s: 30
   max_open_per_coin: 1
   signal_dev_pct: 0.005   # mean-reversion / VWAP deviation trigger (was hardcoded 0.02; scalper sat flat for days)

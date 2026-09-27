@@ -25,6 +25,7 @@ import os
 from pathlib import Path
 import sqlite3
 
+from execution_costs import round_trip_cost_pct as _round_trip_cost_pct
 from live_inventory import (
     _default_params,
     _risk_params_override,
@@ -278,10 +279,7 @@ def maybe_tune(db_path, cfg, *, now=None) -> dict:
     import time as _time
     now = _time.time() if now is None else now
     db_path = Path(db_path)
-    quote_bps = float((cfg or {}).get("paper", {}).get("quote_bps", 40))
-    if quote_bps < 0 or quote_bps > 500:
-        raise ValueError("invalid paper quote cost")
-    round_trip_cost_pct = 2 * quote_bps / 10000.0
+    round_trip_cost_pct = _round_trip_cost_pct(cfg)
     report = {"state": "NO_CHANGE", "tuned": {}, "evaluation": {},
               "round_trip_cost_pct": round(round_trip_cost_pct, 6)}
     for mode in ("MEME", "SERIOUS"):

@@ -282,7 +282,7 @@ class AutotunerTests(unittest.TestCase):
         self.assertEqual(payload["state"], "NO_CHANGE")
         self.assertIn("MEME", payload["evaluation"])
         self.assertIn("SERIOUS", payload["evaluation"])
-        self.assertAlmostEqual(payload["round_trip_cost_pct"], 0.008, places=9)
+        self.assertAlmostEqual(payload["round_trip_cost_pct"], 0.018, places=9)
 
     def test_declined_pass_reports_sample_progress_toward_the_gate(self):
         # The gate reason must show how close the sample is, not just "no".

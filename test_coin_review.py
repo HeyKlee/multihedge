@@ -22,7 +22,7 @@ COIN_C = "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump"
 
 def cfg():
     return {"coins": [{"symbol": "JUP", "mint": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"}],
-            "paper": {"quote_bps": 40}}
+            "paper": {"quote_bps": 40, "slippage_bps": 50}}
 
 
 class CoinReviewBase(unittest.TestCase):
@@ -192,6 +192,57 @@ class GateTests(CoinReviewBase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0][0], "rejected")
         self.assertEqual(rows[0][2], 0)
+
+
+class ReplayCostIntegrationTests(CoinReviewBase):
+    """Regression: review_coin must pass execution_costs.round_trip_cost_pct()
+    to replay_verdict, not the old quote_bps-only formula (0.8% vs 1.8%)."""
+
+    def seed_winning_paths(self, n=cr.MIN_PATHS_FOR_PROPOSAL):
+        for i in range(n):
+            self.add_path(COIN_A, opened=float(i * 10_000))
+
+    def _proposal(self):
+        return {"mint": COIN_A, "take_profit_pct": 0.20, "stop_loss_pct": -0.10,
+                "trail_arm_pct": 0.08, "trail_distance_pct": 0.02,
+                "max_hold_seconds": 900}
+
+    def test_review_coin_passes_full_round_trip_cost_to_replay(self):
+        """With quote_bps=40, slippage_bps=50 the cost must be 0.018, not 0.008."""
+        self.seed_winning_paths()
+        result = cr.review_coin(self.db, cfg(), self._proposal())
+        # Whether authorized or not, the verdict echoes the cost used.
+        # If insufficient paths, we get no verdict; but we seeded enough.
+        if "verdict" in result:
+            self.assertAlmostEqual(
+                result["verdict"]["round_trip_cost_pct"], 0.018, places=6,
+                msg="review_coin must charge 1.8% round trip, not the old 0.8%")
+        else:
+            # Even on rejection the reason should not be insufficient paths
+            # since we seeded MIN_PATHS_FOR_PROPOSAL.
+            self.assertNotEqual(result["reason"], "insufficient_replayable_paths")
+
+    def test_review_coin_cost_changes_with_slippage(self):
+        """If slippage_bps changes, the cost passed to replay must change too.
+        A test that still passes with the old 2*quote_bps/10000 formula is worthless."""
+        self.seed_winning_paths()
+        custom_cfg = {"coins": cfg()["coins"],
+                      "paper": {"quote_bps": 40, "slippage_bps": 100}}
+        result = cr.review_coin(self.db, custom_cfg, self._proposal())
+        if "verdict" in result:
+            expected = 2 * (40 + 100) / 10000.0  # 0.028
+            self.assertAlmostEqual(
+                result["verdict"]["round_trip_cost_pct"], expected, places=6,
+                msg="cost must reflect slippage_bps changes via execution_costs")
+
+    def test_replay_verdict_echoes_exact_cost(self):
+        """Directly verify replay_verdict records the cost_pct it receives."""
+        self.seed_winning_paths()
+        candidate = {"take_profit_pct": 0.20, "stop_loss_pct": -0.10,
+                     "trail_arm_pct": 0.08, "trail_distance_pct": 0.02,
+                     "max_hold_seconds": 900}
+        verdict = cr.replay_verdict(self.db, cfg(), COIN_A, candidate, cost_pct=0.018)
+        self.assertAlmostEqual(verdict["round_trip_cost_pct"], 0.018, places=6)
 
 
 class OverrideScopeTests(CoinReviewBase):

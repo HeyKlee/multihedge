@@ -408,8 +408,8 @@ def review_coin(db_path, cfg, proposal: dict, *, now: float | None = None) -> di
         _log(db_path, mint, ticker, "rejected", reason, {"proposal": clean}, False)
         return {"mint": mint, "ticker": ticker, "applied": False, "reason": reason}
 
-    quote_bps = float((cfg or {}).get("paper", {}).get("quote_bps", 40))
-    verdict = replay_verdict(db_path, cfg, mint, clean, cost_pct=2 * quote_bps / 10000.0)
+    from execution_costs import round_trip_cost_pct
+    verdict = replay_verdict(db_path, cfg, mint, clean, cost_pct=round_trip_cost_pct(cfg))
     if not verdict["authorized"]:
         _log(db_path, mint, ticker, "rejected", verdict["reason"],
              {"proposal": clean, "verdict": verdict}, False)
