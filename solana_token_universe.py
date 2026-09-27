@@ -209,7 +209,8 @@ def _get_json(get: Callable, url: str, *, api_key: str, params: dict | None = No
     raise UpstreamUnavailable("Jupiter metadata unavailable")
 
 
-def discover_candidates(cfg: dict, *, api_key: str, now: float, get=httpx.get) -> list[dict]:
+def discover_candidates(cfg: dict, *, api_key: str, now: float, get=httpx.get,
+                        db_path=None, include_rejected=False) -> list[dict]:
     settings = _settings(cfg)
     if settings.get("enabled") is not True:
         return []
@@ -246,7 +247,21 @@ def discover_candidates(cfg: dict, *, api_key: str, now: float, get=httpx.get) -
             row["market"]["traders_5m"],
         ), reverse=True,
     )
-    return candidates[:int(settings.get("max_candidates", 12))]
+    candidates = candidates[:int(settings.get("max_candidates", 12))]
+    if "maximum_friction_cost_pct" in settings:
+        from entry_friction import check_entry_friction
+        started = time.monotonic()
+        for row in candidates:
+            if time.monotonic() - started >= 20:
+                row["friction"] = {"status": "BLOCKED", "reason": "quote_budget_exhausted",
+                                   "round_trip_loss_pct": None, "mint": row["mint"]}
+            else:
+                row["friction"] = check_entry_friction(
+                    row["mint"], cfg, api_key=api_key, get=get, now=now, db_path=db_path,
+                    ticker=row["ticker"], name=row["name"])
+            row["entry_eligible"] = row["friction"]["status"] == "ALLOWED"
+    # Paper retains rejected metadata for observations and exits, never BUY permission.
+    return candidates if include_rejected else [r for r in candidates if r["entry_eligible"]]
 
 
 def verify_token(mint: str, cfg: dict, *, api_key: str, now: float, get=httpx.get) -> dict:
@@ -295,16 +310,19 @@ def resolve_holdings(mints: list[str], *, api_key: str, now: float, get=httpx.ge
     return result
 
 
-def verify_round_trip(mint: str, cfg: dict, *, api_key: str, get=httpx.get) -> dict:
+def verify_round_trip(mint: str, cfg: dict, *, api_key: str, get=httpx.get,
+                      amount_atomic: int = 1_000_000) -> dict:
+    if type(amount_atomic) is not int or amount_atomic <= 0:
+        raise TokenDenied("invalid USDC quote amount")
     params = {
-        "inputMint": USDC_MINT, "outputMint": mint, "amount": "1000000",
+        "inputMint": USDC_MINT, "outputMint": mint, "amount": str(amount_atomic),
         "slippageBps": "50", "restrictIntermediateTokens": "true",
     }
     buy = _get_json(get, QUOTE_URL, api_key=api_key, params=params)
     try:
         token_out = int(buy["outAmount"])
         buy_impact = float(buy["priceImpactPct"])
-    except (KeyError, TypeError, ValueError) as exc:
+    except (KeyError, TypeError, ValueError, OverflowError) as exc:
         raise TokenDenied("invalid buy quote") from exc
     sell_params = {
         "inputMint": mint, "outputMint": USDC_MINT, "amount": str(token_out),
@@ -314,14 +332,29 @@ def verify_round_trip(mint: str, cfg: dict, *, api_key: str, get=httpx.get) -> d
     try:
         usdc_back = int(sell["outAmount"])
         sell_impact = float(sell["priceImpactPct"])
-    except (KeyError, TypeError, ValueError) as exc:
+    except (KeyError, TypeError, ValueError, OverflowError) as exc:
         raise TokenDenied("invalid sell quote") from exc
-    loss_pct = (1 - usdc_back / 1_000_000) * 100
-    maximum = float(_settings(cfg).get("maximum_round_trip_loss_pct", 2.0))
+    # Unconditional quote-identity check (should not depend on friction feature).
+    for body, inp, out, amount in ((buy, USDC_MINT, mint, amount_atomic),
+                                   (sell, mint, USDC_MINT, token_out)):
+        if (not isinstance(body, dict) or body.get("inputMint") != inp
+                or body.get("outputMint") != out
+                or str(body.get("inAmount")) != str(amount)
+                or isinstance(body.get("outAmount"), bool)
+                or not str(body.get("outAmount", "")).isascii()
+                or not str(body.get("outAmount", "")).isdigit()):
+            raise TokenDenied("round trip quote identity or amount mismatch")
+    if (not all(math.isfinite(v) for v in (buy_impact, sell_impact))
+            or min(buy_impact, sell_impact) < 0 or usdc_back > amount_atomic):
+        raise TokenDenied("invalid round trip impact or crossed quotes")
+    loss_pct = round((amount_atomic - usdc_back) * 100 / amount_atomic, 6)
+    maximum = _number(_settings(cfg).get("maximum_round_trip_loss_pct", 2.0), "round trip limit")
+    if not 0 < maximum <= 2.0:
+        raise TokenDenied("invalid round trip limit")
     if token_out <= 0 or usdc_back <= 0 or max(buy_impact, sell_impact) > 0.0075 or loss_pct > maximum:
         raise TokenDenied("round trip is not safely sellable")
     return {"buy_output_atomic": token_out, "usdc_back_atomic": usdc_back,
-            "round_trip_loss_pct": round(loss_pct, 6)}
+            "round_trip_loss_pct": loss_pct}
 
 
 def verify_onchain_mint(mint: str, expected_decimals: int, rpc_url: str, *, post=httpx.post) -> int:

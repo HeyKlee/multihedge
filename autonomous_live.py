@@ -416,7 +416,8 @@ def jev_decision(cfg: dict, market_context: dict) -> dict:
         else:
             prob = _finite_number(ans.get("confidence", 0.0), "confidence", 0, 1)
         calls.append({
-            "ts": int(market_context.get("timestamp", 0)),
+            "ts": int(assets.get(sym, {}).get("latest_ts")
+                      or market_context.get("timestamp") or 0),
             "symbol": sym,
             "choice": choice,
             "probability": prob,
@@ -608,7 +609,7 @@ def market_context(cfg: dict, balances: dict) -> dict:
     db_path = Path(os.getenv(
         "MULTIHEDGE_EVIDENCE_DB", str(Path(__file__).parent / "deploy/data/multihedge.db")
     ))
-    context = {"balances": balances, "assets": {}}
+    context = {"balances": balances, "assets": {}, "timestamp": int(time.time())}
     uri = f"file:{db_path.resolve()}?mode=ro&immutable=1"
     with sqlite3.connect(uri, uri=True) as con:
         for coin in tradeable_universe(cfg):

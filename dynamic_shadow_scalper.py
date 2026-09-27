@@ -115,6 +115,8 @@ def _exit_reason(position, price: float, now: float, params: dict) -> str | None
 
 
 def _entry_signal(row: dict, now: float) -> bool:
+    if row.get("entry_eligible") is False:
+        return False
     mint = row.get("mint")
     if not mint:
         return False
@@ -225,7 +227,8 @@ def _in_stop_loss_cooldown(con: sqlite3.Connection, mint: str, now: float) -> bo
     return not math.isfinite(closed) or now - closed < STOP_LOSS_REENTRY_COOLDOWN_SECONDS
 
 
-def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None = None) -> dict:
+def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None = None,
+         entry_cost_checker=None) -> dict:
     """Advance paper positions once using one immutable candidate snapshot.
 
     Exit thresholds are per-coin (via live_inventory.risk_params): memecoins
@@ -367,6 +370,29 @@ def tick(db_path: Path, candidates: list[dict], *, now: float, cfg: dict | None 
             target_notional = _target_notional(con, mint, wallet_free)
             if target_notional < 0.25:
                 continue
+            from entry_friction import proof_allows
+            amount_atomic = int(target_notional * 1_000_000)
+            proof = row.get("friction")
+            if not proof_allows(proof, mint, amount_atomic, cfg, now):
+                if entry_cost_checker is None:
+                    continue
+                # Close/earlier entries are durable before HTTP; never hold a SQLite
+                # writer lock across quote requests. Recheck funds after reacquiring.
+                con.commit()
+                proof = entry_cost_checker(mint, amount_atomic)
+                row["friction"] = proof
+                con.execute("BEGIN IMMEDIATE")
+                if not proof_allows(proof, mint, amount_atomic, cfg, now):
+                    continue
+                equity = float(con.execute("SELECT equity_usd FROM mh_accounts WHERE trader=?", (SETUP,)).fetchone()[0])
+                committed = float(con.execute("SELECT COALESCE(SUM(qty*entry_usd),0) FROM mh_dynamic_scalp_positions").fetchone()[0])
+                if not math.isfinite(equity) or not math.isfinite(committed):
+                    raise ValueError("invalid incubator wallet balance")
+                wallet_free = max(0.0, equity - committed)
+                if (con.execute("SELECT 1 FROM mh_dynamic_scalp_positions WHERE mint=?", (mint,)).fetchone()
+                        or _in_stop_loss_cooldown(con, mint, now)
+                        or int(_target_notional(con, mint, wallet_free) * 1_000_000) != amount_atomic):
+                    continue
             raw_qty = target_notional / price
             if raw_qty * price < 0.25:  # skip if position would be under $0.25
                 continue
@@ -412,7 +438,8 @@ def run_cycle(cfg: dict, db_path: Path, *, now: float, api_key: str, get=None,
 
     get = httpx.get if get is None else get
     try:
-        candidates = discover_candidates(cfg, api_key=api_key, now=now, get=get)
+        candidates = discover_candidates(cfg, api_key=api_key, now=now, get=get,
+                                         db_path=db_path, include_rejected=True)
         holdings = list_holdings(db_path)
         with _connect(db_path) as con:
             paper_mints = [row[0] for row in con.execute(
@@ -534,7 +561,17 @@ def run_cycle(cfg: dict, db_path: Path, *, now: float, api_key: str, get=None,
     temporary = forced_path.with_name(f".{forced_path.name}.{os.getpid()}.tmp")
     temporary.write_text(json.dumps(exit_decision or {}, sort_keys=True), encoding="utf-8")
     temporary.replace(forced_path)
-    result = tick(db_path, list(all_tokens.values()), now=now, cfg=cfg)
+    from entry_friction import check_entry_friction
+    def check_size(mint, amount):
+        return check_entry_friction(mint, cfg, api_key=api_key, get=get, now=now,
+                                    db_path=db_path, amount_atomic=amount,
+                                    ticker=all_tokens[mint].get("ticker", "UNKNOWN"),
+                                    name=all_tokens[mint].get("name"))
+    result = tick(db_path, list(all_tokens.values()), now=now, cfg=cfg,
+                  entry_cost_checker=check_size)
+    result["entry_friction"] = [
+        {"ticker": row.get("ticker", "UNKNOWN"), "name": row.get("name", row.get("ticker", "UNKNOWN")),
+         **row["friction"]} for row in candidates if "friction" in row]
     result["forced_exit"] = exit_decision and exit_decision["exit_reason"]
     # Autonomous parameter adaptation: propose TP/SL/max-hold changes from real
     # closed-trade excursions, adopt only when evidence supports improvement.
