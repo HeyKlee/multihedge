@@ -101,7 +101,14 @@ class SidecarsAreShared(unittest.TestCase):
             )
 
     def test_host_and_container_agree_on_the_ledger_path(self):
-        """One file, named identically on both sides."""
+        """Both sides must name the SAME FILE, though the mount prefixes differ.
+
+        Host   : <repo>/deploy/db/multihedge.db
+        Container: /app/db/multihedge.db
+        These are the same inode via the bind mount, so the correct assertion is on the
+        final path component, not on the full string. Comparing full paths was a bug in
+        the first version of this test and produced a false failure by design.
+        """
         if not container_running():
             self.skipTest("container not running")
         p = subprocess.run(
@@ -112,9 +119,29 @@ class SidecarsAreShared(unittest.TestCase):
         self.assertEqual(p.returncode, 0, f"resolver failed in container: {p.stderr[-300:]}")
         container_path = p.stdout.strip().splitlines()[-1].strip()
         import runtime_paths
+        host_path = str(runtime_paths.production_db())
         self.assertEqual(
-            container_path, str(runtime_paths.production_db()),
-            "host and container resolve to different ledger paths",
+            Path(container_path).name, Path(host_path).name,
+            "host and container name different files",
+        )
+        self.assertIn(
+            "/db/", container_path,
+            f"container ledger {container_path} is not inside the shared mount directory",
+        )
+        # The decisive check: the container's file must be the host's file.
+        st = subprocess.run(
+            ["docker", "exec", "multihedge", "python3", "-c",
+             "import os; s=os.stat(runtime_paths.production_db()); print(s.st_dev, s.st_ino)"],
+            capture_output=True, text=True, timeout=60, check=False,
+        )
+        if st.returncode != 0:
+            self.skipTest("could not stat inside the container")
+        host_stat = runtime_paths.production_db().stat()
+        dev_ino = st.stdout.strip().splitlines()[-1].split()
+        self.assertEqual(
+            int(dev_ino[1]), host_stat.st_ino,
+            "container and host are NOT the same file; the directory mount is not sharing "
+            "the ledger and the torn-write risk remains",
         )
 
 
