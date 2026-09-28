@@ -431,8 +431,15 @@ def close_checks(pos, px, cfg):
         return "take_profit"
     if pct <= SL_PCT:
         return "stop_loss"
+    # Max hold is a missed-TP execution fallback ONLY (AGENTS.md:65-67). It may release a
+    # position after the timer when the recorded peak already crossed TP but the sell did
+    # not complete. Age alone must never close a position: doing so truncates the paper
+    # evidence base the autotuner learns from. See FINDING 009.
     if time.time() - pos["open_ts"] >= MAX_HOLD_S:
-        return "max_hold"
+        peak_pct = ((peak - pos["entry_px"]) / pos["entry_px"] if side == "LONG"
+                    else (pos["entry_px"] - peak) / pos["entry_px"])
+        if peak_pct >= TP_PCT:
+            return "max_hold"
     # trailing stop: once up past arm, trail behind peak
     armed = pos.get("trail_armed")
     if not armed and pct >= TRAIL_ARM_PCT:

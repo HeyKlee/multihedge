@@ -142,13 +142,17 @@ def _close_position(pos, exit_px, reason):
 
 def _eval_exit(pos, px):
     pct = (px - pos["entry"]) / pos["entry"]
+    peak = max(pos["peak"] or pos["entry"], px)
     if pct >= TP_PCT:
         return "take_profit"
     if pct <= SL_PCT:
         return "stop_loss"
+    # Max hold is a missed-TP execution fallback ONLY (AGENTS.md:65-67): release after the
+    # timer only when the recorded peak already crossed TP. Age alone must never close a
+    # position, or the paper evidence base is truncated. See FINDING 009.
     if time.time() - pos["ts"] >= MAX_HOLD_S:
-        return "max_hold"
-    peak = max(pos["peak"] or pos["entry"], px)
+        if (peak / pos["entry"] - 1) >= TP_PCT:
+            return "max_hold"
     if (peak / pos["entry"] - 1) >= TRAIL_ARM_PCT and (peak - px) / peak >= TRAIL_DIST_PCT:
         return "trail_stop"
     return None

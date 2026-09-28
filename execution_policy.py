@@ -14,6 +14,12 @@ from pathlib import Path
 import sqlite3
 import time
 
+# The NZ$60 protected floor and NZ$40 death threshold are constitutional. AGENTS.md names
+# survival_policy the sole owner, so the pre-trade gate below MUST import them rather than
+# restate them. A second literal here would keep enforcing a stale value if the floor is
+# ever recalibrated in the owner module, with no error anywhere. See FINDING 010.
+from survival_policy import DEATH_THRESHOLD_NZD, PROTECTED_FLOOR_NZD  # noqa: F401
+
 SYSTEM_PROGRAM = "11111111111111111111111111111111"
 COMPUTE_BUDGET_PROGRAM = "ComputeBudget111111111111111111111111111111"
 TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
@@ -24,7 +30,6 @@ NATIVE_SOL_MINT = "So11111111111111111111111111111111111111112"
 ALLOWED_PROGRAMS = frozenset(
     {SYSTEM_PROGRAM, COMPUTE_BUDGET_PROGRAM, TOKEN_PROGRAM, ASSOCIATED_TOKEN_PROGRAM, JUPITER_V6_PROGRAM}
 )
-PROTECTED_FLOOR_NZD = Decimal("60.00")
 MAX_SLIPPAGE_BPS = 50
 MAX_PRICE_IMPACT = Decimal("0.0075")
 MAX_EXPIRY_BLOCKS = 300
