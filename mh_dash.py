@@ -416,6 +416,18 @@ def api_summary():
     }
 
 
+@app.get("/api/system-manifest")
+def api_system_manifest():
+    """Runtime identity: which code, config, schema and policy are actually live.
+
+    Health endpoints (/api/survival) prove the process answers. This proves what it is
+    running. Added after FINDING 005, where a committed fix was not in production and
+    every available signal (container up, 9/9 RUNNING, HTTP 200) said otherwise.
+    """
+    import runtime_manifest
+    return JSONResponse(content=runtime_manifest.build_manifest())
+
+
 @app.get("/api/trades")
 def api_trades(limit: int = 20):
     return _trades(limit)
