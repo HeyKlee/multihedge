@@ -29,8 +29,9 @@ import yaml
 import pricefeed
 from config import COINS, CFG_PATH
 
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
 CUR_DIR = Path(__file__).parent
-DB_PATH = CUR_DIR / "multihedge.db"
+DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority
 LOG_PATH = CUR_DIR / "mh_news.log"
 
 NEWS_MAX = 5           # top-N headlines per coin

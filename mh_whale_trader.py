@@ -21,7 +21,8 @@ import paper
 import pricefeed
 from config import COINS
 
-DB_PATH = Path(__file__).parent / "multihedge.db"
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
+DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority
 paper.DB_PATH = DB_PATH
 
 TRADER = paper.TRADER_WHALE_TRADER       # 'whale_trader'

@@ -24,8 +24,9 @@ import pricefeed
 import paper
 from config import COINS, CFG_PATH
 
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
 CUR_DIR = Path(__file__).parent
-DB_PATH = CUR_DIR / "multihedge.db"
+DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority
 
 # --- tunable reasoner params (may be overridden by config.yaml / DB optimizer) ---
 DEFAULT_PARAMS = {

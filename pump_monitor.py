@@ -27,6 +27,7 @@ except ImportError:
     Client = None
 from pricefeed import mint_for_symbol
 
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
 # Helius RPC endpoint (injected via env var SOLANA_RPC)
 RPC_URL = os.getenv('SOLANA_RPC', 'https://api.mainnet-beta.solana.com')
 client = Client(RPC_URL) if Client is not None else _UnavailableClient()
@@ -43,7 +44,7 @@ def _log(msg, lvl="INFO"):
 
 def _seen_event_ids():
     """Track which mh_whale_events ids have already been pushed as signals."""
-    con = sqlite3.connect(Path(__file__).parent / "multihedge.db", check_same_thread=False, timeout=30)
+    con = sqlite3.connect(runtime_paths.production_db(), check_same_thread=False, timeout=30)
     cur = con.execute(
         "SELECT DISTINCT CAST(substr(rationale, instr(rationale, 'event ')+6) AS INTEGER) "
         "FROM mh_news_bias WHERE provider='memecoin_tracker'")
@@ -91,7 +92,7 @@ def scan_once():
     """Read recent mh_whale_events and emit a memecoin_tracker bias for any
     whale buy of a token NOT in SOL/JUP/ETH that passes safety checks."""
     seen = _seen_event_ids()
-    con = sqlite3.connect(Path(__file__).parent / "multihedge.db", check_same_thread=False, timeout=30)
+    con = sqlite3.connect(runtime_paths.production_db(), check_same_thread=False, timeout=30)
     con.row_factory = sqlite3.Row
     rows = con.execute(
         "SELECT * FROM mh_whale_events ORDER BY id DESC LIMIT 200"
@@ -124,7 +125,7 @@ def scan_once():
             continue
 
         # Passed all filters – push signal
-        con = sqlite3.connect(Path(__file__).parent / "multihedge.db", check_same_thread=False, timeout=30)
+        con = sqlite3.connect(runtime_paths.production_db(), check_same_thread=False, timeout=30)
         con.execute(
             "INSERT INTO mh_news_bias(symbol,direction,confidence,rationale,headlines,provider,ts) "
             "VALUES(?,?,?,?,?,?,?)",

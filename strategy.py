@@ -19,7 +19,8 @@ import sqlite3
 import time
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "multihedge.db"
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
+DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority
 
 # Setup families available. Each implements sign(prices) -> "LONG"/"SHORT"/"FLAT"
 # where prices is a deque/list of most-recent closes (newest last).

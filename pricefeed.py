@@ -22,7 +22,8 @@ import urllib.request
 from pathlib import Path
 from collections import deque
 
-DB_PATH = Path(__file__).parent / "multihedge.db"
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
+DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority
 CACHE_TTL = 30          # seconds: serve cached price within this window
 
 # CoinGecko symbol -> id (only the ones we know; everything else goes Jupiter)

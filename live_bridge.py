@@ -25,6 +25,7 @@ from pathlib import Path
 import paper
 import pricefeed
 
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
 # Reuse AutoHedge's generic Solana wrapper (works for any SPL token by mint).
 # Try to import chain; if not available (e.g., in test or missing env), set to None.
 try:
@@ -32,7 +33,7 @@ try:
 except ImportError:
     chain = None
 
-DB_PATH = Path(__file__).parent / "multihedge.db"
+DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority
 LIVE_ORDER_DB = Path(os.environ.get(
     "MULTIHEDGE_LIVE_ORDERS_DB", str(Path(__file__).parent / "multihedge_live_orders.db")
 ))

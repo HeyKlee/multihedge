@@ -24,6 +24,7 @@ import sqlite3
 import time
 from pathlib import Path
 
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
 try:
     from solders.pubkey import Pubkey
     from solana.rpc.api import Client
@@ -50,7 +51,7 @@ COIN_MINTS = {
     "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs": "ETH",
 }
 
-DB_PATH = Path(__file__).parent / "multihedge.db"
+DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority
 SEEN_FILE = Path(__file__).parent / "seen_whale_sigs.json"
 SOLANA_RPC = os.getenv("SOLANA_RPC", "https://api.mainnet-beta.solana.com")
 

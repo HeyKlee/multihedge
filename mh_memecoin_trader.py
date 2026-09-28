@@ -16,7 +16,8 @@ import time
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "multihedge.db"
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
+DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority
 TRADER = "memecoin_trader"
 
 TP_PCT = 0.50

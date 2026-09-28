@@ -44,7 +44,8 @@ from execution_costs import (
     DEFAULT_SLIPPAGE_BPS,
 )
 
-DB_PATH = Path(__file__).parent / "multihedge.db"
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
+DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority
 DEFAULT_EQUITY = 24.0           # per-trader default (~NZ$40 / US$24 each)
 MAX_HOLD_S = 3600          # 1 hour virtual max-hold per trade
 TP_PCT = 0.025             # take profit +2.5%
