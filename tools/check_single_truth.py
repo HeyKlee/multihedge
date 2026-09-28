@@ -23,7 +23,11 @@ REPO = Path(__file__).resolve().parent.parent
 
 # Once the canonical modules exist, these become the only legal owners.
 CANONICAL_SETTINGS = {"config/settings.py", "src/multihedge/infrastructure/runtime/settings.py"}
-CANONICAL_PATHS = {"runtime/paths.py", "src/multihedge/infrastructure/runtime/paths.py"}
+CANONICAL_PATHS = {
+    "runtime/paths.py",
+    "runtime_paths.py",              # the shipped resolver: ATLAS Rule A owner
+    "src/multihedge/infrastructure/runtime/paths.py",
+}
 CANONICAL_POLICY = {
     "domain/policy/resolver.py",
     "live_inventory.py",          # current shared owner of Xora-Survival exit params

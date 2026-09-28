@@ -30,6 +30,7 @@ import sqlite3
 import time
 from pathlib import Path
 
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
 SETUP = "dynamic_scalper"
 TRADES_PER_COIN = 5
 MIN_PATHS_FOR_PROPOSAL = 5
@@ -447,12 +448,12 @@ def _default_db() -> str:
     The cron prompt invokes this module without --db, so the default must work on
     both the host and inside the image.
     """
-    env = os.getenv("MULTIHEDGE_EVIDENCE_DB")
-    if env:
-        return env
-    root = Path(__file__).resolve().parent
-    host = root / "deploy" / "data" / "multihedge.db"
-    return str(host if host.exists() else root / "multihedge.db")
+    # ATLAS Rule A + FINDING 001/008: this previously read MULTIHEDGE_EVIDENCE_DB
+    # directly, then hardcoded a host-only deploy/data/ path, then silently fell back to a
+    # DIFFERENT file when that path was absent - so the tool could read an empty database
+    # and report a plausible empty history. runtime_paths already honours
+    # MULTIHEDGE_EVIDENCE_DB, so one resolver now covers every case.
+    return str(runtime_paths.evidence_db())
 
 
 def main(argv=None) -> int:

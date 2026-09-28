@@ -25,9 +25,10 @@ import sqlite3
 import subprocess
 from pathlib import Path
 
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
 APP_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = APP_DIR / "config.yaml"
-DB_PATH = APP_DIR / "multihedge.db"  # /app/multihedge.db inside the container
+DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: do not resolve independently
 
 
 def _sha256_file(path: Path) -> str | None:

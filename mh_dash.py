@@ -24,10 +24,14 @@ import paper
 import pricefeed as pricefeed_module
 import mh_ui
 import mh_reasoner  # HOTSPOT: expose effective runtime reasoner params
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
 # so the API truthfully shows DB-override values alongside config.yaml declarations
 
-DB_PATH = Path(os.environ.get("MULTIHEDGE_DB", str(Path(__file__).parent / "multihedge.db")))
-paper.DB_PATH = DB_PATH  # dashboard and engine share the same ledger
+DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority
+# FINDING 001: this line previously rebound paper.DB_PATH so the dashboard and engine
+# "shared" a ledger. That made correctness depend on import order and was itself a
+# second source of truth. Both modules now resolve through runtime_paths, so they agree
+# without any global mutation.
 
 COINS = ["SOL", "JUP", "ETH"]
 SETUPS = ["momentum_breakout", "mean_reversion", "rsi_oversold", "vwap_reversion"]
@@ -200,7 +204,7 @@ def api_survival():
     except Exception:
         pass
     # Legacy one-off manual fills were logged to the host-root engine ledger.
-    legacy = Path(os.environ.get("MULTIHEDGE_LEGACY_DB", str(Path(__file__).parent / "multihedge.db")))
+    legacy = runtime_paths.legacy_db()  # ATLAS Rule A: single path authority
     try:
         lc = sqlite3.connect(legacy)
         lc.row_factory = sqlite3.Row
@@ -255,8 +259,7 @@ def api_survival():
         "exit_reasons": reasons,
         "notional": {"paper_usd": paper_notional, "live_usd": live_notional},
         "risk_params": _survival_risk_status(
-            Path(os.environ.get("MULTIHEDGE_DB",
-                                str(Path(__file__).parent / "multihedge.db"))),
+            runtime_paths.production_db(),
         ),
     }
 

@@ -23,6 +23,7 @@ from execution_policy import PolicyDenied, TradeIntent, validate_intent
 from solana_token_universe import verify_onchain_mint, verify_round_trip, verify_token
 from live_inventory import get_holding
 
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
 ROOT = Path(__file__).resolve().parent
 TRADE_FIELDS = frozenset(field.name for field in fields(TradeIntent))
 
@@ -82,10 +83,21 @@ def enrich_dynamic_intent(cfg: dict, intent: TradeIntent, *, api_key: str, rpc_u
     """Rebuild dynamic BUY approval inside the signer trust boundary."""
     known = {coin["mint"] for coin in tradeable_universe(cfg)}
     target = intent.output_mint if intent.side == "BUY" else intent.input_mint
+    settings = cfg.get("live", {}).get("autonomous", {}).get("dynamic_universe", {})
+    cost_checked = intent.side == "BUY" and "maximum_friction_cost_pct" in settings
+    if cost_checked:
+        from entry_friction import check_entry_friction, proof_allows
+        from solana_token_universe import USDC_MINT
+        if intent.input_mint != USDC_MINT:
+            raise PolicyDenied("entry friction requires USDC input")
+        proof = check_entry_friction(target, cfg, api_key=api_key,
+                                     amount_atomic=intent.amount_atomic, now=now)
+        if not proof_allows(proof, target, intent.amount_atomic, cfg, now):
+            raise PolicyDenied("entry friction gate failed")
     if target in known:
         return cfg
     if intent.side == "SELL":
-        db_path = Path(os.getenv("MULTIHEDGE_EVIDENCE_DB", str(ROOT / "multihedge.db")))
+        db_path = runtime_paths.evidence_db()  # ATLAS Rule A: single path authority
         holding = get_holding(db_path, target)
         if holding is None or intent.amount_atomic > int(holding["amount_atomic"]):
             raise PolicyDenied("dynamic sells require a registered wallet holding")
@@ -94,7 +106,8 @@ def enrich_dynamic_intent(cfg: dict, intent: TradeIntent, *, api_key: str, rpc_u
             "decimals": int(holding["decimals"]), "entry_eligible": False,
         }])
     candidate = verify_token(target, cfg, api_key=api_key, now=now)
-    verify_round_trip(target, cfg, api_key=api_key)
+    if not cost_checked:
+        verify_round_trip(target, cfg, api_key=api_key, amount_atomic=intent.amount_atomic)
     verify_onchain_mint(target, candidate["decimals"], rpc_url)
     return with_runtime_coins(cfg, [candidate])
 

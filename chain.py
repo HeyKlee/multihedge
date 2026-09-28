@@ -31,6 +31,7 @@ from solders.pubkey import Pubkey
 from solders.system_program import transfer, TransferParams
 from solders.transaction import VersionedTransaction, Transaction
 
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
 try:
     from solana.rpc.api import Client
     from solana.rpc.types import TxOpts
@@ -50,7 +51,7 @@ USDC_DEVNET = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
 _JUP_QUOTE = "https://api.jup.ag/swap/v2/quote"
 _JUP_SWAP = "https://api.jup.ag/swap/v2/swap"
 
-DB_PATH = Path(__file__).parent / "multihedge.db"
+DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority
 
 
 # --------------------------------------------------------------------------

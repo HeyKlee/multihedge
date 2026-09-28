@@ -55,6 +55,47 @@ SITES: list[tuple[str, str, str]] = [
     ("pump_monitor.py",
      'con = sqlite3.connect(Path(__file__).parent / "multihedge.db", check_same_thread=False, timeout=30)',
      'con = sqlite3.connect(runtime_paths.production_db(), check_same_thread=False, timeout=30)'),
+    # --- phase 2: the remaining independent sites ---
+    ("agent_architecture.py",
+     "DB_PATH = Path(os.environ.get('MULTIHEDGE_DB', str(Path(__file__).parent / 'multihedge.db')))",
+     'DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority'),
+    ("chain.py",
+     'DB_PATH = Path(__file__).parent / "multihedge.db"',
+     'DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority'),
+    ("dash_web.py",
+     'DB_PATH = Path(__file__).parent / "multihedge.db"',
+     'DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority'),
+    ("dynamic_shadow_scalper.py",
+     'Path(os.getenv("MULTIHEDGE_EVIDENCE_DB", str(root / "multihedge.db"))),',
+     'runtime_paths.evidence_db(),  # ATLAS Rule A: single path authority'),
+    ("live_signer_worker.py",
+     'db_path = Path(os.getenv("MULTIHEDGE_EVIDENCE_DB", str(ROOT / "multihedge.db")))',
+     'db_path = runtime_paths.evidence_db()  # ATLAS Rule A: single path authority'),
+    # --- phase 3: dashboard trio, autotuner, replay, and the manifest itself ---
+    ("mh_dash.py",
+     'DB_PATH = Path(os.environ.get("MULTIHEDGE_DB", str(Path(__file__).parent / "multihedge.db")))',
+     'DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority'),
+    ("mh_dash.py",
+     'legacy = Path(os.environ.get("MULTIHEDGE_LEGACY_DB", str(Path(__file__).parent / "multihedge.db")))',
+     'legacy = runtime_paths.legacy_db()  # ATLAS Rule A: single path authority'),
+    ("mh_dash.py",
+     'Path(os.environ.get("MULTIHEDGE_DB",\n'
+     '                                str(Path(__file__).parent / "multihedge.db"))),',
+     'runtime_paths.production_db(),'),
+    ("mh_ui.py",
+     'DB_PATH = Path(os.environ.get("MULTIHEDGE_DB", str(Path(__file__).parent / "multihedge.db")))',
+     'DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority'),
+    ("parameter_autotuner.py",
+     'db = Path(os.getenv("MULTIHEDGE_EVIDENCE_DB", str(root / "multihedge.db")))',
+     'db = runtime_paths.evidence_db()  # ATLAS Rule A: single path authority'),
+    ("run_replay.py",
+     "    src = Path('deploy/data/multihedge.db')",
+     '    # ATLAS Rule A: was a CWD-relative host-only path; it breaks the moment the\n'
+     '    # database moves to its own mount. One resolver, so this cannot rot silently.\n'
+     '    src = runtime_paths.production_db()'),
+    ("runtime_manifest.py",
+     'DB_PATH = APP_DIR / "multihedge.db"  # /app/multihedge.db inside the container',
+     'DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: do not resolve independently'),
 ]
 
 IMPORT_LINE = "import runtime_paths  # ATLAS Rule A: sole runtime path authority"
@@ -95,6 +136,44 @@ def ensure_import(text: str) -> str:
     return out
 
 
+# Multi-line replacements: (file, original block, replacement block)
+BLOCK_SITES: list[tuple[str, str, str]] = [
+    ("mh_coin_review.py",
+     '    root = Path(__file__).resolve().parent\n'
+     '    host = root / "deploy" / "data" / "multihedge.db"\n'
+     '    return str(host if host.exists() else root / "multihedge.db")',
+     '    # ATLAS Rule A + FINDING 001/008: this previously hardcoded a host-only\n'
+     '    # deploy/data/ path and silently fell back to a DIFFERENT file when that\n'
+     '    # path was absent, so the tool could read an empty database and report a\n'
+     '    # plausible empty history. One resolver, one path, no existence branching.\n'
+     '    return str(runtime_paths.production_db())'),
+]
+
+
+def migrate_blocks(apply: bool) -> int:
+    changed = failed = 0
+    for filename, original, replacement in BLOCK_SITES:
+        path = REPO / filename
+        if not path.is_file():
+            print(f"  MISSING  {filename}")
+            failed += 1
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if replacement in text:
+            print(f"  already  {filename}")
+            continue
+        if original not in text:
+            print(f"  NOMATCH  {filename}")
+            failed += 1
+            continue
+        new = ensure_import(text.replace(original, replacement))
+        print(f"  {'patched' if apply else 'would patch'} {filename} (block)")
+        if apply:
+            path.write_text(new, encoding="utf-8")
+        changed += 1
+    return failed
+
+
 def migrate(apply: bool) -> int:
     changed = skipped = failed = 0
     for filename, original, replacement in SITES:
@@ -128,7 +207,9 @@ def main() -> int:
     ap.add_argument("--apply", action="store_true", help="write changes (default is a dry run)")
     args = ap.parse_args()
     print(f"DB path migration ({'APPLY' if args.apply else 'DRY RUN'})")
-    return migrate(args.apply)
+    rc = migrate(args.apply)
+    failed = migrate_blocks(args.apply)
+    return rc or failed
 
 
 if __name__ == "__main__":

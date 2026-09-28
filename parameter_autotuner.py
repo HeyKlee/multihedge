@@ -39,6 +39,7 @@ from live_inventory import (
     SERIOUS_MAX_HOLD_SECONDS,
 )
 
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
 MIN_SAMPLE_CLOSED = 30              # closed trades per class before any tuning
 HOLDOUT_FRACTION = 0.25             # chronological tail held out for validation
 IMPROVEMENT_MARGIN = 0.02           # candidate must beat incumbent expectancy by 2%
@@ -367,5 +368,5 @@ if __name__ == "__main__":
     import yaml as _yaml
     root = Path(__file__).resolve().parent
     cfg = _yaml.safe_load((root / "config.yaml").read_text(encoding="utf-8"))
-    db = Path(os.getenv("MULTIHEDGE_EVIDENCE_DB", str(root / "multihedge.db")))
+    db = runtime_paths.evidence_db()  # ATLAS Rule A: single path authority
     print(json.dumps(maybe_tune(db, cfg), sort_keys=True))

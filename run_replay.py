@@ -2,9 +2,12 @@ import tempfile, yaml, json, sqlite3, os
 from pathlib import Path
 from ops.sampled_price_replay import replay
 
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
 with tempfile.TemporaryDirectory() as td:
     out = Path(td) / 'run'
-    src = Path('deploy/data/multihedge.db')
+    # ATLAS Rule A: was a CWD-relative host-only path; it breaks the moment the
+    # database moves to its own mount. One resolver, so this cannot rot silently.
+    src = runtime_paths.production_db()
     con = sqlite3.connect(f'file:{src}?mode=ro', uri=True, timeout=5)
     con.row_factory = sqlite3.Row
     con.execute('PRAGMA query_only=ON')

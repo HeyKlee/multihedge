@@ -12,6 +12,7 @@ import time
 import pricefeed  # for RSI/volume computation
 import paper     # shared round-trip cost model (single source of truth)
 
+import runtime_paths  # ATLAS Rule A: sole runtime path authority
 TRADE_RECORDS_DIR = Path(__file__).parent / "trade_records"
 
 def _persist_trade_record(mint: str, ticker: str, entry_usd: float, exit_usd: float,
@@ -589,7 +590,7 @@ if __name__ == "__main__":
     root = Path(__file__).resolve().parent
     result, code = run_cycle(
         yaml.safe_load((root / "config.yaml").read_text(encoding="utf-8")),
-        Path(os.getenv("MULTIHEDGE_EVIDENCE_DB", str(root / "multihedge.db"))),
+        runtime_paths.evidence_db(),  # ATLAS Rule A: single path authority
         now=time.time(),
         api_key=os.getenv("JUPITER_API_KEY", ""),
     )
