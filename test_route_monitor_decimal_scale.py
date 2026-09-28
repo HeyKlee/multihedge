@@ -104,6 +104,27 @@ class LegPxIsScaleCorrect(unittest.TestCase):
         self.assertEqual(why, "ok")
         self.assertAlmostEqual(px, price, delta=price * 0.001)
 
+    def test_five_decimal_token_also_scale_correct(self):
+        """A real production case: DezXAZ8z7Pnr is dec=5 and was 10x wrong, not 1000x.
+
+        The scale factor is 10**(dec-6), which is a negative exponent below USDC
+        decimals, so this direction must be covered explicitly.
+        """
+        price = 3.735269786317722e-06
+        dec = 5
+        get, classify = self._fake_quotes(price, dec)
+        orig_get, orig_classify = rm._get, rm._classify
+        rm._get, rm._classify = get, classify
+        try:
+            px, why = rm.leg_px("MintFiveDecimals", "buy", 1.0, dec)
+        finally:
+            rm._get, rm._classify = orig_get, orig_classify
+        self.assertEqual(why, "ok")
+        self.assertAlmostEqual(
+            px, price, delta=abs(price) * 0.001,
+            msg=f"buy price {px} is not USD-per-token; expected ~{price}",
+        )
+
     def test_real_liquid_token_is_not_flagged_implausible(self):
         """The exact production failure: a liquid 9dp token must pass the plausibility gate."""
         mid = 0.2569197190847749
