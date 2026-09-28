@@ -19,7 +19,12 @@ import mh_reasoner
 
 REPO_ROOT = Path(__file__).resolve().parent
 DEPLOYED_CONFIG = REPO_ROOT / "config.yaml"
-PRODUCTION_DB = REPO_ROOT / "deploy/data/multihedge.db"
+# ATLAS Rule A: never rebuild the path. The old literal deploy/data/multihedge.db is a stale
+# stub that exists on disk, so the "production database not present" skip below never fired
+# and this suite errored on a table the stub does not have. Resolve through the authority.
+import runtime_paths  # noqa: E402
+
+PRODUCTION_DB = runtime_paths.production_db()
 
 _REASONER_KEYS = {
     "POSITION_FRACTION", "TAKE_PROFIT", "STOP_LOSS", "MAX_HOLD_SECS",

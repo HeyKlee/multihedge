@@ -15,11 +15,27 @@ import hashlib
 import json
 import math
 import sqlite3
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+import runtime_paths  # noqa: E402  (needs ROOT on sys.path first)
+
 MIN_OBSERVATIONS = 100
 MIN_OUTCOMES = 30
+
+
+def default_db() -> Path:
+    """The ledger this runner reads when no --db is given.
+
+    ATLAS Rule A: never rebuild the path. The old literal deploy/data/multihedge.db is a
+    stale 8 KB stub, and a reader pointed at it returns a confident empty history rather
+    than an error, so the default has to come from the single path authority.
+    """
+    return runtime_paths.production_db()
 
 
 def snapshot(source: Path, dest: Path) -> None:
@@ -132,7 +148,7 @@ def render(report: dict) -> str:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db", default=str(ROOT / "deploy/data/multihedge.db"))
+    parser.add_argument("--db", default=str(default_db()))
     parser.add_argument("--output-dir", default=str(ROOT / "entry-quality-results"))
     args = parser.parse_args(argv)
     out = Path(args.output_dir)

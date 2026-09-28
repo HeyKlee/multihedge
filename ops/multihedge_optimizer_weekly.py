@@ -24,8 +24,22 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+import runtime_paths
+sys.path.insert(0, str(ROOT))
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+import runtime_paths  # noqa: E402  (needs ROOT on sys.path first)
+
+
+def default_db() -> Path:
+    """The ledger this runner reads when no --db is given.
+
+    ATLAS Rule A: never rebuild the path. The old literal deploy/data/multihedge.db is a
+    stale 8 KB stub, and a reader pointed at it returns a confident empty history rather
+    than an error, so the default has to come from the single path authority.
+    """
+    return runtime_paths.production_db()
 
 
 def snapshot(source: Path, dest: Path) -> None:
@@ -43,7 +57,7 @@ def snapshot(source: Path, dest: Path) -> None:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db", default=str(ROOT / "deploy/data/multihedge.db"))
+    parser.add_argument("--db", default=str(default_db()))
     parser.add_argument("--output-dir", default=str(ROOT / "optimization-results"))
     parser.add_argument("--per-side-bps", type=float, default=40.0)
     parser.add_argument("--fixed-cost-usd", type=float, default=0.0)
