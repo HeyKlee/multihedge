@@ -49,12 +49,33 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# This file lives in the repository root, which is /app inside the container. Deriving the
-# default from here reproduces the historical `Path(__file__).parent` default exactly, so
-# the migration changes no resolution until an operator opts in via the environment.
+# This file lives in the repository root, which is /app inside the container. The production
+# database is bind-mounted from deploy/db/ as a DIRECTORY (FINDING 008), so the sidecars
+# live beside it and host and container share one -wal/-shm pair.
+#
+# The container names the file explicitly via MULTIHEDGE_DB=/app/db/multihedge.db, because
+# /app has no deploy/ subdirectory. On the host the same location is found by convention,
+# relative to this module, so both sides converge on ONE file without a symlink.
 _APP_DIR = Path(__file__).resolve().parent
+_HOST_DB = _APP_DIR / "deploy" / "db" / "multihedge.db"
 
 DEFAULT_DB_NAME = "multihedge.db"
+
+
+def _default_db_location() -> Path:
+    """Where the production database lives when the environment does not say.
+
+    Host:  <repo>/deploy/db/multihedge.db   (the real ledger)
+    Container: /app/db/multihedge.db      (supplied by MULTIHEDGE_DB in compose)
+
+    The container never reaches the fallback because compose sets the variable, so this
+    returns the host path there only if the variable were missing - and a container without
+    it would otherwise silently open a fresh empty database.
+    """
+    in_container = Path("/app").is_dir() and not _HOST_DB.parent.is_dir()
+    if in_container:
+        return Path("/app/db") / DEFAULT_DB_NAME
+    return _HOST_DB
 
 #: Set by tests to redirect resolution at a temporary database.
 _override: dict[str, Path] = {}
@@ -86,7 +107,7 @@ def production_db() -> Path:
 
     This is the only sanctioned way to locate it. Callers must not rebuild the path.
     """
-    return _resolve("MULTIHEDGE_DB", _APP_DIR / DEFAULT_DB_NAME)
+    return _resolve("MULTIHEDGE_DB", _default_db_location())
 
 
 def evidence_db() -> Path:
@@ -104,7 +125,7 @@ def legacy_db() -> Path:
 
     Never a write target. The dashboard reads it to show historical divergence.
     """
-    return _resolve("MULTIHEDGE_LEGACY_DB", _APP_DIR / DEFAULT_DB_NAME)
+    return _resolve("MULTIHEDGE_LEGACY_DB", _APP_DIR / DEFAULT_DB_NAME)  # the old root copy
 
 
 def connect_readonly(path: Path | None = None, timeout: float = 5.0):
@@ -117,6 +138,37 @@ def connect_readonly(path: Path | None = None, timeout: float = 5.0):
 
     target = Path(path) if path is not None else production_db()
     return sqlite3.connect(f"file:{target}?mode=ro", uri=True, timeout=timeout)
+
+
+def assert_looks_like_ledger(path: Path) -> None:
+    """Refuse to treat a file without a ledger schema as the production database.
+
+    The FINDING 001 failure was a tool silently opening a fresh, empty database and
+    reporting a plausible empty history. Creation must never be implicit.
+    """
+    if not path.exists():
+        raise FileNotFoundError(
+            f"production database does not exist at {path}; refusing to create it. "
+            "Set MULTIHEDGE_DB explicitly if the ledger lives elsewhere."
+        )
+    import sqlite3
+
+    try:
+        con = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)
+    except sqlite3.Error as exc:
+        raise RuntimeError(f"cannot open {path} read-only: {exc}") from exc
+    try:
+        names = {r[0] for r in con.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'")}
+    except sqlite3.Error as exc:
+        raise RuntimeError(f"{path} is not a readable SQLite ledger: {exc}") from exc
+    finally:
+        con.close()
+    if "mh_trades" not in names:
+        raise RuntimeError(
+            f"{path} has no mh_trades table ({len(names)} tables); it is not the production "
+            "ledger. Refusing to proceed rather than reporting an empty history."
+        )
 
 
 def connect(path: Path | None = None, timeout: float = 15.0):

@@ -15,3 +15,4 @@ optimization-results/
 *.bak*
 seen_whale_sigs.json
 confirm_live.flag
+deploy/db/

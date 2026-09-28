@@ -5,10 +5,20 @@ services:
       dockerfile: deploy/Dockerfile
     container_name: multihedge
     restart: unless-stopped
-    # Bind the persistent DB + .env over their in-image locations. Locks,
-    # pidfiles, WAL are recreated fresh in the writable layer each start.
+    # FINDING 008 (2026-09-28 torn write): the DB used to be bind-mounted as a SINGLE
+    # FILE, so SQLite placed the container's -wal/-shm in the container's writable layer
+    # while host tools created their own beside the host file: two independent
+    # write-ahead logs over one database. That is what tore 9 pages and destroyed 20 rows.
+    #
+    # Mounting the DIRECTORY makes the sidecars shared, so there is exactly one WAL.
+    #
+    # It is deliberately NOT ./data/, because deploy/data/ also holds signer.env,
+    # agent.env, .env (mode 0600) and signer_state/live_queue (mode 0700). Mounting that
+    # directory would put the Solana signer key inside the trading container and break the
+    # key-isolation invariant. The database therefore gets its own mount at deploy/db/,
+    # and runtime_paths is the single resolver for its location.
     volumes:
-      - ./data/multihedge.db:/app/multihedge.db
+      - ./db:/app/db
       - ./data/agent.env:/app/.env:ro
       - ./data/agent_logs:/data/agent_logs:ro
       - ../multihedge.db:/data/legacy_multihedge.db:ro
@@ -17,6 +27,10 @@ services:
     environment:
       - TZ=Pacific/Auckland
       - PYTHONUNBUFFERED=1
+      # Single source of truth for where the ledger lives (ATLAS Rule A). The host and the
+      # container now name the SAME file, and /app/db is a shared directory, so both share
+      # one -wal/-shm pair.
+      - MULTIHEDGE_DB=/app/db/multihedge.db
       - MULTIHEDGE_CYCLES_LOG=/data/agent_logs/cycles.jsonl
       - MULTIHEDGE_LEGACY_DB=/data/legacy_multihedge.db
     ports:
