@@ -95,13 +95,23 @@ def path_after(prices, mint, open_ts, horizon_s):
     return out
 
 
-def simulate(path, entry_px, side, tp, sl, max_hold_s, cost=COST_FRACTION):
+def simulate(path, entry_px, side, tp, sl, max_hold_s, cost=COST_FRACTION,
+             trail_arm=None, trail_dist=None):
     """Apply an exit rule to a realised price path.
 
     tp / sl are POSITIVE fractions (e.g. tp=0.015, sl=0.01). sl is stored
     negative in policy.py; the caller is responsible for the sign. This keeps
     one convention at the boundary and avoids the negation that previously
     inverted the stop band in mh_reasoner.
+
+    trail_arm / trail_dist reproduce the live trailing stop, which
+    mh_reasoner.closing_reason applies as: once the running peak has gained
+    trail_arm, exit when price gives back trail_dist FROM THE PEAK (not from
+    entry). Passing None disables the trail entirely.
+
+    The trail is checked AFTER take_profit and stop_loss, matching live order,
+    and the peak is updated before the trail test so the running maximum is
+    never a stale value.
     """
     if not path or entry_px <= 0:
         return None
@@ -122,8 +132,22 @@ def simulate(path, entry_px, side, tp, sl, max_hold_s, cost=COST_FRACTION):
             return ("take_profit", move - cost, held)
         if move <= -sl:
             return ("stop_loss", move - cost, held)
-        if px > peak:
-            peak = px
+        # Track the running peak before testing the trail, so the giveback is
+        # measured from the true maximum and not a stale one.
+        if side == "LONG":
+            if px > peak:
+                peak = px
+        else:
+            if px < peak:
+                peak = px
+        if trail_arm is not None and trail_dist is not None:
+            peak_gain = ((peak - entry_px) / entry_px) if side == "LONG" \
+                else ((entry_px - peak) / entry_px)
+            if peak_gain >= trail_arm:
+                giveback = ((peak - px) / peak) if side == "LONG" \
+                    else ((px - peak) / peak)
+                if giveback >= trail_dist:
+                    return ("trail_stop", move - cost, held)
         if held >= max_hold_s:
             return ("max_hold", move - cost, held)
     # Path exhausted with no exit triggering. Mark to the last observed price
@@ -138,7 +162,8 @@ def simulate(path, entry_px, side, tp, sl, max_hold_s, cost=COST_FRACTION):
     return ("path_exhausted", move - cost, held)
 
 
-def evaluate(trades, prices, tp, sl, max_hold_s, horizon_mult=3.0):
+def evaluate(trades, prices, tp, sl, max_hold_s, horizon_mult=3.0,
+             trail_arm=None, trail_dist=None):
     """Run one exit rule over a trade set. Returns aggregate + per-trade."""
     horizon = max_hold_s * horizon_mult
     rows = []
@@ -148,7 +173,8 @@ def evaluate(trades, prices, tp, sl, max_hold_s, horizon_mult=3.0):
             continue
         # Anchor the path at the recorded entry so the first sample is entry_px.
         path = [(open_ts, ep)] + path
-        r = simulate(path, ep, side, tp, sl, max_hold_s)
+        r = simulate(path, ep, side, tp, sl, max_hold_s,
+                     trail_arm=trail_arm, trail_dist=trail_dist)
         if r is None:
             continue
         why, net, held = r
@@ -190,7 +216,13 @@ def main():
     ap.add_argument("--sl", type=float, default=0.01)
     ap.add_argument("--max-hold", type=int, default=1800)
     ap.add_argument("--sweep", action="store_true")
+    ap.add_argument("--no-trail", action="store_true",
+                    help="disable the trailing stop (for A/B against the live rule)")
+    ap.add_argument("--trail-sweep", action="store_true",
+                    help="sweep trail_arm x trail_distance instead of tp/sl/hold")
     ap.add_argument("--out", default=str(ROOT / "ops" / "hold_time_replay_result.json"))
+    ap.add_argument("--trail-arm", type=float, default=0.005)
+    ap.add_argument("--trail-dist", type=float, default=0.003)
     a = ap.parse_args()
 
     db = a.db
@@ -220,7 +252,12 @@ def main():
         print(f"  test : {len(test)} trades, from {time.strftime('%Y-%m-%d %H:%M', time.localtime(cut))}")
     print()
 
-    results = {}
+    arm = None if a.no_trail else a.trail_arm
+    dist = None if a.no_trail else a.trail_dist
+    print(f"trail      : {'DISABLED' if a.no_trail else f'arm={arm:.3%} dist={dist:.3%}'}")
+    print()
+
+    results = {"trail_arm": arm, "trail_dist": dist}
     if a.sweep:
         print("=" * 78)
         print("EXIT-RULE SWEEP  (tp, sl, max_hold)   gross / net at 1.800% cost")
@@ -232,8 +269,10 @@ def main():
         for tp in (0.005, 0.010, 0.015, 0.020, 0.030):
             for sl in (0.005, 0.010, 0.015, 0.025):
                 for hold in (300, 600, 900, 1200, 1800, 2700, 3600):
-                    tr = evaluate(train, prices, tp, sl, hold)
-                    te = evaluate(test, prices, tp, sl, hold)
+                    tr = evaluate(train, prices, tp, sl, hold,
+                                  trail_arm=arm, trail_dist=dist)
+                    te = evaluate(test, prices, tp, sl, hold,
+                                  trail_arm=arm, trail_dist=dist)
                     if not tr or not te:
                         continue
                     grid.append((tp, sl, hold, tr, te))
@@ -257,7 +296,8 @@ def main():
         print("  NOTE: ranked on TEST to show out-of-sample reality. A rule that only")
         print("  wins in TRAIN is overfit and must not be promoted.")
 
-    cur = evaluate(trades, prices, a.tp, a.sl, a.max_hold)
+    cur = evaluate(trades, prices, a.tp, a.sl, a.max_hold,
+                   trail_arm=arm, trail_dist=dist)
     if cur:
         print("=" * 78)
         print(f"CURRENT RULE REPLAY  tp={a.tp*100:.1f}% sl={a.sl*100:.1f}% hold={a.max_hold}s")
