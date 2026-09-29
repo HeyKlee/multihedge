@@ -1,5 +1,6 @@
+import copy
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import httpx
 
@@ -22,6 +23,7 @@ CFG = {
         "minimum_5m_sell_volume_usd": 5_000,
         "maximum_metadata_age_seconds": 300,
         "maximum_round_trip_loss_pct": 2.0,
+        "maximum_friction_cost_pct": 0.50,
         "max_candidates": 12,
     }}}
 }
@@ -111,11 +113,71 @@ class TokenUniverseTests(unittest.TestCase):
 
     def test_round_trip_quote_must_be_sellable_within_loss_limit(self):
         get = Mock(side_effect=[
-            stu.FakeResponse(200, {"outAmount": "1000000000", "priceImpactPct": "0.001"}),
-            stu.FakeResponse(200, {"outAmount": "979999", "priceImpactPct": "0.001"}),
+            stu.FakeResponse(200, {
+                "inputMint": stu.USDC_MINT, "outputMint": MINT_A,
+                "inAmount": "1000000", "outAmount": "1000000000",
+                "priceImpactPct": "0.001",
+            }),
+            stu.FakeResponse(200, {
+                "inputMint": MINT_A, "outputMint": stu.USDC_MINT,
+                "inAmount": "1000000000", "outAmount": "979999",
+                "priceImpactPct": "0.001",
+            }),
         ])
         with self.assertRaisesRegex(stu.TokenDenied, "round trip"):
             stu.verify_round_trip(MINT_A, CFG, api_key="key", get=get)
+
+    def test_configured_friction_limit_is_enforced_inside_round_trip_verifier(self):
+        cfg = copy.deepcopy(CFG)
+        cfg["live"]["autonomous"]["dynamic_universe"]["maximum_friction_cost_pct"] = 0.50
+        for returned in (994999, 1005001, 979000, 1021000):
+            get = Mock(side_effect=[
+                stu.FakeResponse(200, {
+                    "inputMint": stu.USDC_MINT, "outputMint": MINT_A,
+                    "inAmount": "1000000", "outAmount": "1000000000",
+                    "priceImpactPct": "0.001",
+                }),
+                stu.FakeResponse(200, {
+                    "inputMint": MINT_A, "outputMint": stu.USDC_MINT,
+                    "inAmount": "1000000000", "outAmount": str(returned),
+                    "priceImpactPct": "0.001",
+                }),
+            ])
+            with self.subTest(returned=returned):
+                with self.assertRaises(stu.RoundTripCostExceeded) as caught:
+                    stu.verify_round_trip(MINT_A, cfg, api_key="key", get=get)
+                self.assertAlmostEqual(
+                    caught.exception.cost_pct, abs(1000000 - returned) / 10000)
+                self.assertEqual(caught.exception.limit_pct, 0.50)
+
+        cfg["live"]["autonomous"]["dynamic_universe"]["maximum_friction_cost_pct"] = 0.30
+        get = Mock(side_effect=[
+            stu.FakeResponse(200, {
+                "inputMint": stu.USDC_MINT, "outputMint": MINT_A,
+                "inAmount": "1000000", "outAmount": "1000000000",
+                "priceImpactPct": "0.001",
+            }),
+            stu.FakeResponse(200, {
+                "inputMint": MINT_A, "outputMint": stu.USDC_MINT,
+                "inAmount": "1000000000", "outAmount": "996999",
+                "priceImpactPct": "0.001",
+            }),
+        ])
+        with self.assertRaises(stu.RoundTripCostExceeded) as caught:
+            stu.verify_round_trip(MINT_A, cfg, api_key="key", get=get)
+        self.assertEqual(caught.exception.limit_pct, 0.30)
+        self.assertAlmostEqual(caught.exception.cost_pct, 0.3001)
+
+    def test_missing_entry_friction_configuration_fails_closed_before_network(self):
+        cfg = copy.deepcopy(CFG)
+        del cfg["live"]["autonomous"]["dynamic_universe"]["maximum_friction_cost_pct"]
+        get = Mock()
+        with self.assertRaisesRegex(stu.TokenDenied, "entry friction"):
+            stu.verify_round_trip(MINT_A, cfg, api_key="key", get=get)
+        get.assert_not_called()
+        with self.assertRaisesRegex(stu.TokenDenied, "entry friction"):
+            stu.discover_candidates(cfg, api_key="key", now=NOW, get=get)
+        get.assert_not_called()
 
     def test_discovery_deduplicates_and_caps_candidates(self):
         rows = [token(MINT_A, "PEPE"), token(MINT_B, "PEPE"), token(MINT_A, "PEPE")]
@@ -125,7 +187,8 @@ class TokenUniverseTests(unittest.TestCase):
             stu.FakeResponse(200, []),
             stu.FakeResponse(200, {"warnings": {MINT_A: [], MINT_B: []}}),
         ])
-        result = stu.discover_candidates(CFG, api_key="key", now=NOW, get=get)
+        with patch('entry_friction.check_entry_friction', return_value={'status': 'ALLOWED'}):
+            result = stu.discover_candidates(CFG, api_key="key", now=NOW, get=get)
         self.assertEqual([row["mint"] for row in result], [MINT_A, MINT_B])
 
     def test_registered_holding_is_resolved_for_exit_even_if_no_longer_entry_safe(self):
@@ -152,7 +215,9 @@ class TokenUniverseTests(unittest.TestCase):
                 stu.FakeResponse(200, []),
                 stu.FakeResponse(200, {"warnings": {MINT_A: []}}),
             ])
-            result = stu.discover_candidates(CFG, api_key="key", now=NOW, get=get)
+            with patch('entry_friction.check_entry_friction',
+                       return_value={'status': 'ALLOWED'}):
+                result = stu.discover_candidates(CFG, api_key="key", now=NOW, get=get)
         finally:
             stu._sleep = original
         self.assertEqual([row["mint"] for row in result], [MINT_A])

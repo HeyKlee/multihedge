@@ -58,18 +58,50 @@ class EntryFrictionTests(unittest.TestCase):
                 self.assertEqual(check_entry_friction(MINT_A, cfg, api_key='test',
                     now=NOW, get=Mock())['status'], 'BLOCKED')
         for field, bad in [('outAmount', True), ('outAmount', '1.5'),
-                           ('priceImpactPct', 'nan'), ('priceImpactPct', '-0.1'),
-                           ('inputMint', MINT_B), ('inAmount', '2')]:
+                           ('priceImpactPct', 'nan'), ('priceImpactPct', 'inf'),
+                           ('priceImpactPct', '-0.1'), ('inputMint', MINT_B),
+                           ('inAmount', '2')]:
             buy = quote(stu.USDC_MINT, MINT_A, 1000000, 1000000000)
             buy._payload[field] = bad
             get = Mock(side_effect=[buy, quote(MINT_A, stu.USDC_MINT, 1000000000, 999000)])
             with self.subTest(field=field, bad=bad):
                 self.assertEqual(check_entry_friction(MINT_A, config(), api_key='test',
                     now=NOW, get=get)['status'], 'BLOCKED')
-        get = Mock(side_effect=[quote(stu.USDC_MINT, MINT_A, 1000000, 1000000000),
-                               quote(MINT_A, stu.USDC_MINT, 1000000000, 1000010)])
-        self.assertEqual(check_entry_friction(MINT_A, config(), api_key='test',
-            now=NOW, get=get)['status'], 'BLOCKED')
+    def test_modest_favourable_quote_move_is_charged_as_absolute_cost(self):
+        from entry_friction import check_entry_friction
+        get = Mock(side_effect=[quote(stu.USDC_MINT, MINT_A, 1000000, 1000000000,
+                                      impact='0'),
+                               quote(MINT_A, stu.USDC_MINT, 1000000000, 1000832,
+                                     impact='0')])
+        result = check_entry_friction(MINT_A, config(), api_key='test', now=NOW, get=get)
+        self.assertEqual(result['status'], 'ALLOWED')
+        self.assertEqual(result['reason'], 'quoted_cost_within_limit')
+        self.assertAlmostEqual(result['round_trip_loss_pct'], 0.0832)
+
+    def test_absolute_cost_boundary_is_symmetric_and_fail_closed(self):
+        from entry_friction import check_entry_friction
+        for returned, expected_status in ((995000, 'ALLOWED'), (1005000, 'ALLOWED'),
+                                          (994999, 'BLOCKED'), (1005001, 'BLOCKED'),
+                                          (979000, 'BLOCKED'), (1021000, 'BLOCKED')):
+            get = Mock(side_effect=[quote(stu.USDC_MINT, MINT_A, 1000000, 1000000000),
+                                    quote(MINT_A, stu.USDC_MINT, 1000000000, returned)])
+            with self.subTest(returned=returned):
+                result = check_entry_friction(
+                    MINT_A, config(), api_key='test', now=NOW, get=get)
+                self.assertEqual(result['status'], expected_status)
+                self.assertAlmostEqual(
+                    result['round_trip_loss_pct'], abs(1000000 - returned) / 10000)
+                if expected_status == 'BLOCKED':
+                    self.assertEqual(result['reason'], 'round_trip_cost_above_limit')
+
+    def test_favourable_quote_never_bypasses_identity_validation(self):
+        from entry_friction import check_entry_friction
+        buy = quote(stu.USDC_MINT, MINT_A, 1000000, 1000000000)
+        buy._payload['outputMint'] = MINT_B
+        get = Mock(side_effect=[buy, quote(MINT_A, stu.USDC_MINT, 1000000000, 1000832)])
+        result = check_entry_friction(MINT_A, config(), api_key='test', now=NOW, get=get)
+        self.assertEqual(result['status'], 'BLOCKED')
+        self.assertEqual(result['reason'], 'route_unavailable_or_invalid')
 
     def test_cache_is_exact_size_fresh_and_never_revives_failed_old_quote(self):
         from entry_friction import check_entry_friction
@@ -101,7 +133,13 @@ class EntryFrictionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / 'paper.db'
             row = candidate()
-            self.assertEqual(ds.tick(db, [row], now=NOW)['opened'], 1)
+            def allow_entry(mint, amount):
+                return {'status': 'ALLOWED', 'mint': mint, 'amount_atomic': amount,
+                        'round_trip_loss_pct': .1, 'threshold_pct': .5,
+                        'checked_at': NOW}
+            self.assertEqual(ds.tick(
+                db, [row], now=NOW, cfg=config(),
+                entry_cost_checker=allow_entry)['opened'], 1)
             blocked = candidate(price=.0008)
             blocked['entry_eligible'] = False
             blocked['friction'] = {'status': 'BLOCKED', 'reason': 'round_trip_cost_above_limit'}

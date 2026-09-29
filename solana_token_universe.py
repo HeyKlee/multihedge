@@ -36,6 +36,16 @@ class TokenDenied(RuntimeError):
     pass
 
 
+class RoundTripCostExceeded(TokenDenied):
+    """A valid exact-mint quote pair exceeded its configured cost ceiling."""
+
+    def __init__(self, cost_pct: float, limit_pct: float):
+        self.cost_pct = cost_pct
+        self.limit_pct = limit_pct
+        super().__init__(
+            f"round trip cost {cost_pct:.6f}% exceeds {limit_pct:.6f}% limit")
+
+
 class UpstreamUnavailable(TokenDenied):
     """Jupiter could not be reached or rate-limited every retry.
 
@@ -62,6 +72,24 @@ class FakeResponse:
 
 def _settings(cfg: dict) -> dict:
     return cfg.get("live", {}).get("autonomous", {}).get("dynamic_universe", {})
+
+
+def _entry_friction_limit(settings: dict) -> float | None:
+    """Resolve the new-entry cost ceiling, fail-closed when entries are enabled.
+
+    Pure paper callers that do not enable the dynamic universe have no live
+    admission surface and may omit this setting. Once dynamic entries are
+    enabled, however, removing one config key must never widen BUY admission
+    from the reviewed 0.50% gate to the looser route-safety ceiling.
+    """
+    if "maximum_friction_cost_pct" not in settings:
+        if settings.get("enabled") is True:
+            raise TokenDenied("entry friction configuration unavailable")
+        return None
+    maximum = _number(settings["maximum_friction_cost_pct"], "entry friction limit")
+    if not 0 < maximum <= 2.0:
+        raise TokenDenied("invalid entry friction limit")
+    return maximum
 
 
 def _number(value, label: str) -> float:
@@ -214,6 +242,7 @@ def discover_candidates(cfg: dict, *, api_key: str, now: float, get=httpx.get,
     settings = _settings(cfg)
     if settings.get("enabled") is not True:
         return []
+    _entry_friction_limit(settings)
     raw_rows = []
     for category in ("toptraded", "toptrending", "toporganicscore"):
         body = _get_json(
@@ -248,18 +277,17 @@ def discover_candidates(cfg: dict, *, api_key: str, now: float, get=httpx.get,
         ), reverse=True,
     )
     candidates = candidates[:int(settings.get("max_candidates", 12))]
-    if "maximum_friction_cost_pct" in settings:
-        from entry_friction import check_entry_friction
-        started = time.monotonic()
-        for row in candidates:
-            if time.monotonic() - started >= 20:
-                row["friction"] = {"status": "BLOCKED", "reason": "quote_budget_exhausted",
-                                   "round_trip_loss_pct": None, "mint": row["mint"]}
-            else:
-                row["friction"] = check_entry_friction(
-                    row["mint"], cfg, api_key=api_key, get=get, now=now, db_path=db_path,
-                    ticker=row["ticker"], name=row["name"])
-            row["entry_eligible"] = row["friction"]["status"] == "ALLOWED"
+    from entry_friction import check_entry_friction
+    started = time.monotonic()
+    for row in candidates:
+        if time.monotonic() - started >= 20:
+            row["friction"] = {"status": "BLOCKED", "reason": "quote_budget_exhausted",
+                               "round_trip_loss_pct": None, "mint": row["mint"]}
+        else:
+            row["friction"] = check_entry_friction(
+                row["mint"], cfg, api_key=api_key, get=get, now=now, db_path=db_path,
+                ticker=row["ticker"], name=row["name"])
+        row["entry_eligible"] = row["friction"]["status"] == "ALLOWED"
     # Paper retains rejected metadata for observations and exits, never BUY permission.
     return candidates if include_rejected else [r for r in candidates if r["entry_eligible"]]
 
@@ -314,6 +342,13 @@ def verify_round_trip(mint: str, cfg: dict, *, api_key: str, get=httpx.get,
                       amount_atomic: int = 1_000_000) -> dict:
     if type(amount_atomic) is not int or amount_atomic <= 0:
         raise TokenDenied("invalid USDC quote amount")
+    settings = _settings(cfg)
+    route_maximum = _number(
+        settings.get("maximum_round_trip_loss_pct", 2.0), "round trip limit")
+    if not 0 < route_maximum <= 2.0:
+        raise TokenDenied("invalid round trip limit")
+    entry_maximum = _entry_friction_limit(settings)
+    maximum = min(route_maximum, entry_maximum) if entry_maximum is not None else route_maximum
     params = {
         "inputMint": USDC_MINT, "outputMint": mint, "amount": str(amount_atomic),
         "slippageBps": "50", "restrictIntermediateTokens": "true",
@@ -345,14 +380,19 @@ def verify_round_trip(mint: str, cfg: dict, *, api_key: str, get=httpx.get,
                 or not str(body.get("outAmount", "")).isdigit()):
             raise TokenDenied("round trip quote identity or amount mismatch")
     if (not all(math.isfinite(v) for v in (buy_impact, sell_impact))
-            or min(buy_impact, sell_impact) < 0 or usdc_back > amount_atomic):
+            or min(buy_impact, sell_impact) < 0):
         raise TokenDenied("invalid round trip impact or crossed quotes")
-    loss_pct = round((amount_atomic - usdc_back) * 100 / amount_atomic, 6)
-    maximum = _number(_settings(cfg).get("maximum_round_trip_loss_pct", 2.0), "round trip limit")
-    if not 0 < maximum <= 2.0:
-        raise TokenDenied("invalid round trip limit")
-    if token_out <= 0 or usdc_back <= 0 or max(buy_impact, sell_impact) > 0.0075 or loss_pct > maximum:
+    # The two executable quotes are sequential, so a small market move can make
+    # the immediate SELL return slightly more USDC than the BUY spent. It is not
+    # a free profit and it is not malformed when mint/amount identity is valid.
+    # Charge the absolute quote disagreement as cost. This is conservative in
+    # either direction and lets the tighter friction threshold reject large
+    # timing/price discrepancies deterministically.
+    loss_pct = round(abs(amount_atomic - usdc_back) * 100 / amount_atomic, 6)
+    if token_out <= 0 or usdc_back <= 0 or max(buy_impact, sell_impact) > 0.0075:
         raise TokenDenied("round trip is not safely sellable")
+    if loss_pct > maximum:
+        raise RoundTripCostExceeded(loss_pct, maximum)
     return {"buy_output_atomic": token_out, "usdc_back_atomic": usdc_back,
             "round_trip_loss_pct": loss_pct}
 

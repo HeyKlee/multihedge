@@ -54,6 +54,8 @@ def _save(db_path, result):
 def friction_limit(cfg):
     settings = cfg.get('live', {}).get('autonomous', {}).get('dynamic_universe', {}) if cfg else {}
     if 'maximum_friction_cost_pct' not in settings:
+        if settings.get('enabled') is True:
+            raise ValueError('missing maximum_friction_cost_pct')
         return None
     value = settings['maximum_friction_cost_pct']
     if isinstance(value, bool) or not isinstance(value, (float, int)) or not math.isfinite(value) or not 0 < value <= 2:
@@ -63,7 +65,8 @@ def friction_limit(cfg):
 
 def check_entry_friction(mint, cfg, *, api_key, amount_atomic=1_000_000,
                          get=None, now=None, db_path=None, ticker="UNKNOWN", name=None):
-    from solana_token_universe import TokenDenied, verify_round_trip
+    from solana_token_universe import (RoundTripCostExceeded, TokenDenied,
+                                       verify_round_trip)
     now = time.time() if now is None else now
     result = {'status': 'BLOCKED', 'mint': mint, 'ticker': ticker, 'name': name or ticker,
               'amount_atomic': amount_atomic,
@@ -97,6 +100,9 @@ def check_entry_friction(mint, cfg, *, api_key, amount_atomic=1_000_000,
             result['reason'] = 'round_trip_cost_above_limit'
         else:
             result.update(status='ALLOWED', reason='quoted_cost_within_limit')
+    except RoundTripCostExceeded as exc:
+        result.update(round_trip_loss_pct=exc.cost_pct,
+                      reason='round_trip_cost_above_limit')
     except TokenDenied:
         # Never leak provider responses/credentials or reuse stale success on failure.
         result['reason'] = 'route_unavailable_or_invalid'
