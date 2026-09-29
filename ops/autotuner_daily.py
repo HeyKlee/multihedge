@@ -44,10 +44,22 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import yaml
+import runtime_paths
 from parameter_autotuner import maybe_tune
 
 CONTAINER_NAME = "multihedge"
 REPORT_SENTINEL = "__AUTOTUNE_REPORT__"
+
+
+def _production_db_path() -> Path:
+    """The production ledger, resolved by the single authority.
+
+    Never hardcode it here. The file moved from deploy/data/ to deploy/db/ when
+    compose started bind-mounting a DIRECTORY (FINDING 008), so a literal path in
+    this router silently named an 8 KB orphan and the fail-closed comparison in
+    _route_command never matched the real ledger.
+    """
+    return runtime_paths.production_db()
 
 # Runs inside the container: uses the container's canonical config and DB so
 # the evaluation row lands in the container's WAL universe (the only writer
@@ -56,10 +68,18 @@ BOOTSTRAP = """
 import json, sys, time
 sys.path.insert(0, "/app")
 import yaml
+import runtime_paths
 from parameter_autotuner import maybe_tune
+# FINDING 008: the ledger is bind-mounted as a DIRECTORY at /app/db, so the old
+# single-file literal is an orphan in the container layer holding one table.
+# Reading it silently reported an empty history as a valid evaluation. Resolve
+# through the single authority and refuse anything without a ledger schema
+# instead of tuning an empty database.
+db = runtime_paths.evidence_db()
+runtime_paths.assert_looks_like_ledger(db)
 with open("/app/config.yaml", encoding="utf-8") as fh:
     cfg = yaml.safe_load(fh)
-report = maybe_tune("/app/multihedge.db", cfg, now=time.time())
+report = maybe_tune(str(db), cfg, now=time.time())
 sys.stdout.write({sentinel!r} + json.dumps(report, sort_keys=True, allow_nan=False, default=str) + "\\n")
 """.format(sentinel=REPORT_SENTINEL)
 
@@ -75,7 +95,7 @@ def _route_command(db_path: Path, root: Path, *, docker_exe: str | None,
     the shared WAL file corrupts host readers, so refusing is the only safe
     outcome.
     """
-    prod_db = (root / "deploy/data/multihedge.db").resolve()
+    prod_db = _production_db_path().resolve()
     if Path(db_path).resolve() != prod_db:
         return None
     if not docker_exe or not container_running:
@@ -86,9 +106,10 @@ def _route_command(db_path: Path, root: Path, *, docker_exe: str | None,
         raise RuntimeError(
             "container lacks parameter_autotuner.py/config.yaml; "
             "refusing host-side WAL write")
-    return [docker_exe, "exec", "-i", "-e",
-            "MULTIHEDGE_EVIDENCE_DB=/app/multihedge.db",
-            CONTAINER_NAME, "python3", "-"]
+    # No -e MULTIHEDGE_EVIDENCE_DB override: the container's own environment
+    # already names the ledger, and forcing a path here reintroduces a database
+    # decision made outside runtime_paths.
+    return [docker_exe, "exec", "-i", CONTAINER_NAME, "python3", "-"]
 
 
 def _container_running(docker_exe: str, name: str) -> bool:
@@ -136,7 +157,9 @@ def _save_report(report: dict) -> Path:
 
 
 def main() -> int:
-    db_path = Path(os.getenv("MULTIHEDGE_EVIDENCE_DB", str(ROOT / "deploy/data/multihedge.db")))
+    # ATLAS Rule A: never rebuild the ledger path. runtime_paths is the sole authority
+    # and the old deploy/data/multihedge.db literal is a stale stub with no tables.
+    db_path = Path(os.getenv("MULTIHEDGE_EVIDENCE_DB") or str(runtime_paths.evidence_db()))
     cfg_path = ROOT / "config.yaml"
 
     docker_exe = shutil.which("docker")

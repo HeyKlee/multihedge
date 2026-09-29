@@ -54,6 +54,8 @@ live:
       minimum_5m_buy_volume_usd: 5000
       minimum_5m_sell_volume_usd: 5000
       maximum_round_trip_loss_pct: 2.0
+      # Percent units: 0.50 means 0.50%, quotes only (not network fees).
+      maximum_friction_cost_pct: 0.50
       minimum_strategy_trades: 50
       minimum_strategy_win_rate: 0.6667
       minimum_strategy_net_usd: 0
@@ -66,18 +68,22 @@ strategies:
   enabled: true
 - name: vwap_reversion
   enabled: true
-reasoner:
-  POSITION_FRACTION: 0.5
-  TAKE_PROFIT: 0.015
-  STOP_LOSS: 0.015
-  # Values here are the declared defaults. At runtime mh_reasoner._load_params
-  # reads DB table mh_reasoner_params FIRST, then this block, then code defaults,
-  # and the runtime override is what actually applies. Keep the two in sync:
-  # this declared 10800 while the applied override was 7200, so they disagreed.
-  MAX_HOLD_SECS: 7200
-  TRAIL_ARM: 0.008
-  TRAIL_DIST: 0.004
-  CONFIDENCE_MIN: 0.35
+# ATLAS Rule C (FINDING 004): exit thresholds are NOT declared here.
+#
+# This block used to declare POSITION_FRACTION/TAKE_PROFIT/STOP_LOSS/MAX_HOLD_SECS/
+# TRAIL_*/CONFIDENCE_MIN, and it was a rival source of truth that silently disagreed with
+# the runtime. Its own comment admitted the drift: "this declared 10800 while the applied
+# override was 7200". The bare mh_reasoner_params table then won outright at TAKE_PROFIT
+# 0.05, a value present in no source file, which is why editing config or source changed
+# nothing.
+#
+# Single owner: live_inventory.py declares the defaults; policy.effective_policy() resolves
+# them and applies an override ONLY when it carries provenance (source, approved_by,
+# approved_at). See the current values with:  python3 ops/policy_report.py
+#
+# To change a threshold, either edit the owner in live_inventory.py, or record an APPROVED
+# row in mh_policy_overrides. Do not add numbers back here.
+reasoner: {}
 grid:
   enabled: true
   starting_cash_nzd: 40

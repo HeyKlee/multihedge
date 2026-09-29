@@ -3,10 +3,15 @@ MultiHedge REASONER TRADER (Layer 2, SLOW swing) — multi-coin.
 
 Generalises AutoHedge's reasoner_trader to EVERY coin. Each coin gets its own
 reasoner account + one open reasoner position at a time (LONG or SHORT) with a
-LONG horizon (TP +2.5% / SL -1.5% / MAX_HOLD 2h), trading on the per-coin
-`mh_news_bias` direction written by mh_news.py. It NEVER calls the LLM itself;
-it reads the bias the news reasoner produced, then sizes from that coin's own
-reasoner equity.
+Long horizon, trading on the per-coin `mh_news_bias` direction written by
+mh_news.py. It NEVER calls the LLM itself; it reads the bias the news reasoner
+produced, then sizes from that coin's own reasoner equity.
+
+Exit thresholds are NOT stated here. They are resolved by policy.effective_policy()
+(ATLAS Rule C / FINDING 004), which is the single owner. This docstring previously
+restated them as prose and drifted: it claimed TP +2.5% / SL -1.5% / 2h while the code
+enforced 5% / 2% / 2h and the source constants said 1.5%. Run `python3 ops/policy_report.py`
+for the values actually in force.
 
 State per coin: mh_reasoner_positions (open). Equity is the SINGLE shared USDC
 treasury (same account.py pool the fast engine uses). Closed trades go to
@@ -28,44 +33,56 @@ import runtime_paths  # ATLAS Rule A: sole runtime path authority
 CUR_DIR = Path(__file__).parent
 DB_PATH = runtime_paths.production_db()  # ATLAS Rule A: single path authority
 
-# --- tunable reasoner params (may be overridden by config.yaml / DB optimizer) ---
-DEFAULT_PARAMS = {
-    "POSITION_FRACTION": 0.50,
-    "TAKE_PROFIT": 0.015,
-    "STOP_LOSS": 0.015,
-    "MAX_HOLD_SECS": 2 * 3600,
-    "TRAIL_ARM": 0.008,
-    "TRAIL_DIST": 0.004,
-    "CONFIDENCE_MIN": 0.35,
-}
-
-PARAMS_SCHEMA = """CREATE TABLE IF NOT EXISTS mh_reasoner_params (
-    key TEXT PRIMARY KEY, value REAL)"""
+# --- reasoner params: ONE owner, resolved by policy.py (ATLAS Rule C) ------------------
+# FINDING 004: these were four competing definitions. The bare `mh_reasoner_params` table
+# was winning at TAKE_PROFIT=0.05 with no author, timestamp or approval, so editing this
+# file or config.yaml changed nothing. policy.effective_policy() is now the only resolver;
+# an override row is honoured only when it carries provenance, and an out-of-bounds value
+# is refused rather than clamped.
+import policy as _policy
 
 def _load_params():
-    """Read tunable params: DB table wins, then config.yaml 'reasoner:' block, then defaults."""
-    p = dict(DEFAULT_PARAMS)
-    try:
-        import yaml
-        cfg = yaml.safe_load(CFG_PATH.read_text(encoding="utf-8")) or {}
-        r = cfg.get("reasoner", {})
-        if isinstance(r, dict):
-            for k in DEFAULT_PARAMS:
-                if k in r:
-                    p[k] = r[k]
-    except Exception:
-        pass
-    # DB overrides (monthly optimizer writes here; survives image rebuilds)
-    try:
-        con = sqlite3.connect(DB_PATH, check_same_thread=False)
-        con.execute(PARAMS_SCHEMA)
-        for row in con.execute("SELECT key, value FROM mh_reasoner_params"):
-            if row[0] in p:
-                p[row[0]] = row[1]
-        con.close()
-    except Exception:
-        pass
-    return p
+    """Resolve effective params through the single policy owner.
+
+    Deliberately does NOT re-read config.yaml and does NOT read the legacy key/value
+    override table. Both are reported by policy.policy_conflicts() instead of being
+    silently merged here.
+    """
+    p = _policy.effective_policy("MEME", db_path=DB_PATH)
+    return {
+        "POSITION_FRACTION": p.position_fraction,
+        "TAKE_PROFIT": p.take_profit_pct,
+        "STOP_LOSS": p.stop_loss_pct,
+        "MAX_HOLD_SECS": p.max_hold_seconds,
+        "TRAIL_ARM": p.trail_arm_pct,
+        "TRAIL_DIST": p.trail_distance_pct,
+        "CONFIDENCE_MIN": p.confidence_min,
+    }
+
+PARAMS_SCHEMA = """CREATE TABLE IF NOT EXISTS mh_reasoner_params (
+    key TEXT PRIMARY KEY, value REAL)"""  # LEGACY: retained for historical rows only
+
+
+def _resolved_params() -> dict:
+    """Read-only view of the resolved policy, in the legacy key shape.
+
+    Kept because several diagnostics and tests import DEFAULT_PARAMS. It is a VIEW of
+    policy.effective_policy(), not an independent declaration, so there is still exactly one
+    place a value can come from. Re-declaring the numbers here would recreate FINDING 004.
+    """
+    p = _policy.effective_policy("MEME", db_path=DB_PATH)
+    return {
+        "POSITION_FRACTION": p.position_fraction,
+        "TAKE_PROFIT": p.take_profit_pct,
+        "STOP_LOSS": p.stop_loss_pct,
+        "MAX_HOLD_SECS": p.max_hold_seconds,
+        "TRAIL_ARM": p.trail_arm_pct,
+        "TRAIL_DIST": p.trail_distance_pct,
+        "CONFIDENCE_MIN": p.confidence_min,
+    }
+
+
+DEFAULT_PARAMS = _resolved_params()
 
 def refresh_params():
     """Re-read params (called each tick so a monthly optimization applies live)."""
@@ -92,7 +109,26 @@ def refresh_params():
 _PARAMS = _load_params()
 
 def P(key):
-    return _PARAMS.get(key, DEFAULT_PARAMS.get(key))
+    """Read a resolved policy value. Fails closed on an unknown key.
+
+    The previous fallback returned None for a miss, which would surface as a TypeError deep
+    inside a trade decision. An unknown policy key is a programming error and must be loud.
+    """
+    if key in _PARAMS:
+        return _PARAMS[key]
+    fallback = {
+        "POSITION_FRACTION": "position_fraction",
+        "TAKE_PROFIT": "take_profit_pct",
+        "STOP_LOSS": "stop_loss_pct",
+        "MAX_HOLD_SECS": "max_hold_seconds",
+        "TRAIL_ARM": "trail_arm_pct",
+        "TRAIL_DIST": "trail_distance_pct",
+        "CONFIDENCE_MIN": "confidence_min",
+    }
+    field = fallback.get(key)
+    if field is None:
+        raise _policy.PolicyError(f"unknown reasoner policy key {key!r}")
+    return getattr(_policy.effective_policy("MEME", db_path=DB_PATH), field)
 
 # module-level constants mirroring config (kept for unchanged call sites)
 POSITION_FRACTION = P("POSITION_FRACTION")
@@ -239,7 +275,12 @@ def closing_reason(px, pos):
           (pos["entry"] - px) / pos["entry"]
     if pct >= TAKE_PROFIT:
         return "take_profit"
-    if pct <= -STOP_LOSS:
+    # STOP_LOSS is stored NEGATIVE, matching paper.py / mh_memecoin_trader.py /
+    # live_inventory.py. This line previously read `pct <= -STOP_LOSS`, which was correct
+    # only while the value was stored positive; with the resolver (ATLAS Rule C) supplying a
+    # negative value, the negation inverted the band and exited a position as "stop_loss"
+    # on any gain >= |stop|. mh_reasoner was the only consumer that negated.
+    if pct <= STOP_LOSS:
         return "stop_loss"
     if time.time() - pos["ts"] >= MAX_HOLD_SECS:
         return "max_hold"

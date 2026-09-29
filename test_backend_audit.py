@@ -40,9 +40,17 @@ class BackendAuditTests(unittest.TestCase):
     def test_reasoner_does_not_open_without_confirmation_data(self):
         self.assertFalse(mh_reasoner._momentum_ok('SOL',100,'LONG')[0])
     def test_reasoner_trailing_stop_stays_armed_after_retracement(self):
+        # A -0.3% move from entry is now INSIDE the stop band: the resolver's MEME stop loss
+        # is -1.0% (was 0.015 = -1.5% via the config.yaml reasoner block, which is no longer
+        # an input to resolution - ATLAS Rule C / FINDING 004). The price must be chosen to
+        # sit above the stop and below the trailing band, or the test measures the stop.
         pos={'side':'LONG','entry':100,'peak':101.4,'ts':time.time()}
         with patch.object(mh_reasoner,'TRAIL_ARM',.01), patch.object(mh_reasoner,'TRAIL_DIST',.005):
-            self.assertEqual(mh_reasoner.closing_reason(100.7,pos),'trail_stop')
+            # entry 100, stop -1.0% -> must stay above 99.0. peak 101.4, dist 0.5% -> must
+            # fall to <= 100.893 to trigger the trail. 100.5 satisfies both.
+            self.assertEqual(mh_reasoner.closing_reason(100.5,pos),'trail_stop')
+            # and the stop still fires when it should
+            self.assertEqual(mh_reasoner.closing_reason(98.9,pos),'stop_loss')
     def test_reasoner_replay_does_not_double_credit(self):
         with patch.object(mh_reasoner,'POSITION_FRACTION',.5): mh_reasoner._open('SOL','LONG',100)
         pos=mh_reasoner._rpos('SOL')
