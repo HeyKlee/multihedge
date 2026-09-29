@@ -40,8 +40,31 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
-DB = "/app/multihedge.db"
+# ATLAS Rule A: resolve the ledger through the single authority rather than
+# hardcoding a path. The ledger is bind-mounted as a DIRECTORY at /app/db, so
+# the historical single-file literal /app/multihedge.db is an orphan in the
+# container layer. A 0-byte file of that name was present on 2026-09-29, and
+# sqlite would happily create or open it, so a hardcoded literal here silently
+# collects route measurements into an empty database that nothing ever reads.
+# MULTIHEDGE_DB is honoured first, then runtime_paths, then the known mounts.
+def _resolve_db() -> str:
+    env = os.getenv("MULTIHEDGE_DB")
+    if env:
+        return env
+    for cand in ("/app/db/multihedge.db", "/app/multihedge.db"):
+        if os.path.exists(cand) and os.path.getsize(cand) > 0:
+            return cand
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+        import runtime_paths
+        return str(runtime_paths.evidence_db())
+    except Exception:
+        return "/app/db/multihedge.db"
+
+
+DB = _resolve_db()
 USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 # USDC is the settlement asset and has exactly 6 decimals. Quoted amounts arrive in
 # native atomic units per mint, so any USD-per-token ratio must normalise the token
@@ -308,7 +331,24 @@ def leg_px(mint, side, usd, dec):
         amt = int(usd * 10 ** 6)
         params = {"inputMint": USDC, "outputMint": mint, "amount": amt}
     else:
-        amt = int(usd * 10 ** dec)
+        # The SELL leg must size in TOKENS, and the token count has to come from
+        # the USD notional via the token's own price. The previous code used
+        # `int(usd * 10 ** dec)`, which multiplied the USD notional by the token's
+        # decimal scale. The resulting token COUNT looked large but its VALUE was
+        # `usd * px`: a "$2 sell" on a 9-decimal token at $0.0000017 actually asked
+        # to move $0.0000034 of value, and on a 6-decimal token at $0.27 it asked
+        # for $0.54 when $2 was intended. A dust sell barely moves the pool, so
+        # Jupiter returns a price essentially AT MID. That is the whole reason
+        # measured sell slippage sat at a median of +0.010% and the round trip
+        # read as 0.274%: the sell leg was quoting a rounding error, so an entire
+        # side of the friction was never measured at all. Size the sell from the
+        # observed mid price so both legs describe the same USD notional.
+        mid = mid_price(mint)
+        if mid is None or mid <= 0:
+            return None, "no_mid_for_sell_sizing"
+        amt = int((usd / mid) * 10 ** dec)
+        if amt <= 0:
+            return None, "sell_amount_rounds_to_zero"
         params = {"inputMint": mint, "outputMint": USDC, "amount": amt}
     try:
         ina, outa = _classify(
@@ -390,9 +430,24 @@ def main(argv=None):
                     ok = False
                     reason = f"no_route:{why}"
                 else:
-                    bs = (mid - buy) / mid * 100.0
-                    ss = (sell - mid) / mid * 100.0
-                    rt = ((buy * sell / (mid * mid)) - 1.0) * 100.0
+                    # Slippage is stored as a POSITIVE COST, matching the
+                    # convention every consumer already assumes: positive
+                    # means you lost value to the quote. The previous code
+                    # stored the negation, so "sell slippage of +0.010%" was
+                    # actually a small NEGATIVE number, which is why the
+                    # round trip looked free.
+                    bs = (buy - mid) / mid * 100.0
+                    ss = (mid - sell) / mid * 100.0
+                    # Round-trip cost is the ARITHMETIC spread you must cross
+                    # to buy and then sell the same notional, not a geometric
+                    # ratio. The old `buy*sell/mid^2 - 1` cancels the two legs
+                    # against each other: an ordinary 2% round trip (buy 1%
+                    # above mid, sell 1% below) evaluated to -0.01%, i.e. free.
+                    # On the live PerPsCe2SJ7Q row it reported +0.092% for a
+                    # true 1.928% cost. Every historical roundtrip_pct value in
+                    # mh_route_observations is therefore understated and must
+                    # not be read as a cost measurement.
+                    rt = (buy - sell) / mid * 100.0
             else:
                 ok = False
                 reason = f"{reason}/no_mid" if mid is None else reason
