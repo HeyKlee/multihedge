@@ -39,7 +39,14 @@ class LegPxIsScaleCorrect(unittest.TestCase):
         Amounts are native atomic units: USDC is 6dp, the token is `dec`dp. The token
         quantity must be derived from the HUMAN notional, not the atomic USDC amount.
         """
-        def _get(url):
+        def _get(url, *a, **kw):
+            # The price endpoint is used to size the SELL leg. A corrected
+            # leg_px derives the token quantity from the observed mid rather
+            # than multiplying the USD notional by the decimal scale, so the
+            # stub has to serve mid as well as swap quotes.
+            if "/price/" in url:
+                mint_id = url.split("ids=", 1)[1].split("&")[0]
+                return {"data": {mint_id: {"usdPrice": price_per_token}}}
             query = url.split("?", 1)[1]
             params = dict(p.split("=", 1) for p in query.split("&"))
             amount = int(params["amount"])
